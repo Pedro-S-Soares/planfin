@@ -1,0 +1,39 @@
+# ===========================
+# Backend — Elixir / Phoenix
+# ===========================
+backend/_build/
+backend/deps/
+backend/.elixir_ls/
+backend/.lexical/
+backend/priv/static/uploads/
+backend/*.ez
+backend/erl_crash.dump
+
+# Backend env
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# ===========================
+# Mobile — Expo / React Native
+# ===========================
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/.env
+mobile/.env.*
+!mobile/.env.example
+
+# Expo
+mobile/android/
+mobile/ios/
+
+# ===========================
+# Editor / OS
+# ===========================
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
