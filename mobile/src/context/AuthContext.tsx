@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import * as SecureStore from "expo-secure-store";
+import { storage } from "../lib/storage";
 import { apolloClient } from "../lib/apollo";
 
 type User = {
@@ -23,8 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Restore token from secure storage on app start
-    SecureStore.getItemAsync("auth_token").then((storedToken) => {
+    // Restore token from storage on app start
+    storage.getItem("auth_token").then((storedToken) => {
       if (storedToken) {
         setToken(storedToken);
         // User will be fetched by screens that need it via `me` query
@@ -34,13 +34,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (newToken: string, newUser: User) => {
-    await SecureStore.setItemAsync("auth_token", newToken);
+    await storage.setItem("auth_token", newToken);
     setToken(newToken);
     setUser(newUser);
   }, []);
 
   const signOut = useCallback(async () => {
-    await SecureStore.deleteItemAsync("auth_token");
+    await storage.deleteItem("auth_token");
     setToken(null);
     setUser(null);
     await apolloClient.clearStore();
