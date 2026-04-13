@@ -2,6 +2,8 @@ import { ApolloProvider } from "@apollo/client/react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { enableScreens } from "react-native-screens";
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { apolloClient } from "./src/lib/apollo";
@@ -9,6 +11,8 @@ import { LoginScreen } from "./src/screens/LoginScreen";
 import { RegisterScreen } from "./src/screens/RegisterScreen";
 import { ForgotPasswordScreen } from "./src/screens/ForgotPasswordScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
+
+enableScreens();
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -47,13 +51,15 @@ function Navigation() {
 
 export default function App() {
   return (
-    <ApolloProvider client={apolloClient}>
-      <AuthProvider>
-        <NavigationContainer>
-          <Navigation />
-        </NavigationContainer>
-        <StatusBar style="auto" />
-      </AuthProvider>
-    </ApolloProvider>
+    <SafeAreaProvider>
+      <ApolloProvider client={apolloClient}>
+        <AuthProvider>
+          <NavigationContainer>
+            <Navigation />
+          </NavigationContainer>
+          <StatusBar style="auto" />
+        </AuthProvider>
+      </ApolloProvider>
+    </SafeAreaProvider>
   );
 }
