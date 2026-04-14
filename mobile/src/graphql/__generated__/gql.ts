@@ -1,0 +1,64 @@
+/* eslint-disable */
+import * as types from './graphql';
+import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
+
+/**
+ * Map of all GraphQL operations in the project.
+ *
+ * This map has several performance disadvantages:
+ * 1. It is not tree-shakeable, so it will include all operations in the project.
+ * 2. It is not minifiable, so the string of a GraphQL query will be multiple times inside the bundle.
+ * 3. It does not support dead code elimination, so it will add unused operations.
+ *
+ * Therefore it is highly recommended to use the babel or swc plugin for production.
+ * Learn more about it here: https://the-guild.dev/graphql/codegen/plugins/presets/preset-client#reducing-bundle-size
+ */
+type Documents = {
+    "mutation Login($email: String!, $password: String!) {\n  login(email: $email, password: $password) {\n    token\n    user {\n      id\n      email\n    }\n  }\n}\n\nmutation RegisterUser($email: String!, $password: String!, $passwordConfirmation: String!) {\n  registerUser(\n    email: $email\n    password: $password\n    passwordConfirmation: $passwordConfirmation\n  ) {\n    token\n    user {\n      id\n      email\n    }\n  }\n}\n\nmutation Logout {\n  logout\n}\n\nmutation ForgotPassword($email: String!) {\n  forgotPassword(email: $email)\n}\n\nmutation ResetPassword($token: String!, $password: String!, $passwordConfirmation: String!) {\n  resetPassword(\n    token: $token\n    password: $password\n    passwordConfirmation: $passwordConfirmation\n  )\n}": typeof types.LoginDocument,
+    "mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {\n  createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit) {\n    id\n    status\n  }\n}\n\nmutation CreateExpense($amount: String!, $date: String!, $note: String, $subcategoryId: ID) {\n  createExpense(\n    amount: $amount\n    date: $date\n    note: $note\n    subcategoryId: $subcategoryId\n  ) {\n    id\n    amount\n    date\n    note\n    subcategory {\n      id\n      name\n    }\n  }\n}\n\nmutation DeleteExpense($id: ID!) {\n  deleteExpense(id: $id)\n}\n\nmutation CreateCategory($name: String!) {\n  createCategory(name: $name) {\n    id\n    name\n    subcategories {\n      id\n      name\n    }\n  }\n}\n\nmutation UpdateCategory($id: ID!, $name: String!) {\n  updateCategory(id: $id, name: $name) {\n    id\n    name\n  }\n}\n\nmutation DeleteCategory($id: ID!) {\n  deleteCategory(id: $id)\n}\n\nmutation CreateSubcategory($categoryId: ID!, $name: String!) {\n  createSubcategory(categoryId: $categoryId, name: $name) {\n    id\n    name\n  }\n}\n\nmutation DeleteSubcategory($id: ID!) {\n  deleteSubcategory(id: $id)\n}": typeof types.CreatePeriodDocument,
+    "query ActivePeriod {\n  activePeriod {\n    id\n    startDate\n    endDate\n    dailyLimit\n    status\n    today {\n      id\n      date\n      dailyLimit\n      carryover\n      availableBalance\n      closedAt\n    }\n  }\n}\n\nquery ExpenseHistory($periodId: ID!) {\n  expenseHistory(periodId: $periodId) {\n    date\n    total\n    expenses {\n      id\n      amount\n      note\n      subcategory {\n        id\n        name\n      }\n    }\n  }\n}\n\nquery Categories {\n  categories {\n    id\n    name\n    subcategories {\n      id\n      name\n    }\n  }\n}": typeof types.ActivePeriodDocument,
+    "query Me {\n  me {\n    id\n    email\n  }\n}": typeof types.MeDocument,
+};
+const documents: Documents = {
+    "mutation Login($email: String!, $password: String!) {\n  login(email: $email, password: $password) {\n    token\n    user {\n      id\n      email\n    }\n  }\n}\n\nmutation RegisterUser($email: String!, $password: String!, $passwordConfirmation: String!) {\n  registerUser(\n    email: $email\n    password: $password\n    passwordConfirmation: $passwordConfirmation\n  ) {\n    token\n    user {\n      id\n      email\n    }\n  }\n}\n\nmutation Logout {\n  logout\n}\n\nmutation ForgotPassword($email: String!) {\n  forgotPassword(email: $email)\n}\n\nmutation ResetPassword($token: String!, $password: String!, $passwordConfirmation: String!) {\n  resetPassword(\n    token: $token\n    password: $password\n    passwordConfirmation: $passwordConfirmation\n  )\n}": types.LoginDocument,
+    "mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {\n  createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit) {\n    id\n    status\n  }\n}\n\nmutation CreateExpense($amount: String!, $date: String!, $note: String, $subcategoryId: ID) {\n  createExpense(\n    amount: $amount\n    date: $date\n    note: $note\n    subcategoryId: $subcategoryId\n  ) {\n    id\n    amount\n    date\n    note\n    subcategory {\n      id\n      name\n    }\n  }\n}\n\nmutation DeleteExpense($id: ID!) {\n  deleteExpense(id: $id)\n}\n\nmutation CreateCategory($name: String!) {\n  createCategory(name: $name) {\n    id\n    name\n    subcategories {\n      id\n      name\n    }\n  }\n}\n\nmutation UpdateCategory($id: ID!, $name: String!) {\n  updateCategory(id: $id, name: $name) {\n    id\n    name\n  }\n}\n\nmutation DeleteCategory($id: ID!) {\n  deleteCategory(id: $id)\n}\n\nmutation CreateSubcategory($categoryId: ID!, $name: String!) {\n  createSubcategory(categoryId: $categoryId, name: $name) {\n    id\n    name\n  }\n}\n\nmutation DeleteSubcategory($id: ID!) {\n  deleteSubcategory(id: $id)\n}": types.CreatePeriodDocument,
+    "query ActivePeriod {\n  activePeriod {\n    id\n    startDate\n    endDate\n    dailyLimit\n    status\n    today {\n      id\n      date\n      dailyLimit\n      carryover\n      availableBalance\n      closedAt\n    }\n  }\n}\n\nquery ExpenseHistory($periodId: ID!) {\n  expenseHistory(periodId: $periodId) {\n    date\n    total\n    expenses {\n      id\n      amount\n      note\n      subcategory {\n        id\n        name\n      }\n    }\n  }\n}\n\nquery Categories {\n  categories {\n    id\n    name\n    subcategories {\n      id\n      name\n    }\n  }\n}": types.ActivePeriodDocument,
+    "query Me {\n  me {\n    id\n    email\n  }\n}": types.MeDocument,
+};
+
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ *
+ *
+ * @example
+ * ```ts
+ * const query = gql(`query GetUser($id: ID!) { user(id: $id) { name } }`);
+ * ```
+ *
+ * The query argument is unknown!
+ * Please regenerate the types.
+ */
+export function gql(source: string): unknown;
+
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "mutation Login($email: String!, $password: String!) {\n  login(email: $email, password: $password) {\n    token\n    user {\n      id\n      email\n    }\n  }\n}\n\nmutation RegisterUser($email: String!, $password: String!, $passwordConfirmation: String!) {\n  registerUser(\n    email: $email\n    password: $password\n    passwordConfirmation: $passwordConfirmation\n  ) {\n    token\n    user {\n      id\n      email\n    }\n  }\n}\n\nmutation Logout {\n  logout\n}\n\nmutation ForgotPassword($email: String!) {\n  forgotPassword(email: $email)\n}\n\nmutation ResetPassword($token: String!, $password: String!, $passwordConfirmation: String!) {\n  resetPassword(\n    token: $token\n    password: $password\n    passwordConfirmation: $passwordConfirmation\n  )\n}"): (typeof documents)["mutation Login($email: String!, $password: String!) {\n  login(email: $email, password: $password) {\n    token\n    user {\n      id\n      email\n    }\n  }\n}\n\nmutation RegisterUser($email: String!, $password: String!, $passwordConfirmation: String!) {\n  registerUser(\n    email: $email\n    password: $password\n    passwordConfirmation: $passwordConfirmation\n  ) {\n    token\n    user {\n      id\n      email\n    }\n  }\n}\n\nmutation Logout {\n  logout\n}\n\nmutation ForgotPassword($email: String!) {\n  forgotPassword(email: $email)\n}\n\nmutation ResetPassword($token: String!, $password: String!, $passwordConfirmation: String!) {\n  resetPassword(\n    token: $token\n    password: $password\n    passwordConfirmation: $passwordConfirmation\n  )\n}"];
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {\n  createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit) {\n    id\n    status\n  }\n}\n\nmutation CreateExpense($amount: String!, $date: String!, $note: String, $subcategoryId: ID) {\n  createExpense(\n    amount: $amount\n    date: $date\n    note: $note\n    subcategoryId: $subcategoryId\n  ) {\n    id\n    amount\n    date\n    note\n    subcategory {\n      id\n      name\n    }\n  }\n}\n\nmutation DeleteExpense($id: ID!) {\n  deleteExpense(id: $id)\n}\n\nmutation CreateCategory($name: String!) {\n  createCategory(name: $name) {\n    id\n    name\n    subcategories {\n      id\n      name\n    }\n  }\n}\n\nmutation UpdateCategory($id: ID!, $name: String!) {\n  updateCategory(id: $id, name: $name) {\n    id\n    name\n  }\n}\n\nmutation DeleteCategory($id: ID!) {\n  deleteCategory(id: $id)\n}\n\nmutation CreateSubcategory($categoryId: ID!, $name: String!) {\n  createSubcategory(categoryId: $categoryId, name: $name) {\n    id\n    name\n  }\n}\n\nmutation DeleteSubcategory($id: ID!) {\n  deleteSubcategory(id: $id)\n}"): (typeof documents)["mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {\n  createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit) {\n    id\n    status\n  }\n}\n\nmutation CreateExpense($amount: String!, $date: String!, $note: String, $subcategoryId: ID) {\n  createExpense(\n    amount: $amount\n    date: $date\n    note: $note\n    subcategoryId: $subcategoryId\n  ) {\n    id\n    amount\n    date\n    note\n    subcategory {\n      id\n      name\n    }\n  }\n}\n\nmutation DeleteExpense($id: ID!) {\n  deleteExpense(id: $id)\n}\n\nmutation CreateCategory($name: String!) {\n  createCategory(name: $name) {\n    id\n    name\n    subcategories {\n      id\n      name\n    }\n  }\n}\n\nmutation UpdateCategory($id: ID!, $name: String!) {\n  updateCategory(id: $id, name: $name) {\n    id\n    name\n  }\n}\n\nmutation DeleteCategory($id: ID!) {\n  deleteCategory(id: $id)\n}\n\nmutation CreateSubcategory($categoryId: ID!, $name: String!) {\n  createSubcategory(categoryId: $categoryId, name: $name) {\n    id\n    name\n  }\n}\n\nmutation DeleteSubcategory($id: ID!) {\n  deleteSubcategory(id: $id)\n}"];
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "query ActivePeriod {\n  activePeriod {\n    id\n    startDate\n    endDate\n    dailyLimit\n    status\n    today {\n      id\n      date\n      dailyLimit\n      carryover\n      availableBalance\n      closedAt\n    }\n  }\n}\n\nquery ExpenseHistory($periodId: ID!) {\n  expenseHistory(periodId: $periodId) {\n    date\n    total\n    expenses {\n      id\n      amount\n      note\n      subcategory {\n        id\n        name\n      }\n    }\n  }\n}\n\nquery Categories {\n  categories {\n    id\n    name\n    subcategories {\n      id\n      name\n    }\n  }\n}"): (typeof documents)["query ActivePeriod {\n  activePeriod {\n    id\n    startDate\n    endDate\n    dailyLimit\n    status\n    today {\n      id\n      date\n      dailyLimit\n      carryover\n      availableBalance\n      closedAt\n    }\n  }\n}\n\nquery ExpenseHistory($periodId: ID!) {\n  expenseHistory(periodId: $periodId) {\n    date\n    total\n    expenses {\n      id\n      amount\n      note\n      subcategory {\n        id\n        name\n      }\n    }\n  }\n}\n\nquery Categories {\n  categories {\n    id\n    name\n    subcategories {\n      id\n      name\n    }\n  }\n}"];
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "query Me {\n  me {\n    id\n    email\n  }\n}"): (typeof documents)["query Me {\n  me {\n    id\n    email\n  }\n}"];
+
+export function gql(source: string) {
+  return (documents as any)[source] ?? {};
+}
+
+export type DocumentType<TDocumentNode extends DocumentNode<any, any>> = TDocumentNode extends DocumentNode<  infer TType,  any>  ? TType  : never;

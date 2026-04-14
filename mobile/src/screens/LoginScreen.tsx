@@ -3,9 +3,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useMutation } from "@apollo/client/react";
-import { gql } from "@apollo/client";
-
+import { useLoginMutation } from "../graphql/__generated__/hooks";
 import { useAuth } from "../context/AuthContext";
 import type { AuthStackParamList } from "../../App";
 
@@ -15,21 +13,6 @@ const schema = yup.object({
 });
 
 type FormValues = yup.InferType<typeof schema>;
-
-const LOGIN_MUTATION = gql`
-  mutation Login($email: String!, $password: String!) {
-    login(email: $email, password: $password) {
-      token
-      user {
-        id
-        email
-      }
-    }
-  }
-`;
-
-type LoginData = { login: { token: string; user: { id: string; email: string } } };
-type LoginVars = { email: string; password: string };
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
@@ -45,9 +28,13 @@ export function LoginScreen({ navigation }: Props) {
     resolver: yupResolver(schema),
   });
 
-  const [login, { loading }] = useMutation<LoginData, LoginVars>(LOGIN_MUTATION, {
+  const [login, { loading }] = useLoginMutation({
     onCompleted: async (data) => {
-      await signIn(data.login.token, data.login.user);
+      const token = data.login?.token;
+      const user = data.login?.user;
+      if (token && user?.id && user?.email) {
+        await signIn(token, { id: user.id, email: user.email });
+      }
     },
     onError: (error) => {
       setError("root", { message: error.message });

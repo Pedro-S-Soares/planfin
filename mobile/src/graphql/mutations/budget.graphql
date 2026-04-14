@@ -1,0 +1,56 @@
+mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {
+  createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit) {
+    id
+    status
+  }
+}
+
+mutation CreateExpense($amount: String!, $date: String!, $note: String, $subcategoryId: ID) {
+  createExpense(amount: $amount, date: $date, note: $note, subcategoryId: $subcategoryId) {
+    id
+    amount
+    date
+    note
+    subcategory {
+      id
+      name
+    }
+  }
+}
+
+mutation DeleteExpense($id: ID!) {
+  deleteExpense(id: $id)
+}
+
+mutation CreateCategory($name: String!) {
+  createCategory(name: $name) {
+    id
+    name
+    subcategories {
+      id
+      name
+    }
+  }
+}
+
+mutation UpdateCategory($id: ID!, $name: String!) {
+  updateCategory(id: $id, name: $name) {
+    id
+    name
+  }
+}
+
+mutation DeleteCategory($id: ID!) {
+  deleteCategory(id: $id)
+}
+
+mutation CreateSubcategory($categoryId: ID!, $name: String!) {
+  createSubcategory(categoryId: $categoryId, name: $name) {
+    id
+    name
+  }
+}
+
+mutation DeleteSubcategory($id: ID!) {
+  deleteSubcategory(id: $id)
+}
