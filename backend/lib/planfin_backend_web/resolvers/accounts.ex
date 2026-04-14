@@ -45,9 +45,17 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
     {:ok, true}
   end
 
-  def reset_password(_parent, %{token: token, password: password, password_confirmation: confirmation}, _context) do
+  def reset_password(
+        _parent,
+        %{token: token, password: password, password_confirmation: confirmation},
+        _context
+      ) do
     with {:ok, user} <- Accounts.get_user_by_reset_password_token(token),
-         {:ok, _user} <- Accounts.reset_user_password(user, %{password: password, password_confirmation: confirmation}) do
+         {:ok, _user} <-
+           Accounts.reset_user_password(user, %{
+             password: password,
+             password_confirmation: confirmation
+           }) do
       {:ok, true}
     else
       _ -> {:error, "Invalid or expired token"}
