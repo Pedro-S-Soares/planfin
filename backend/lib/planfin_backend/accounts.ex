@@ -75,9 +75,19 @@ defmodule PlanfinBackend.Accounts do
 
   """
   def register_user(attrs) do
-    %User{}
-    |> User.email_changeset(attrs)
-    |> Repo.insert()
+    result =
+      %User{}
+      |> User.email_changeset(attrs)
+      |> Repo.insert()
+
+    case result do
+      {:ok, user} ->
+        PlanfinBackend.Categories.seed_default_categories(user.id)
+        {:ok, user}
+
+      error ->
+        error
+    end
   end
 
   ## Settings
