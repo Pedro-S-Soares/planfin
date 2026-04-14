@@ -2,40 +2,17 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useMutation, useQuery } from "@apollo/client/react";
-import { gql } from "@apollo/client";
 import { useNavigation } from "@react-navigation/native";
-import { usePeriod, ACTIVE_PERIOD_QUERY } from "../context/PeriodContext";
+import {
+  useCategoriesQuery,
+  useCreateExpenseMutation,
+  ActivePeriodDocument,
+  CategoriesQuery,
+} from "../graphql/__generated__/hooks";
+import { usePeriod } from "../context/PeriodContext";
 
-const CATEGORIES_QUERY = gql`
-  query Categories {
-    categories {
-      id
-      name
-      subcategories {
-        id
-        name
-      }
-    }
-  }
-`;
-
-const CREATE_EXPENSE_MUTATION = gql`
-  mutation CreateExpense($amount: String!, $date: String!, $note: String, $subcategoryId: ID) {
-    createExpense(amount: $amount, date: $date, note: $note, subcategoryId: $subcategoryId) {
-      id
-      amount
-      date
-      note
-      subcategory {
-        id
-        name
-      }
-    }
-  }
-`;
-
-type Category = { id: string; name: string; subcategories: { id: string; name: string }[] };
+type Category = NonNullable<CategoriesQuery["categories"]>[number];
+type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
 
 const schema = yup.object({
   amount: yup
@@ -51,13 +28,11 @@ const schema = yup.object({
   subcategoryId: yup.string().optional(),
 });
 
-type FormValues = yup.InferType<typeof schema>;
-
 export function AddExpenseScreen() {
   const navigation = useNavigation();
   const { refetch } = usePeriod();
 
-  const { data: catData } = useQuery<{ categories: Category[] }>(CATEGORIES_QUERY);
+  const { data: catData } = useCategoriesQuery();
   const categories = catData?.categories ?? [];
 
   const {
@@ -78,16 +53,16 @@ export function AddExpenseScreen() {
   });
 
   const selectedCategoryId = watch("categoryId");
-  const subcategories =
-    categories.find((c) => c.id === selectedCategoryId)?.subcategories ?? [];
+  const subcategories: NonNullable<Subcategory>[] =
+    categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
 
-  const [createExpense, { loading }] = useMutation(CREATE_EXPENSE_MUTATION, {
+  const [createExpense, { loading }] = useCreateExpenseMutation({
     onCompleted: () => {
       refetch();
       navigation.goBack();
     },
-    onError: (error: Error) => setError("root", { message: error.message }),
-    refetchQueries: [{ query: ACTIVE_PERIOD_QUERY }],
+    onError: (error) => setError("root", { message: error.message }),
+    refetchQueries: [{ query: ActivePeriodDocument }],
   });
 
   const onSubmit = (values: yup.InferType<typeof schema>) => {
@@ -149,7 +124,7 @@ export function AddExpenseScreen() {
         render={({ field: { onChange, value } }) => (
           <View style={styles.fieldWrapper}>
             <View style={styles.optionList}>
-              {categories.map((cat) => (
+              {(categories as NonNullable<Category>[]).map((cat) => (
                 <TouchableOpacity
                   key={cat.id}
                   style={[styles.option, value === cat.id && styles.optionSelected]}
@@ -219,46 +194,14 @@ export function AddExpenseScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    backgroundColor: "#fff",
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 6,
-  },
-  fieldWrapper: {
-    marginBottom: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  inputError: {
-    borderColor: "#ef4444",
-  },
-  errorText: {
-    color: "#ef4444",
-    fontSize: 12,
-    marginTop: 4,
-  },
-  rootError: {
-    color: "#ef4444",
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  optionList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
+  container: { flexGrow: 1, padding: 24, backgroundColor: "#fff" },
+  label: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 6 },
+  fieldWrapper: { marginBottom: 20 },
+  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 16 },
+  inputError: { borderColor: "#ef4444" },
+  errorText: { color: "#ef4444", fontSize: 12, marginTop: 4 },
+  rootError: { color: "#ef4444", fontSize: 14, textAlign: "center", marginBottom: 12 },
+  optionList: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   option: {
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -267,28 +210,9 @@ const styles = StyleSheet.create({
     borderColor: "#ddd",
     backgroundColor: "#f9f9f9",
   },
-  optionSelected: {
-    borderColor: "#2563EB",
-    backgroundColor: "#EFF6FF",
-  },
-  optionText: {
-    fontSize: 13,
-    color: "#555",
-  },
-  optionTextSelected: {
-    color: "#2563EB",
-    fontWeight: "600",
-  },
-  button: {
-    backgroundColor: "#2563EB",
-    borderRadius: 8,
-    padding: 16,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  optionSelected: { borderColor: "#2563EB", backgroundColor: "#EFF6FF" },
+  optionText: { fontSize: 13, color: "#555" },
+  optionTextSelected: { color: "#2563EB", fontWeight: "600" },
+  button: { backgroundColor: "#2563EB", borderRadius: 8, padding: 16, alignItems: "center", marginTop: 8 },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

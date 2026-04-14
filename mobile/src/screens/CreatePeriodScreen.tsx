@@ -2,23 +2,12 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useMutation } from "@apollo/client/react";
-import { gql } from "@apollo/client";
+import { useCreatePeriodMutation } from "../graphql/__generated__/hooks";
 import { usePeriod } from "../context/PeriodContext";
-
-const CREATE_PERIOD_MUTATION = gql`
-  mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {
-    createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit) {
-      id
-      status
-    }
-  }
-`;
 
 const today = new Date();
 const in30Days = new Date(today);
 in30Days.setDate(today.getDate() + 29);
-
 const toISO = (d: Date) => d.toISOString().split("T")[0];
 
 const schema = yup.object({
@@ -55,9 +44,9 @@ export function CreatePeriodScreen() {
     },
   });
 
-  const [createPeriod, { loading }] = useMutation(CREATE_PERIOD_MUTATION, {
+  const [createPeriod, { loading }] = useCreatePeriodMutation({
     onCompleted: () => refetch(),
-    onError: (error: Error) => setError("root", { message: error.message }),
+    onError: (error) => setError("root", { message: error.message }),
   });
 
   const onSubmit = (values: FormValues) => {
@@ -73,9 +62,7 @@ export function CreatePeriodScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Novo planejamento</Text>
-      <Text style={styles.subtitle}>
-        Defina o período e quanto quer gastar por dia.
-      </Text>
+      <Text style={styles.subtitle}>Defina o período e quanto quer gastar por dia.</Text>
 
       <Text style={styles.label}>Data de início</Text>
       <Controller
@@ -148,65 +135,15 @@ export function CreatePeriodScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 6,
-  },
-  fieldWrapper: {
-    marginBottom: 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  inputError: {
-    borderColor: "#ef4444",
-  },
-  errorText: {
-    color: "#ef4444",
-    fontSize: 12,
-    marginTop: 4,
-  },
-  rootError: {
-    color: "#ef4444",
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  button: {
-    backgroundColor: "#2563EB",
-    borderRadius: 8,
-    padding: 16,
-    alignItems: "center",
-    marginTop: 8,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
+  container: { flexGrow: 1, padding: 24, justifyContent: "center", backgroundColor: "#fff" },
+  title: { fontSize: 28, fontWeight: "bold", marginBottom: 8, textAlign: "center" },
+  subtitle: { fontSize: 14, color: "#666", textAlign: "center", marginBottom: 32, lineHeight: 20 },
+  label: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 6 },
+  fieldWrapper: { marginBottom: 20 },
+  input: { borderWidth: 1, borderColor: "#ddd", borderRadius: 8, padding: 12, fontSize: 16 },
+  inputError: { borderColor: "#ef4444" },
+  errorText: { color: "#ef4444", fontSize: 12, marginTop: 4 },
+  rootError: { color: "#ef4444", fontSize: 14, textAlign: "center", marginBottom: 12 },
+  button: { backgroundColor: "#2563EB", borderRadius: 8, padding: 16, alignItems: "center", marginTop: 8 },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });

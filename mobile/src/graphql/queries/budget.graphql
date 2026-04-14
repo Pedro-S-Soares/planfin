@@ -1,0 +1,44 @@
+query ActivePeriod {
+  activePeriod {
+    id
+    startDate
+    endDate
+    dailyLimit
+    status
+    today {
+      id
+      date
+      dailyLimit
+      carryover
+      availableBalance
+      closedAt
+    }
+  }
+}
+
+query ExpenseHistory($periodId: ID!) {
+  expenseHistory(periodId: $periodId) {
+    date
+    total
+    expenses {
+      id
+      amount
+      note
+      subcategory {
+        id
+        name
+      }
+    }
+  }
+}
+
+query Categories {
+  categories {
+    id
+    name
+    subcategories {
+      id
+      name
+    }
+  }
+}

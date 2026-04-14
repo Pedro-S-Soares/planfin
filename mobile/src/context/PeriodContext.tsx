@@ -1,44 +1,10 @@
 import React, { createContext, useContext, useMemo } from "react";
-import { useQuery } from "@apollo/client/react";
-import { gql } from "@apollo/client";
+import { useActivePeriodQuery, ActivePeriodQuery } from "../graphql/__generated__/hooks";
 
-export const ACTIVE_PERIOD_QUERY = gql`
-  query ActivePeriod {
-    activePeriod {
-      id
-      startDate
-      endDate
-      dailyLimit
-      status
-      today {
-        id
-        date
-        dailyLimit
-        carryover
-        availableBalance
-        closedAt
-      }
-    }
-  }
-`;
+type Period = NonNullable<ActivePeriodQuery["activePeriod"]>;
+type BudgetDay = NonNullable<Period["today"]>;
 
-type BudgetDay = {
-  id: string;
-  date: string;
-  dailyLimit: string;
-  carryover: string;
-  availableBalance: string;
-  closedAt: string | null;
-};
-
-type Period = {
-  id: string;
-  startDate: string;
-  endDate: string;
-  dailyLimit: string;
-  status: string;
-  today: BudgetDay | null;
-};
+export type { Period, BudgetDay };
 
 type PeriodContextValue = {
   period: Period | null;
@@ -50,10 +16,9 @@ type PeriodContextValue = {
 const PeriodContext = createContext<PeriodContextValue | null>(null);
 
 export function PeriodProvider({ children }: { children: React.ReactNode }) {
-  const { data, loading, refetch } = useQuery<{ activePeriod: Period | null }>(
-    ACTIVE_PERIOD_QUERY,
-    { fetchPolicy: "network-only" }
-  );
+  const { data, loading, refetch } = useActivePeriodQuery({
+    fetchPolicy: "network-only",
+  });
 
   const period = data?.activePeriod ?? null;
   const hasActivePeriod = period !== null && period.status === "active";

@@ -4,9 +4,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useMutation } from "@apollo/client/react";
-import { gql } from "@apollo/client";
-
+import { useForgotPasswordMutation } from "../graphql/__generated__/hooks";
 import type { AuthStackParamList } from "../../App";
 
 const schema = yup.object({
@@ -14,12 +12,6 @@ const schema = yup.object({
 });
 
 type FormValues = yup.InferType<typeof schema>;
-
-const FORGOT_PASSWORD_MUTATION = gql`
-  mutation ForgotPassword($email: String!) {
-    forgotPassword(email: $email)
-  }
-`;
 
 type Props = NativeStackScreenProps<AuthStackParamList, "ForgotPassword">;
 
@@ -34,7 +26,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
     resolver: yupResolver(schema),
   });
 
-  const [forgotPassword, { loading }] = useMutation(FORGOT_PASSWORD_MUTATION, {
+  const [forgotPassword, { loading }] = useForgotPasswordMutation({
     onCompleted: () => setSent(true),
     onError: () => setSent(true), // Don't reveal whether email exists
   });

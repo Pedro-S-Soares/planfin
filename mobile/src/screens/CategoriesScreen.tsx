@@ -9,71 +9,34 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useQuery, useMutation } from "@apollo/client/react";
-import { gql } from "@apollo/client";
+import {
+  useCategoriesQuery,
+  useCreateCategoryMutation,
+  useUpdateCategoryMutation,
+  useDeleteCategoryMutation,
+  useCreateSubcategoryMutation,
+  useDeleteSubcategoryMutation,
+  CategoriesDocument,
+  CategoriesQuery,
+} from "../graphql/__generated__/hooks";
 
-const CATEGORIES_QUERY = gql`
-  query Categories {
-    categories {
-      id
-      name
-      subcategories {
-        id
-        name
-      }
-    }
-  }
-`;
+type Category = NonNullable<CategoriesQuery["categories"]>[number];
+type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
 
-const CREATE_CATEGORY_MUTATION = gql`
-  mutation CreateCategory($name: String!) {
-    createCategory(name: $name) { id name subcategories { id name } }
-  }
-`;
-
-const UPDATE_CATEGORY_MUTATION = gql`
-  mutation UpdateCategory($id: ID!, $name: String!) {
-    updateCategory(id: $id, name: $name) { id name }
-  }
-`;
-
-const DELETE_CATEGORY_MUTATION = gql`
-  mutation DeleteCategory($id: ID!) {
-    deleteCategory(id: $id)
-  }
-`;
-
-const CREATE_SUBCATEGORY_MUTATION = gql`
-  mutation CreateSubcategory($categoryId: ID!, $name: String!) {
-    createSubcategory(categoryId: $categoryId, name: $name) { id name }
-  }
-`;
-
-const DELETE_SUBCATEGORY_MUTATION = gql`
-  mutation DeleteSubcategory($id: ID!) {
-    deleteSubcategory(id: $id)
-  }
-`;
-
-type Subcategory = { id: string; name: string };
-type Category = { id: string; name: string; subcategories: Subcategory[] };
-
-const refetchCategories = [{ query: CATEGORIES_QUERY }];
+const refetchCategories = [{ query: CategoriesDocument }];
 
 export function CategoriesScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newSubName, setNewSubName] = useState<Record<string, string>>({});
 
-  const { data, loading } = useQuery<{ categories: Category[] }>(CATEGORIES_QUERY, {
-    fetchPolicy: "network-only",
-  });
+  const { data, loading } = useCategoriesQuery({ fetchPolicy: "network-only" });
 
-  const [createCategory] = useMutation(CREATE_CATEGORY_MUTATION, { refetchQueries: refetchCategories });
-  const [updateCategory] = useMutation(UPDATE_CATEGORY_MUTATION, { refetchQueries: refetchCategories });
-  const [deleteCategory] = useMutation(DELETE_CATEGORY_MUTATION, { refetchQueries: refetchCategories });
-  const [createSubcategory] = useMutation(CREATE_SUBCATEGORY_MUTATION, { refetchQueries: refetchCategories });
-  const [deleteSubcategory] = useMutation(DELETE_SUBCATEGORY_MUTATION, { refetchQueries: refetchCategories });
+  const [createCategory] = useCreateCategoryMutation({ refetchQueries: refetchCategories });
+  const [updateCategory] = useUpdateCategoryMutation({ refetchQueries: refetchCategories });
+  const [deleteCategory] = useDeleteCategoryMutation({ refetchQueries: refetchCategories });
+  const [createSubcategory] = useCreateSubcategoryMutation({ refetchQueries: refetchCategories });
+  const [deleteSubcategory] = useDeleteSubcategoryMutation({ refetchQueries: refetchCategories });
 
   const handleAddCategory = () => {
     const name = newCategoryName.trim();
@@ -82,10 +45,10 @@ export function CategoriesScreen() {
     setNewCategoryName("");
   };
 
-  const handleRenameCategory = (cat: Category) => {
+  const handleRenameCategory = (cat: NonNullable<Category>) => {
     Alert.prompt("Renomear categoria", "Novo nome:", (name) => {
-      if (name?.trim()) updateCategory({ variables: { id: cat.id, name: name.trim() } });
-    }, "plain-text", cat.name);
+      if (name?.trim()) updateCategory({ variables: { id: cat.id ?? "", name: name.trim() } });
+    }, "plain-text", cat.name ?? "");
   };
 
   const handleDeleteCategory = (id: string) => {
@@ -103,7 +66,7 @@ export function CategoriesScreen() {
     deleteSubcategory({ variables: { id } });
   };
 
-  const categories = data?.categories ?? [];
+  const categories = (data?.categories ?? []).filter(Boolean) as NonNullable<Category>[];
 
   if (loading) {
     return (
@@ -117,7 +80,7 @@ export function CategoriesScreen() {
     <View style={styles.container}>
       <FlatList
         data={categories}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item?.id ?? ""}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View style={styles.addRow}>
@@ -136,14 +99,14 @@ export function CategoriesScreen() {
           <View style={styles.categoryCard}>
             <TouchableOpacity
               style={styles.categoryHeader}
-              onPress={() => setExpandedId(expandedId === cat.id ? null : cat.id)}
+              onPress={() => setExpandedId(expandedId === cat.id ? null : cat.id ?? null)}
             >
               <Text style={styles.categoryName}>{cat.name}</Text>
               <View style={styles.categoryActions}>
                 <TouchableOpacity onPress={() => handleRenameCategory(cat)} style={styles.actionBtn}>
                   <Text style={styles.editText}>✎</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDeleteCategory(cat.id)} style={styles.actionBtn}>
+                <TouchableOpacity onPress={() => handleDeleteCategory(cat.id ?? "")} style={styles.actionBtn}>
                   <Text style={styles.deleteText}>✕</Text>
                 </TouchableOpacity>
                 <Text style={styles.chevron}>{expandedId === cat.id ? "▲" : "▼"}</Text>
@@ -152,10 +115,10 @@ export function CategoriesScreen() {
 
             {expandedId === cat.id && (
               <View style={styles.subcategorySection}>
-                {cat.subcategories.map((sub: Subcategory) => (
-                  <View key={sub.id} style={styles.subRow}>
-                    <Text style={styles.subName}>{sub.name}</Text>
-                    <TouchableOpacity onPress={() => handleDeleteSubcategory(sub.id)}>
+                {(cat.subcategories ?? []).filter(Boolean).map((sub: Subcategory) => (
+                  <View key={sub?.id ?? ""} style={styles.subRow}>
+                    <Text style={styles.subName}>{sub?.name}</Text>
+                    <TouchableOpacity onPress={() => handleDeleteSubcategory(sub?.id ?? "")}>
                       <Text style={styles.deleteText}>✕</Text>
                     </TouchableOpacity>
                   </View>
@@ -164,10 +127,10 @@ export function CategoriesScreen() {
                   <TextInput
                     style={[styles.addInput, styles.addInputSm]}
                     placeholder="Nova subcategoria..."
-                    value={newSubName[cat.id] ?? ""}
-                    onChangeText={(t) => setNewSubName((prev) => ({ ...prev, [cat.id]: t }))}
+                    value={newSubName[cat.id ?? ""] ?? ""}
+                    onChangeText={(t) => setNewSubName((prev) => ({ ...prev, [cat.id ?? ""]: t }))}
                   />
-                  <TouchableOpacity style={styles.addButton} onPress={() => handleAddSubcategory(cat.id)}>
+                  <TouchableOpacity style={styles.addButton} onPress={() => handleAddSubcategory(cat.id ?? "")}>
                     <Text style={styles.addButtonText}>+</Text>
                   </TouchableOpacity>
                 </View>

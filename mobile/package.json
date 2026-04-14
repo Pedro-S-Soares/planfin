@@ -13,7 +13,7 @@
   "dependencies": {
     "@absinthe/socket": "^0.2.1",
     "@absinthe/socket-apollo-link": "^0.2.1",
-    "@apollo/client": "^4.1.7",
+    "@apollo/client": "^3.14.1",
     "@hookform/resolvers": "^5.2.2",
     "@react-navigation/bottom-tabs": "^7.15.9",
     "@react-navigation/native": "^7.2.2",

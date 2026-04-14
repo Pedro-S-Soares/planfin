@@ -4,9 +4,7 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useMutation } from "@apollo/client/react";
-import { gql } from "@apollo/client";
-
+import { useResetPasswordMutation } from "../graphql/__generated__/hooks";
 import type { AuthStackParamList } from "../../App";
 
 const schema = yup.object({
@@ -21,14 +19,6 @@ const schema = yup.object({
 });
 
 type FormValues = yup.InferType<typeof schema>;
-
-const RESET_PASSWORD_MUTATION = gql`
-  mutation ResetPassword($token: String!, $password: String!, $passwordConfirmation: String!) {
-    resetPassword(token: $token, password: $password, passwordConfirmation: $passwordConfirmation)
-  }
-`;
-
-type ResetPasswordVars = { token: string; password: string; passwordConfirmation: string };
 
 type Props = NativeStackScreenProps<AuthStackParamList, "ResetPassword">;
 
@@ -45,13 +35,10 @@ export function ResetPasswordScreen({ route, navigation }: Props) {
     resolver: yupResolver(schema),
   });
 
-  const [resetPassword, { loading }] = useMutation<{ resetPassword: boolean }, ResetPasswordVars>(
-    RESET_PASSWORD_MUTATION,
-    {
-      onCompleted: () => setDone(true),
-      onError: (error) => setError("root", { message: error.message }),
-    }
-  );
+  const [resetPassword, { loading }] = useResetPasswordMutation({
+    onCompleted: () => setDone(true),
+    onError: (error) => setError("root", { message: error.message }),
+  });
 
   const onSubmit = (values: FormValues) => {
     resetPassword({ variables: { token, ...values } });

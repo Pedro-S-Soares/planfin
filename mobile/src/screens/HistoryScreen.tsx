@@ -1,44 +1,13 @@
 import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator } from "react-native";
-import { useQuery, useMutation } from "@apollo/client/react";
-import { gql } from "@apollo/client";
+import {
+  useExpenseHistoryQuery,
+  useDeleteExpenseMutation,
+  ExpenseHistoryQuery,
+} from "../graphql/__generated__/hooks";
 import { usePeriod } from "../context/PeriodContext";
 
-const EXPENSE_HISTORY_QUERY = gql`
-  query ExpenseHistory($periodId: ID!) {
-    expenseHistory(periodId: $periodId) {
-      date
-      total
-      expenses {
-        id
-        amount
-        note
-        subcategory {
-          id
-          name
-        }
-      }
-    }
-  }
-`;
-
-const DELETE_EXPENSE_MUTATION = gql`
-  mutation DeleteExpense($id: ID!) {
-    deleteExpense(id: $id)
-  }
-`;
-
-type Expense = {
-  id: string;
-  amount: string;
-  note: string | null;
-  subcategory: { id: string; name: string } | null;
-};
-
-type ExpenseDay = {
-  date: string;
-  total: string;
-  expenses: Expense[];
-};
+type ExpenseDay = NonNullable<ExpenseHistoryQuery["expenseHistory"]>[number];
+type Expense = NonNullable<NonNullable<ExpenseDay>["expenses"]>[number];
 
 function formatDate(dateStr: string) {
   const [year, month, day] = dateStr.split("-");
@@ -48,23 +17,20 @@ function formatDate(dateStr: string) {
 export function HistoryScreen() {
   const { period } = usePeriod();
 
-  const { data, loading, refetch } = useQuery<{ expenseHistory: ExpenseDay[] }>(
-    EXPENSE_HISTORY_QUERY,
-    {
-      variables: { periodId: period?.id },
-      skip: !period?.id,
-      fetchPolicy: "network-only",
-    }
-  );
+  const { data, loading, refetch } = useExpenseHistoryQuery({
+    variables: { periodId: period?.id ?? "" },
+    skip: !period?.id,
+    fetchPolicy: "network-only",
+  });
 
-  const [deleteExpense] = useMutation(DELETE_EXPENSE_MUTATION, {
+  const [deleteExpense] = useDeleteExpenseMutation({
     onCompleted: () => refetch(),
   });
 
   const sections = (data?.expenseHistory ?? []).map((day: ExpenseDay) => ({
-    title: day.date,
-    total: day.total,
-    data: day.expenses,
+    title: day?.date ?? "",
+    total: day?.total ?? "0",
+    data: (day?.expenses ?? []).filter(Boolean) as NonNullable<Expense>[],
   }));
 
   if (loading) {
@@ -87,7 +53,7 @@ export function HistoryScreen() {
     <View style={styles.container}>
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item?.id ?? ""}
         contentContainerStyle={styles.list}
         renderSectionHeader={({ section }) => (
           <View style={styles.sectionHeader}>
@@ -101,16 +67,16 @@ export function HistoryScreen() {
           <View style={styles.expenseItem}>
             <View style={styles.expenseInfo}>
               <Text style={styles.expenseCategory}>
-                {item.subcategory?.name ?? "Sem categoria"}
+                {item?.subcategory?.name ?? "Sem categoria"}
               </Text>
-              {item.note ? <Text style={styles.expenseNote}>{item.note}</Text> : null}
+              {item?.note ? <Text style={styles.expenseNote}>{item.note}</Text> : null}
             </View>
             <View style={styles.expenseRight}>
               <Text style={styles.expenseAmount}>
-                R$ {parseFloat(item.amount).toFixed(2).replace(".", ",")}
+                R$ {parseFloat(item?.amount ?? "0").toFixed(2).replace(".", ",")}
               </Text>
               <TouchableOpacity
-                onPress={() => deleteExpense({ variables: { id: item.id } })}
+                onPress={() => deleteExpense({ variables: { id: item?.id ?? "" } })}
                 style={styles.deleteButton}
               >
                 <Text style={styles.deleteText}>✕</Text>
