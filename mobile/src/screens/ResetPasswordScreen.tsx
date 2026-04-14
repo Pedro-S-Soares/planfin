@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
@@ -6,11 +7,9 @@ import * as yup from "yup";
 import { useMutation } from "@apollo/client/react";
 import { gql } from "@apollo/client";
 
-import { useAuth } from "../context/AuthContext";
 import type { AuthStackParamList } from "../../App";
 
 const schema = yup.object({
-  email: yup.string().email("Email inválido").required("Email é obrigatório"),
   password: yup
     .string()
     .min(8, "A senha deve ter pelo menos 8 caracteres")
@@ -23,25 +22,19 @@ const schema = yup.object({
 
 type FormValues = yup.InferType<typeof schema>;
 
-const REGISTER_MUTATION = gql`
-  mutation RegisterUser($email: String!, $password: String!, $passwordConfirmation: String!) {
-    registerUser(email: $email, password: $password, passwordConfirmation: $passwordConfirmation) {
-      token
-      user {
-        id
-        email
-      }
-    }
+const RESET_PASSWORD_MUTATION = gql`
+  mutation ResetPassword($token: String!, $password: String!, $passwordConfirmation: String!) {
+    resetPassword(token: $token, password: $password, passwordConfirmation: $passwordConfirmation)
   }
 `;
 
-type RegisterData = { registerUser: { token: string; user: { id: string; email: string } } };
-type RegisterVars = { email: string; password: string; passwordConfirmation: string };
+type ResetPasswordVars = { token: string; password: string; passwordConfirmation: string };
 
-type Props = NativeStackScreenProps<AuthStackParamList, "Register">;
+type Props = NativeStackScreenProps<AuthStackParamList, "ResetPassword">;
 
-export function RegisterScreen({ navigation }: Props) {
-  const { signIn } = useAuth();
+export function ResetPasswordScreen({ route, navigation }: Props) {
+  const { token } = route.params;
+  const [done, setDone] = useState(false);
 
   const {
     control,
@@ -52,42 +45,36 @@ export function RegisterScreen({ navigation }: Props) {
     resolver: yupResolver(schema),
   });
 
-  const [registerUser, { loading }] = useMutation<RegisterData, RegisterVars>(REGISTER_MUTATION, {
-    onCompleted: async (data) => {
-      await signIn(data.registerUser.token, data.registerUser.user);
-    },
-    onError: (error) => {
-      setError("root", { message: error.message });
-    },
-  });
+  const [resetPassword, { loading }] = useMutation<{ resetPassword: boolean }, ResetPasswordVars>(
+    RESET_PASSWORD_MUTATION,
+    {
+      onCompleted: () => setDone(true),
+      onError: (error) => setError("root", { message: error.message }),
+    }
+  );
 
   const onSubmit = (values: FormValues) => {
-    registerUser({ variables: values });
+    resetPassword({ variables: { token, ...values } });
   };
+
+  if (done) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Senha redefinida</Text>
+        <Text style={styles.description}>
+          Sua senha foi atualizada com sucesso. Faça login com a nova senha.
+        </Text>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("Login")}>
+          <Text style={styles.buttonText}>Ir para login</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Criar conta</Text>
-
-      <Controller
-        control={control}
-        name="email"
-        render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.fieldWrapper}>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
-              placeholder="Email"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-          </View>
-        )}
-      />
+      <Text style={styles.title}>Nova senha</Text>
+      <Text style={styles.description}>Escolha uma nova senha para sua conta.</Text>
 
       <Controller
         control={control}
@@ -96,7 +83,7 @@ export function RegisterScreen({ navigation }: Props) {
           <View style={styles.fieldWrapper}>
             <TextInput
               style={[styles.input, errors.password && styles.inputError]}
-              placeholder="Senha"
+              placeholder="Nova senha"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -115,7 +102,7 @@ export function RegisterScreen({ navigation }: Props) {
           <View style={styles.fieldWrapper}>
             <TextInput
               style={[styles.input, errors.passwordConfirmation && styles.inputError]}
-              placeholder="Confirmar senha"
+              placeholder="Confirmar nova senha"
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -135,12 +122,12 @@ export function RegisterScreen({ navigation }: Props) {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Criar conta</Text>
+          <Text style={styles.buttonText}>Redefinir senha</Text>
         )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-        <Text style={styles.link}>Já tenho conta</Text>
+        <Text style={styles.link}>Voltar para login</Text>
       </TouchableOpacity>
     </View>
   );
@@ -156,8 +143,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    marginBottom: 32,
+    marginBottom: 12,
     textAlign: "center",
+  },
+  description: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 20,
   },
   fieldWrapper: {
     marginBottom: 16,

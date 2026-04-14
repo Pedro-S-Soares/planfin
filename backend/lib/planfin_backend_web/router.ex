@@ -32,8 +32,7 @@ defmodule PlanfinBackendWeb.Router do
   scope "/api" do
     pipe_through :graphql
 
-    forward "/graphql", Absinthe.Plug,
-      schema: PlanfinBackendWeb.Schema
+    forward "/graphql", Absinthe.Plug, schema: PlanfinBackendWeb.Schema
 
     if Mix.env() == :dev do
       forward "/graphiql", Absinthe.Plug.GraphiQL,
