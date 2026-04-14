@@ -23,24 +23,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Restore token from storage on app start
-    storage.getItem("auth_token").then((storedToken) => {
-      if (storedToken) {
-        setToken(storedToken);
-        // User will be fetched by screens that need it via `me` query
+    Promise.all([
+      storage.getItem("auth_token"),
+      storage.getItem("auth_user"),
+    ]).then(([storedToken, storedUser]) => {
+      if (storedToken) setToken(storedToken);
+      if (storedUser) {
+        try {
+          setUser(JSON.parse(storedUser));
+        } catch {
+          // ignore malformed user data
+        }
       }
       setIsLoading(false);
     });
   }, []);
 
   const signIn = useCallback(async (newToken: string, newUser: User) => {
-    await storage.setItem("auth_token", newToken);
+    await Promise.all([
+      storage.setItem("auth_token", newToken),
+      storage.setItem("auth_user", JSON.stringify(newUser)),
+    ]);
     setToken(newToken);
     setUser(newUser);
   }, []);
 
   const signOut = useCallback(async () => {
-    await storage.deleteItem("auth_token");
+    await Promise.all([
+      storage.deleteItem("auth_token"),
+      storage.deleteItem("auth_user"),
+    ]);
     setToken(null);
     setUser(null);
     await apolloClient.clearStore();

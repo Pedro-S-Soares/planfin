@@ -1,18 +1,20 @@
-import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useForm, Controller } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
 import { useMutation } from "@apollo/client/react";
 import { gql } from "@apollo/client";
+
 import { useAuth } from "../context/AuthContext";
 import type { AuthStackParamList } from "../../App";
+
+const schema = yup.object({
+  email: yup.string().email("Email inválido").required("Email é obrigatório"),
+  password: yup.string().required("Senha é obrigatória"),
+});
+
+type FormValues = yup.InferType<typeof schema>;
 
 const LOGIN_MUTATION = gql`
   mutation Login($email: String!, $password: String!) {
@@ -32,25 +34,28 @@ type LoginVars = { email: string; password: string };
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
 export function LoginScreen({ navigation }: Props) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const { signIn } = useAuth();
+
+  const {
+    control,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: yupResolver(schema),
+  });
 
   const [login, { loading }] = useMutation<LoginData, LoginVars>(LOGIN_MUTATION, {
     onCompleted: async (data) => {
       await signIn(data.login.token, data.login.user);
     },
     onError: (error) => {
-      Alert.alert("Erro", error.message);
+      setError("root", { message: error.message });
     },
   });
 
-  const handleLogin = () => {
-    if (!email || !password) {
-      Alert.alert("Erro", "Preencha todos os campos");
-      return;
-    }
-    login({ variables: { email, password } });
+  const onSubmit = (values: FormValues) => {
+    login({ variables: values });
   };
 
   return (
@@ -58,31 +63,49 @@ export function LoginScreen({ navigation }: Props) {
       <Text style={styles.title}>Planfin</Text>
       <Text style={styles.subtitle}>Entrar na sua conta</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        autoComplete="email"
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoComplete="password"
-      />
-
-      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Entrar</Text>
+      <Controller
+        control={control}
+        name="email"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <View style={styles.fieldWrapper}>
+            <TextInput
+              style={[styles.input, errors.email && styles.inputError]}
+              placeholder="Email"
+              value={value}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+            />
+            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+          </View>
         )}
+      />
+
+      <Controller
+        control={control}
+        name="password"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <View style={styles.fieldWrapper}>
+            <TextInput
+              style={[styles.input, errors.password && styles.inputError]}
+              placeholder="Senha"
+              value={value}
+              onChangeText={onChange}
+              onBlur={onBlur}
+              secureTextEntry
+              autoComplete="password"
+            />
+            {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
+          </View>
+        )}
+      />
+
+      {errors.root && <Text style={styles.rootError}>{errors.root.message}</Text>}
+
+      <TouchableOpacity style={styles.button} onPress={handleSubmit(onSubmit)} disabled={loading}>
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Entrar</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
@@ -115,13 +138,29 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     textAlign: "center",
   },
+  fieldWrapper: {
+    marginBottom: 16,
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 8,
     padding: 12,
-    marginBottom: 16,
     fontSize: 16,
+  },
+  inputError: {
+    borderColor: "#ef4444",
+  },
+  errorText: {
+    color: "#ef4444",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  rootError: {
+    color: "#ef4444",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 12,
   },
   button: {
     backgroundColor: "#2563EB",

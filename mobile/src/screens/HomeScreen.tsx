@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useMutation } from "@apollo/client/react";
 import { gql } from "@apollo/client";
 import { useAuth } from "../context/AuthContext";
@@ -17,12 +17,7 @@ export function HomeScreen() {
     onError: () => signOut(), // Sign out locally even if server fails
   });
 
-  const handleLogout = () => {
-    Alert.alert("Sair", "Deseja sair da sua conta?", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Sair", style: "destructive", onPress: () => logout() },
-    ]);
-  };
+  const handleLogout = () => logout();
 
   return (
     <View style={styles.container}>

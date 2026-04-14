@@ -37,7 +37,7 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
     if user = Accounts.get_user_by_email(email) do
       Accounts.deliver_user_reset_password_instructions(
         user,
-        &"/reset-password/#{&1}"
+        fn token -> "planfin://reset-password/#{token}" end
       )
     end
 
