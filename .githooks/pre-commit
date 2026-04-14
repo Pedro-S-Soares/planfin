@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+# ── Backend checks ────────────────────────────────────────────────────────────
+if git diff --cached --name-only | grep -q "^backend/"; then
+  echo "🔍 Backend changes detected — running checks..."
+
+  cd "$ROOT/backend"
+
+  echo "  → mix format --check-formatted"
+  if ! mix format --check-formatted 2>&1; then
+    echo ""
+    echo "❌ Formatting check failed."
+    echo "   Run 'mix format' inside the backend/ directory, re-stage the files and commit again."
+    exit 1
+  fi
+
+  echo "  → mix test"
+  if ! mix test 2>&1; then
+    echo ""
+    echo "❌ Tests failed. Fix the failing tests before committing."
+    exit 1
+  fi
+
+  echo "✅ Backend checks passed."
+fi
