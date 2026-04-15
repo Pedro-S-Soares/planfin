@@ -2,22 +2,23 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView 
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   useCategoriesQuery,
-  useCreateExpenseMutation,
+  useUpdateExpenseMutation,
   ActivePeriodDocument,
-  ExpenseHistoryDocument,
   CategoriesQuery,
 } from "../graphql/__generated__/hooks";
 import { usePeriod } from "../context/PeriodContext";
 import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
-import { toISODate } from "../lib/date";
-import { displayToAPI } from "../lib/currency";
+import { displayToAPI, formatCents, parseCents } from "../lib/currency";
+import type { AppStackParamList } from "../../App";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
+type RouteParams = AppStackParamList["EditExpense"];
 
 const schema = yup.object({
   amount: yup
@@ -30,10 +31,17 @@ const schema = yup.object({
   subcategoryId: yup.string().optional(),
 });
 
-export function AddExpenseScreen() {
-  const navigation = useNavigation();
-  const { period, refetch } = usePeriod();
+function apiToDisplay(apiAmount: string): string {
+  const cents = Math.round(parseFloat(apiAmount) * 100);
+  return formatCents(cents);
+}
 
+export function EditExpenseScreen() {
+  const navigation = useNavigation();
+  const route = useRoute<NativeStackScreenProps<AppStackParamList, "EditExpense">["route"]>();
+  const { id, amount, date, note, subcategoryId, categoryId } = route.params;
+
+  const { period, refetch } = usePeriod();
   const { data: catData } = useCategoriesQuery();
   const categories = catData?.categories ?? [];
 
@@ -46,11 +54,11 @@ export function AddExpenseScreen() {
   } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
-      amount: "0,00",
-      date: toISODate(new Date()),
-      note: "",
-      categoryId: "",
-      subcategoryId: "",
+      amount: apiToDisplay(amount),
+      date,
+      note: note ?? "",
+      categoryId: categoryId ?? "",
+      subcategoryId: subcategoryId ?? "",
     },
   });
 
@@ -58,7 +66,7 @@ export function AddExpenseScreen() {
   const subcategories: NonNullable<Subcategory>[] =
     categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
 
-  const [createExpense, { loading }] = useCreateExpenseMutation({
+  const [updateExpense, { loading }] = useUpdateExpenseMutation({
     onCompleted: () => {
       refetch();
       navigation.goBack();
@@ -68,8 +76,9 @@ export function AddExpenseScreen() {
   });
 
   const onSubmit = (values: yup.InferType<typeof schema>) => {
-    createExpense({
+    updateExpense({
       variables: {
+        id,
         amount: displayToAPI(values.amount),
         date: values.date,
         note: values.note || null,
@@ -178,7 +187,7 @@ export function AddExpenseScreen() {
       {errors.root && <Text className="text-red-500 text-sm text-center mb-3">{errors.root.message}</Text>}
 
       <TouchableOpacity className="bg-blue-600 rounded-lg p-4 items-center mt-2" onPress={handleSubmit(onSubmit)} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-base font-semibold">Registrar gasto</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-base font-semibold">Salvar alterações</Text>}
       </TouchableOpacity>
     </ScrollView>
   );

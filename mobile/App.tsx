@@ -1,3 +1,4 @@
+import "./global.css";
 import { ApolloProvider } from "@apollo/client/react";
 import { NavigationContainer, LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -16,6 +17,7 @@ import { ResetPasswordScreen } from "./src/screens/ResetPasswordScreen";
 import { CreatePeriodScreen } from "./src/screens/CreatePeriodScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { AddExpenseScreen } from "./src/screens/AddExpenseScreen";
+import { EditExpenseScreen } from "./src/screens/EditExpenseScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
 import { usePeriod } from "./src/context/PeriodContext";
@@ -34,6 +36,14 @@ export type AppStackParamList = {
   CreatePeriod: undefined;
   MainTabs: undefined;
   AddExpense: undefined;
+  EditExpense: {
+    id: string;
+    amount: string;
+    date: string;
+    note?: string;
+    subcategoryId?: string;
+    categoryId?: string;
+  };
 };
 
 export type MainTabParamList = {
@@ -93,6 +103,11 @@ function AppNavigator() {
             name="AddExpense"
             component={AddExpenseScreen}
             options={{ presentation: "modal", headerShown: true, title: "Novo gasto" }}
+          />
+          <AppStack.Screen
+            name="EditExpense"
+            component={EditExpenseScreen}
+            options={{ presentation: "modal", headerShown: true, title: "Editar gasto" }}
           />
         </>
       )}

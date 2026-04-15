@@ -56,6 +56,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
 
   object :budget_queries do
     field :active_period, :period do
+      arg(:today, :string)
       resolve(&Budget.active_period/3)
     end
 
@@ -92,6 +93,15 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:note, :string)
       arg(:subcategory_id, :id)
       resolve(&Budget.create_expense/3)
+    end
+
+    field :update_expense, :expense do
+      arg(:id, non_null(:id))
+      arg(:amount, :string)
+      arg(:date, :string)
+      arg(:note, :string)
+      arg(:subcategory_id, :id)
+      resolve(&Budget.update_expense/3)
     end
 
     field :delete_expense, :boolean do

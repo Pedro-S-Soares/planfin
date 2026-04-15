@@ -1,5 +1,5 @@
-query ActivePeriod {
-  activePeriod {
+query ActivePeriod($today: String!) {
+  activePeriod(today: $today) {
     id
     startDate
     endDate
@@ -23,6 +23,7 @@ query ExpenseHistory($periodId: ID!) {
     expenses {
       id
       amount
+      date
       note
       subcategory {
         id

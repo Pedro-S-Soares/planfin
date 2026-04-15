@@ -89,6 +89,7 @@ export type RootMutationType = {
   registerUser?: Maybe<AuthPayload>;
   resetPassword?: Maybe<Scalars['Boolean']['output']>;
   updateCategory?: Maybe<Category>;
+  updateExpense?: Maybe<Expense>;
   updateSubcategory?: Maybe<Subcategory>;
 };
 
@@ -165,6 +166,15 @@ export type RootMutationTypeUpdateCategoryArgs = {
 };
 
 
+export type RootMutationTypeUpdateExpenseArgs = {
+  amount?: InputMaybe<Scalars['String']['input']>;
+  date?: InputMaybe<Scalars['String']['input']>;
+  id: Scalars['ID']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+  subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
 export type RootMutationTypeUpdateSubcategoryArgs = {
   id: Scalars['ID']['input'];
   name: Scalars['String']['input'];
@@ -178,6 +188,11 @@ export type RootQueryType = {
   me?: Maybe<User>;
   periodSummary?: Maybe<PeriodSummary>;
   periods?: Maybe<Array<Maybe<Period>>>;
+};
+
+
+export type RootQueryTypeActivePeriodArgs = {
+  today?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -260,6 +275,17 @@ export type CreateExpenseMutationVariables = Exact<{
 
 export type CreateExpenseMutation = { __typename?: 'RootMutationType', createExpense?: { __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null };
 
+export type UpdateExpenseMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  amount?: InputMaybe<Scalars['String']['input']>;
+  date?: InputMaybe<Scalars['String']['input']>;
+  note?: InputMaybe<Scalars['String']['input']>;
+  subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+
+export type UpdateExpenseMutation = { __typename?: 'RootMutationType', updateExpense?: { __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null };
+
 export type DeleteExpenseMutationVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
@@ -304,7 +330,9 @@ export type DeleteSubcategoryMutationVariables = Exact<{
 
 export type DeleteSubcategoryMutation = { __typename?: 'RootMutationType', deleteSubcategory?: boolean | null };
 
-export type ActivePeriodQueryVariables = Exact<{ [key: string]: never; }>;
+export type ActivePeriodQueryVariables = Exact<{
+  today: Scalars['String']['input'];
+}>;
 
 
 export type ActivePeriodQuery = { __typename?: 'RootQueryType', activePeriod?: { __typename?: 'Period', id?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null, status?: string | null, today?: { __typename?: 'BudgetDay', id?: string | null, date?: string | null, dailyLimit?: string | null, carryover?: string | null, availableBalance?: string | null, closedAt?: string | null } | null } | null };
@@ -314,7 +342,7 @@ export type ExpenseHistoryQueryVariables = Exact<{
 }>;
 
 
-export type ExpenseHistoryQuery = { __typename?: 'RootQueryType', expenseHistory?: Array<{ __typename?: 'ExpenseDay', date?: string | null, total?: string | null, expenses?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null> | null } | null> | null };
+export type ExpenseHistoryQuery = { __typename?: 'RootQueryType', expenseHistory?: Array<{ __typename?: 'ExpenseDay', date?: string | null, total?: string | null, expenses?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null> | null } | null> | null };
 
 export type CategoriesQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -590,6 +618,56 @@ export function useCreateExpenseMutation(baseOptions?: Apollo.MutationHookOption
 export type CreateExpenseMutationHookResult = ReturnType<typeof useCreateExpenseMutation>;
 export type CreateExpenseMutationResult = Apollo.MutationResult<CreateExpenseMutation>;
 export type CreateExpenseMutationOptions = Apollo.BaseMutationOptions<CreateExpenseMutation, CreateExpenseMutationVariables>;
+export const UpdateExpenseDocument = gql`
+    mutation UpdateExpense($id: ID!, $amount: String, $date: String, $note: String, $subcategoryId: ID) {
+  updateExpense(
+    id: $id
+    amount: $amount
+    date: $date
+    note: $note
+    subcategoryId: $subcategoryId
+  ) {
+    id
+    amount
+    date
+    note
+    subcategory {
+      id
+      name
+    }
+  }
+}
+    `;
+export type UpdateExpenseMutationFn = Apollo.MutationFunction<UpdateExpenseMutation, UpdateExpenseMutationVariables>;
+
+/**
+ * __useUpdateExpenseMutation__
+ *
+ * To run a mutation, you first call `useUpdateExpenseMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateExpenseMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateExpenseMutation, { data, loading, error }] = useUpdateExpenseMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      amount: // value for 'amount'
+ *      date: // value for 'date'
+ *      note: // value for 'note'
+ *      subcategoryId: // value for 'subcategoryId'
+ *   },
+ * });
+ */
+export function useUpdateExpenseMutation(baseOptions?: Apollo.MutationHookOptions<UpdateExpenseMutation, UpdateExpenseMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateExpenseMutation, UpdateExpenseMutationVariables>(UpdateExpenseDocument, options);
+      }
+export type UpdateExpenseMutationHookResult = ReturnType<typeof useUpdateExpenseMutation>;
+export type UpdateExpenseMutationResult = Apollo.MutationResult<UpdateExpenseMutation>;
+export type UpdateExpenseMutationOptions = Apollo.BaseMutationOptions<UpdateExpenseMutation, UpdateExpenseMutationVariables>;
 export const DeleteExpenseDocument = gql`
     mutation DeleteExpense($id: ID!) {
   deleteExpense(id: $id)
@@ -792,8 +870,8 @@ export type DeleteSubcategoryMutationHookResult = ReturnType<typeof useDeleteSub
 export type DeleteSubcategoryMutationResult = Apollo.MutationResult<DeleteSubcategoryMutation>;
 export type DeleteSubcategoryMutationOptions = Apollo.BaseMutationOptions<DeleteSubcategoryMutation, DeleteSubcategoryMutationVariables>;
 export const ActivePeriodDocument = gql`
-    query ActivePeriod {
-  activePeriod {
+    query ActivePeriod($today: String!) {
+  activePeriod(today: $today) {
     id
     startDate
     endDate
@@ -823,10 +901,11 @@ export const ActivePeriodDocument = gql`
  * @example
  * const { data, loading, error } = useActivePeriodQuery({
  *   variables: {
+ *      today: // value for 'today'
  *   },
  * });
  */
-export function useActivePeriodQuery(baseOptions?: Apollo.QueryHookOptions<ActivePeriodQuery, ActivePeriodQueryVariables>) {
+export function useActivePeriodQuery(baseOptions: Apollo.QueryHookOptions<ActivePeriodQuery, ActivePeriodQueryVariables> & ({ variables: ActivePeriodQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<ActivePeriodQuery, ActivePeriodQueryVariables>(ActivePeriodDocument, options);
       }
@@ -853,6 +932,7 @@ export const ExpenseHistoryDocument = gql`
     expenses {
       id
       amount
+      date
       note
       subcategory {
         id

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo } from "react";
 import { useActivePeriodQuery, ActivePeriodQuery } from "../graphql/__generated__/hooks";
+import { toISODate } from "../lib/date";
 
 type Period = NonNullable<ActivePeriodQuery["activePeriod"]>;
 type BudgetDay = NonNullable<Period["today"]>;
@@ -17,6 +18,7 @@ const PeriodContext = createContext<PeriodContextValue | null>(null);
 
 export function PeriodProvider({ children }: { children: React.ReactNode }) {
   const { data, loading, refetch } = useActivePeriodQuery({
+    variables: { today: toISODate(new Date()) },
     fetchPolicy: "network-only",
   });
 

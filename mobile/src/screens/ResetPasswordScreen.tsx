@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -46,30 +46,30 @@ export function ResetPasswordScreen({ route, navigation }: Props) {
 
   if (done) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Senha redefinida</Text>
-        <Text style={styles.description}>
+      <View className="flex-1 p-6 justify-center bg-white">
+        <Text className="text-2xl font-bold mb-3 text-center">Senha redefinida</Text>
+        <Text className="text-sm text-neutral-500 text-center mb-8 leading-5">
           Sua senha foi atualizada com sucesso. Faça login com a nova senha.
         </Text>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate("Login")}>
-          <Text style={styles.buttonText}>Ir para login</Text>
+        <TouchableOpacity className="bg-blue-600 rounded-lg p-4 items-center mb-4" onPress={() => navigation.navigate("Login")}>
+          <Text className="text-white text-base font-semibold">Ir para login</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Nova senha</Text>
-      <Text style={styles.description}>Escolha uma nova senha para sua conta.</Text>
+    <View className="flex-1 p-6 justify-center bg-white">
+      <Text className="text-2xl font-bold mb-3 text-center">Nova senha</Text>
+      <Text className="text-sm text-neutral-500 text-center mb-8 leading-5">Escolha uma nova senha para sua conta.</Text>
 
       <Controller
         control={control}
         name="password"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.fieldWrapper}>
+          <View className="mb-4">
             <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
+              className={`border rounded-lg p-3 text-base ${errors.password ? "border-red-500" : "border-neutral-300"}`}
               placeholder="Nova senha"
               value={value}
               onChangeText={onChange}
@@ -77,7 +77,7 @@ export function ResetPasswordScreen({ route, navigation }: Props) {
               secureTextEntry
               autoComplete="new-password"
             />
-            {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
+            {errors.password && <Text className="text-red-500 text-xs mt-1">{errors.password.message}</Text>}
           </View>
         )}
       />
@@ -86,9 +86,9 @@ export function ResetPasswordScreen({ route, navigation }: Props) {
         control={control}
         name="passwordConfirmation"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.fieldWrapper}>
+          <View className="mb-4">
             <TextInput
-              style={[styles.input, errors.passwordConfirmation && styles.inputError]}
+              className={`border rounded-lg p-3 text-base ${errors.passwordConfirmation ? "border-red-500" : "border-neutral-300"}`}
               placeholder="Confirmar nova senha"
               value={value}
               onChangeText={onChange}
@@ -97,89 +97,25 @@ export function ResetPasswordScreen({ route, navigation }: Props) {
               autoComplete="new-password"
             />
             {errors.passwordConfirmation && (
-              <Text style={styles.errorText}>{errors.passwordConfirmation.message}</Text>
+              <Text className="text-red-500 text-xs mt-1">{errors.passwordConfirmation.message}</Text>
             )}
           </View>
         )}
       />
 
-      {errors.root && <Text style={styles.rootError}>{errors.root.message}</Text>}
+      {errors.root && <Text className="text-red-500 text-sm text-center mb-3">{errors.root.message}</Text>}
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit(onSubmit)} disabled={loading}>
+      <TouchableOpacity className="bg-blue-600 rounded-lg p-4 items-center mb-4" onPress={handleSubmit(onSubmit)} disabled={loading}>
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Redefinir senha</Text>
+          <Text className="text-white text-base font-semibold">Redefinir senha</Text>
         )}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-        <Text style={styles.link}>Voltar para login</Text>
+        <Text className="text-blue-600 text-center mt-2 text-sm">Voltar para login</Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  description: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 20,
-  },
-  fieldWrapper: {
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  inputError: {
-    borderColor: "#ef4444",
-  },
-  errorText: {
-    color: "#ef4444",
-    fontSize: 12,
-    marginTop: 4,
-  },
-  rootError: {
-    color: "#ef4444",
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  button: {
-    backgroundColor: "#2563EB",
-    borderRadius: 8,
-    padding: 16,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  link: {
-    color: "#2563EB",
-    textAlign: "center",
-    marginTop: 8,
-    fontSize: 14,
-  },
-});

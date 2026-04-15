@@ -18,6 +18,19 @@ mutation CreateExpense($amount: String!, $date: String!, $note: String, $subcate
   }
 }
 
+mutation UpdateExpense($id: ID!, $amount: String, $date: String, $note: String, $subcategoryId: ID) {
+  updateExpense(id: $id, amount: $amount, date: $date, note: $note, subcategoryId: $subcategoryId) {
+    id
+    amount
+    date
+    note
+    subcategory {
+      id
+      name
+    }
+  }
+}
+
 mutation DeleteExpense($id: ID!) {
   deleteExpense(id: $id)
 }

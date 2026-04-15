@@ -36,6 +36,37 @@ defmodule PlanfinBackend.Expenses do
   Returns `{:ok, expense}` on success, `{:error, :not_found}` if the expense
   does not exist or belongs to a different user.
   """
+  @doc """
+  Updates an expense that belongs to the given user.
+
+  Allowed fields: amount, note, subcategory_id.
+  If the date changes, re-links to the correct budget_day.
+  """
+  def update_expense(user_id, expense_id, attrs) do
+    case Repo.get_by(Expense, id: expense_id, user_id: user_id) do
+      nil ->
+        {:error, :not_found}
+
+      expense ->
+        expense = Repo.preload(expense, :period)
+        new_date = Map.get(attrs, :date, expense.date)
+
+        with :ok <- validate_date_in_range(new_date, expense.period),
+             {:ok, budget_day} <- get_or_create_budget_day(expense.period, new_date) do
+          expense
+          |> Expense.changeset(Map.put(attrs, :budget_day_id, budget_day.id))
+          |> Repo.update()
+          |> case do
+            {:ok, updated} ->
+              {:ok, Repo.preload(updated, subcategory: :category)}
+
+            {:error, changeset} ->
+              {:error, changeset}
+          end
+        end
+    end
+  end
+
   def delete_expense(user_id, expense_id) do
     case Repo.get_by(Expense, id: expense_id, user_id: user_id) do
       nil ->
