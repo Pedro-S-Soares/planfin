@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -46,17 +46,17 @@ export function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Planfin</Text>
-      <Text style={styles.subtitle}>Entrar na sua conta</Text>
+    <View className="flex-1 p-6 justify-center bg-white">
+      <Text className="text-3xl font-bold mb-2 text-center">Planfin</Text>
+      <Text className="text-base text-neutral-500 mb-8 text-center">Entrar na sua conta</Text>
 
       <Controller
         control={control}
         name="email"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.fieldWrapper}>
+          <View className="mb-4">
             <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
+              className={`border rounded-lg p-3 text-base ${errors.email ? "border-red-500" : "border-neutral-300"}`}
               placeholder="Email"
               value={value}
               onChangeText={onChange}
@@ -65,7 +65,7 @@ export function LoginScreen({ navigation }: Props) {
               keyboardType="email-address"
               autoComplete="email"
             />
-            {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+            {errors.email && <Text className="text-red-500 text-xs mt-1">{errors.email.message}</Text>}
           </View>
         )}
       />
@@ -74,9 +74,9 @@ export function LoginScreen({ navigation }: Props) {
         control={control}
         name="password"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View style={styles.fieldWrapper}>
+          <View className="mb-4">
             <TextInput
-              style={[styles.input, errors.password && styles.inputError]}
+              className={`border rounded-lg p-3 text-base ${errors.password ? "border-red-500" : "border-neutral-300"}`}
               placeholder="Senha"
               value={value}
               onChangeText={onChange}
@@ -84,87 +84,24 @@ export function LoginScreen({ navigation }: Props) {
               secureTextEntry
               autoComplete="password"
             />
-            {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
+            {errors.password && <Text className="text-red-500 text-xs mt-1">{errors.password.message}</Text>}
           </View>
         )}
       />
 
-      {errors.root && <Text style={styles.rootError}>{errors.root.message}</Text>}
+      {errors.root && <Text className="text-red-500 text-sm text-center mb-3">{errors.root.message}</Text>}
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit(onSubmit)} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Entrar</Text>}
+      <TouchableOpacity className="bg-blue-600 rounded-lg p-4 items-center mb-4" onPress={handleSubmit(onSubmit)} disabled={loading}>
+        {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-base font-semibold">Entrar</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
-        <Text style={styles.link}>Esqueci minha senha</Text>
+        <Text className="text-blue-600 text-center mt-2 text-sm">Esqueci minha senha</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-        <Text style={styles.link}>Criar conta</Text>
+        <Text className="text-blue-600 text-center mt-2 text-sm">Criar conta</Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: "bold",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#666",
-    marginBottom: 32,
-    textAlign: "center",
-  },
-  fieldWrapper: {
-    marginBottom: 16,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-  },
-  inputError: {
-    borderColor: "#ef4444",
-  },
-  errorText: {
-    color: "#ef4444",
-    fontSize: 12,
-    marginTop: 4,
-  },
-  rootError: {
-    color: "#ef4444",
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  button: {
-    backgroundColor: "#2563EB",
-    borderRadius: 8,
-    padding: 16,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  link: {
-    color: "#2563EB",
-    textAlign: "center",
-    marginTop: 8,
-    fontSize: 14,
-  },
-});

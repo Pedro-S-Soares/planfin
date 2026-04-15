@@ -1,5 +1,6 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useCallback } from "react";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   useExpenseHistoryQuery,
@@ -8,6 +9,7 @@ import {
 } from "../graphql/__generated__/hooks";
 import { usePeriod } from "../context/PeriodContext";
 import { useAuth } from "../context/AuthContext";
+import { toISODate } from "../lib/date";
 import type { AppStackParamList } from "../../App";
 
 type Expense = NonNullable<
@@ -17,20 +19,27 @@ type Expense = NonNullable<
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
 export function HomeScreen() {
-  const { period } = usePeriod();
+  const { period, refetch: refetchPeriod } = usePeriod();
   const { signOut } = useAuth();
   const navigation = useNavigation<Navigation>();
 
   const balance = period?.today?.availableBalance ?? "0.00";
   const isPositive = parseFloat(balance) >= 0;
 
-  const { data, loading } = useExpenseHistoryQuery({
+  const { data, loading, refetch: refetchHistory } = useExpenseHistoryQuery({
     variables: { periodId: period?.id ?? "" },
     skip: !period?.id,
     fetchPolicy: "network-only",
   });
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  useFocusEffect(
+    useCallback(() => {
+      refetchPeriod();
+      if (period?.id) refetchHistory();
+    }, [refetchPeriod, refetchHistory, period?.id])
+  );
+
+  const todayStr = toISODate(new Date());
   const todayExpenses =
     data?.expenseHistory?.find((d) => d?.date === todayStr)?.expenses ?? [];
 
@@ -40,46 +49,46 @@ export function HomeScreen() {
   });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Planfin</Text>
+    <View className="flex-1 bg-neutral-100">
+      <View className="flex-row justify-between items-center px-5 pt-14 pb-3 bg-white">
+        <Text className="text-xl font-bold">Planfin</Text>
         <TouchableOpacity onPress={() => logout()}>
-          <Text style={styles.logoutText}>Sair</Text>
+          <Text className="text-red-500 text-sm font-semibold">Sair</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.balanceCard, isPositive ? styles.balancePositive : styles.balanceNegative]}>
-        <Text style={styles.balanceLabel}>Disponível hoje</Text>
-        <Text style={styles.balanceValue}>
-          R$ {parseFloat(balance).toFixed(2).replace(".", ",")}
+      <View className={`m-4 p-6 rounded-2xl items-center ${isPositive ? "bg-blue-600" : "bg-red-500"}`}>
+        <Text className="text-white/80 text-sm mb-2">Disponível hoje</Text>
+        <Text className="text-white text-[42px] font-bold">
+          {isPositive ? "" : "- "}R$ {Math.abs(parseFloat(balance)).toFixed(2).replace(".", ",")}
         </Text>
         {period && (
-          <Text style={styles.periodInfo}>
+          <Text className="text-white/70 text-xs mt-2">
             Limite diário: R$ {parseFloat(period.dailyLimit ?? "0").toFixed(2).replace(".", ",")}
           </Text>
         )}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Gastos de hoje</Text>
+      <View className="bg-white mx-4 rounded-xl p-4">
+        <Text className="text-base font-semibold mb-3 text-neutral-700">Gastos de hoje</Text>
 
         {loading ? (
-          <ActivityIndicator style={styles.loader} />
+          <ActivityIndicator className="my-5" />
         ) : todayExpenses.length === 0 ? (
-          <Text style={styles.emptyText}>Nenhum gasto registrado hoje.</Text>
+          <Text className="text-neutral-400 text-sm text-center py-4">Nenhum gasto registrado hoje.</Text>
         ) : (
           <FlatList
             data={todayExpenses}
             keyExtractor={(item) => item?.id ?? ""}
             renderItem={({ item }) => (
-              <View style={styles.expenseItem}>
-                <View style={styles.expenseInfo}>
-                  <Text style={styles.expenseCategory}>
+              <View className="flex-row justify-between items-center py-2.5 border-b border-neutral-100">
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-neutral-700">
                     {item?.subcategory?.name ?? "Sem categoria"}
                   </Text>
-                  {item?.note ? <Text style={styles.expenseNote}>{item.note}</Text> : null}
+                  {item?.note ? <Text className="text-xs text-neutral-400 mt-0.5">{item.note}</Text> : null}
                 </View>
-                <Text style={styles.expenseAmount}>
+                <Text className="text-sm font-semibold text-neutral-700 ml-3">
                   R$ {parseFloat(item?.amount ?? "0").toFixed(2).replace(".", ",")}
                 </Text>
               </View>
@@ -89,63 +98,12 @@ export function HomeScreen() {
         )}
       </View>
 
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate("AddExpense")}>
-        <Text style={styles.fabText}>+</Text>
+      <TouchableOpacity
+        className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-blue-600 items-center justify-center shadow-md"
+        onPress={() => navigation.navigate("AddExpense")}
+      >
+        <Text className="text-white text-[28px] leading-8">+</Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 12,
-    backgroundColor: "#fff",
-  },
-  headerTitle: { fontSize: 20, fontWeight: "bold" },
-  logoutText: { color: "#ef4444", fontSize: 14, fontWeight: "600" },
-  balanceCard: { margin: 16, padding: 24, borderRadius: 16, alignItems: "center" },
-  balancePositive: { backgroundColor: "#2563EB" },
-  balanceNegative: { backgroundColor: "#ef4444" },
-  balanceLabel: { color: "rgba(255,255,255,0.8)", fontSize: 14, marginBottom: 8 },
-  balanceValue: { color: "#fff", fontSize: 42, fontWeight: "bold" },
-  periodInfo: { color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 8 },
-  section: { backgroundColor: "#fff", marginHorizontal: 16, borderRadius: 12, padding: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 12, color: "#333" },
-  loader: { marginVertical: 20 },
-  emptyText: { color: "#999", fontSize: 14, textAlign: "center", paddingVertical: 16 },
-  expenseItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  expenseInfo: { flex: 1 },
-  expenseCategory: { fontSize: 14, fontWeight: "500", color: "#333" },
-  expenseNote: { fontSize: 12, color: "#999", marginTop: 2 },
-  expenseAmount: { fontSize: 14, fontWeight: "600", color: "#333", marginLeft: 12 },
-  fab: {
-    position: "absolute",
-    bottom: 24,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#2563EB",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  fabText: { color: "#fff", fontSize: 28, lineHeight: 32 },
-});

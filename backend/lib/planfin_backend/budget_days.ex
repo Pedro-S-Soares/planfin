@@ -25,9 +25,7 @@ defmodule PlanfinBackend.BudgetDays do
 
   Returns `{:ok, period}` when all past days are closed (or there were none to close).
   """
-  def close_past_days(period) do
-    today = Date.utc_today()
-
+  def close_past_days(period, today \\ Date.utc_today()) do
     open_past_days =
       BudgetDay
       |> where([bd], bd.period_id == ^period.id and is_nil(bd.closed_at) and bd.date < ^today)
@@ -57,9 +55,7 @@ defmodule PlanfinBackend.BudgetDays do
 
   Returns `{:ok, budget_day}`.
   """
-  def get_or_create_today(period) do
-    today = Date.utc_today()
-
+  def get_or_create_today(period, today \\ Date.utc_today()) do
     case Repo.get_by(BudgetDay, period_id: period.id, date: today) do
       %BudgetDay{} = bd ->
         {:ok, bd}
@@ -110,15 +106,21 @@ defmodule PlanfinBackend.BudgetDays do
     next_date = Date.add(budget_day.date, 1)
 
     if Date.compare(next_date, period.end_date) != :gt do
-      unless Repo.get_by(BudgetDay, period_id: period.id, date: next_date) do
-        %BudgetDay{}
-        |> BudgetDay.changeset(%{
-          period_id: period.id,
-          date: next_date,
-          daily_limit: budget_day.daily_limit,
-          carryover: carryover
-        })
-        |> Repo.insert!()
+      case Repo.get_by(BudgetDay, period_id: period.id, date: next_date) do
+        nil ->
+          %BudgetDay{}
+          |> BudgetDay.changeset(%{
+            period_id: period.id,
+            date: next_date,
+            daily_limit: budget_day.daily_limit,
+            carryover: carryover
+          })
+          |> Repo.insert!()
+
+        existing ->
+          existing
+          |> BudgetDay.changeset(%{carryover: carryover})
+          |> Repo.update!()
       end
     end
 

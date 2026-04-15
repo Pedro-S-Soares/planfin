@@ -3,22 +3,24 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   # ---- Queries ----
 
-  def active_period(_parent, _args, %{context: %{current_user: user}}) do
+  def active_period(_parent, args, %{context: %{current_user: user}}) do
+    today = parse_today(args)
+
     case Periods.get_active_period(user.id) do
       {:ok, nil} ->
         {:ok, nil}
 
       {:ok, period} ->
-        case BudgetDays.close_past_days(period) do
+        case BudgetDays.close_past_days(period, today) do
           {:abandoned, _abandoned_period} ->
             {:ok, nil}
 
           {:ok, period} ->
-            case BudgetDays.get_or_create_today(period) do
+            case BudgetDays.get_or_create_today(period, today) do
               {:ok, budget_day} ->
                 budget_day = load_expenses(budget_day)
-                today = format_budget_day(budget_day)
-                {:ok, format_period(period, today)}
+                today_data = format_budget_day(budget_day)
+                {:ok, format_period(period, today_data)}
 
               {:error, reason} ->
                 {:error, inspect(reason)}
@@ -145,6 +147,31 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   def create_expense(_parent, _args, _context), do: {:error, "Not authenticated"}
 
+  def update_expense(_parent, %{id: id} = args, %{context: %{current_user: user}}) do
+    attrs =
+      %{}
+      |> maybe_put(:amount, args[:amount], &Decimal.new/1)
+      |> maybe_put(:date, args[:date], &Date.from_iso8601!/1)
+      |> maybe_put(:note, args[:note], & &1)
+      |> maybe_put(:subcategory_id, args[:subcategory_id], & &1)
+
+    case Expenses.update_expense(user.id, id, attrs) do
+      {:ok, expense} ->
+        {:ok, format_expense(expense)}
+
+      {:error, :not_found} ->
+        {:error, "Expense not found"}
+
+      {:error, :date_out_of_range} ->
+        {:error, "Date is out of the period range"}
+
+      {:error, changeset} ->
+        {:error, format_errors(changeset)}
+    end
+  end
+
+  def update_expense(_parent, _args, _context), do: {:error, "Not authenticated"}
+
   def delete_expense(_parent, %{id: id}, %{context: %{current_user: user}}) do
     case Expenses.delete_expense(user.id, id) do
       {:ok, _expense} -> {:ok, true}
@@ -265,6 +292,15 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   def delete_subcategory(_parent, _args, _context), do: {:error, "Not authenticated"}
 
   # ---- Private helpers ----
+
+  defp maybe_put(map, _key, nil, _transform), do: map
+  defp maybe_put(map, key, value, transform), do: Map.put(map, key, transform.(value))
+
+  defp parse_today(%{today: date_str}) when is_binary(date_str) do
+    Date.from_iso8601!(date_str)
+  end
+
+  defp parse_today(_args), do: Date.utc_today()
 
   defp format_period(period, today) do
     %{

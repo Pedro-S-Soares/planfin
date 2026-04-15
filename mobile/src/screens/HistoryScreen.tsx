@@ -1,21 +1,25 @@
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useCallback } from "react";
+import { View, Text, SectionList, TouchableOpacity, ActivityIndicator } from "react-native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import {
   useExpenseHistoryQuery,
   useDeleteExpenseMutation,
+  ActivePeriodDocument,
   ExpenseHistoryQuery,
 } from "../graphql/__generated__/hooks";
 import { usePeriod } from "../context/PeriodContext";
+import { formatDateBR } from "../lib/date";
+import type { AppStackParamList } from "../../App";
 
 type ExpenseDay = NonNullable<ExpenseHistoryQuery["expenseHistory"]>[number];
 type Expense = NonNullable<NonNullable<ExpenseDay>["expenses"]>[number];
 
-function formatDate(dateStr: string) {
-  const [year, month, day] = dateStr.split("-");
-  return `${day}/${month}/${year}`;
-}
+type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
 export function HistoryScreen() {
-  const { period } = usePeriod();
+  const navigation = useNavigation<Navigation>();
+  const { period, refetch: refetchPeriod } = usePeriod();
 
   const { data, loading, refetch } = useExpenseHistoryQuery({
     variables: { periodId: period?.id ?? "" },
@@ -23,8 +27,19 @@ export function HistoryScreen() {
     fetchPolicy: "network-only",
   });
 
+  useFocusEffect(
+    useCallback(() => {
+      refetchPeriod();
+      if (period?.id) refetch();
+    }, [refetchPeriod, refetch, period?.id])
+  );
+
   const [deleteExpense] = useDeleteExpenseMutation({
-    onCompleted: () => refetch(),
+    onCompleted: () => {
+      refetch();
+      refetchPeriod();
+    },
+    refetchQueries: [{ query: ActivePeriodDocument }],
   });
 
   const sections = (data?.expenseHistory ?? []).map((day: ExpenseDay) => ({
@@ -35,7 +50,7 @@ export function HistoryScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View className="flex-1 items-center justify-center">
         <ActivityIndicator size="large" color="#2563EB" />
       </View>
     );
@@ -43,126 +58,61 @@ export function HistoryScreen() {
 
   if (sections.length === 0) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.emptyText}>Nenhum gasto registrado ainda.</Text>
+      <View className="flex-1 items-center justify-center">
+        <Text className="text-neutral-400 text-[15px]">Nenhum gasto registrado ainda.</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 pt-14 bg-neutral-100">
       <SectionList
         sections={sections}
         keyExtractor={(item) => item?.id ?? ""}
-        contentContainerStyle={styles.list}
+        contentContainerClassName="py-3 px-4"
         renderSectionHeader={({ section }) => (
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionDate}>{formatDate(section.title)}</Text>
-            <Text style={styles.sectionTotal}>
+          <View className="flex-row justify-between items-center py-2 px-1 mt-2">
+            <Text className="text-sm font-bold text-neutral-700">{formatDateBR(section.title)}</Text>
+            <Text className="text-[13px] text-neutral-500 font-semibold">
               Total: R$ {parseFloat(section.total).toFixed(2).replace(".", ",")}
             </Text>
           </View>
         )}
-        renderItem={({ item }) => (
-          <View style={styles.expenseItem}>
-            <View style={styles.expenseInfo}>
-              <Text style={styles.expenseCategory}>
+        renderItem={({ item, section }) => (
+          <TouchableOpacity
+            className="flex-row justify-between items-center bg-white p-3.5 rounded-lg mb-1.5"
+            onPress={() =>
+              navigation.navigate("EditExpense", {
+                id: item?.id ?? "",
+                amount: item?.amount ?? "0",
+                date: item?.date ?? section.title,
+                note: item?.note ?? undefined,
+                subcategoryId: item?.subcategory?.id ?? undefined,
+                categoryId: undefined,
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <View className="flex-1">
+              <Text className="text-sm font-medium text-neutral-700">
                 {item?.subcategory?.name ?? "Sem categoria"}
               </Text>
-              {item?.note ? <Text style={styles.expenseNote}>{item.note}</Text> : null}
+              {item?.note ? <Text className="text-xs text-neutral-400 mt-0.5">{item.note}</Text> : null}
             </View>
-            <View style={styles.expenseRight}>
-              <Text style={styles.expenseAmount}>
+            <View className="flex-row items-center gap-3">
+              <Text className="text-sm font-semibold text-neutral-700">
                 R$ {parseFloat(item?.amount ?? "0").toFixed(2).replace(".", ",")}
               </Text>
               <TouchableOpacity
                 onPress={() => deleteExpense({ variables: { id: item?.id ?? "" } })}
-                style={styles.deleteButton}
+                className="p-1"
               >
-                <Text style={styles.deleteText}>✕</Text>
+                <Text className="text-red-500 text-sm font-semibold">✕</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    color: "#999",
-    fontSize: 15,
-  },
-  list: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    marginTop: 8,
-  },
-  sectionDate: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#333",
-  },
-  sectionTotal: {
-    fontSize: 13,
-    color: "#666",
-    fontWeight: "600",
-  },
-  expenseItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 6,
-  },
-  expenseInfo: {
-    flex: 1,
-  },
-  expenseCategory: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#333",
-  },
-  expenseNote: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 2,
-  },
-  expenseRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  expenseAmount: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  deleteText: {
-    color: "#ef4444",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-});

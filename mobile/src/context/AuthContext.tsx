@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { storage } from "../lib/storage";
-import { apolloClient } from "../lib/apollo";
+import { apolloClient, setOnAuthError } from "../lib/apollo";
 
 type User = {
   id: string;
@@ -57,6 +57,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     await apolloClient.clearStore();
   }, []);
+
+  useEffect(() => {
+    setOnAuthError(() => signOut());
+  }, [signOut]);
 
   return (
     <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut }}>

@@ -1,14 +1,5 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert } from "react-native";
 import {
   useCategoriesQuery,
   useCreateCategoryMutation,
@@ -70,68 +61,68 @@ export function CategoriesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <View className="flex-1 items-center justify-center">
         <ActivityIndicator size="large" color="#2563EB" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 pt-14 bg-neutral-100">
       <FlatList
         data={categories}
         keyExtractor={(item) => item?.id ?? ""}
-        contentContainerStyle={styles.list}
+        contentContainerClassName="p-4 gap-2.5"
         ListHeaderComponent={
-          <View style={styles.addRow}>
+          <View className="flex-row gap-2 mb-4">
             <TextInput
-              style={styles.addInput}
+              className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white"
               placeholder="Nova categoria..."
               value={newCategoryName}
               onChangeText={setNewCategoryName}
             />
-            <TouchableOpacity style={styles.addButton} onPress={handleAddCategory}>
-              <Text style={styles.addButtonText}>+</Text>
+            <TouchableOpacity className="bg-blue-600 rounded-lg px-4 items-center justify-center" onPress={handleAddCategory}>
+              <Text className="text-white text-xl font-bold">+</Text>
             </TouchableOpacity>
           </View>
         }
         renderItem={({ item: cat }) => (
-          <View style={styles.categoryCard}>
+          <View className="bg-white rounded-xl overflow-hidden">
             <TouchableOpacity
-              style={styles.categoryHeader}
+              className="flex-row items-center justify-between p-4"
               onPress={() => setExpandedId(expandedId === cat.id ? null : cat.id ?? null)}
             >
-              <Text style={styles.categoryName}>{cat.name}</Text>
-              <View style={styles.categoryActions}>
-                <TouchableOpacity onPress={() => handleRenameCategory(cat)} style={styles.actionBtn}>
-                  <Text style={styles.editText}>✎</Text>
+              <Text className="text-[15px] font-semibold text-neutral-700 flex-1">{cat.name}</Text>
+              <View className="flex-row items-center gap-3">
+                <TouchableOpacity onPress={() => handleRenameCategory(cat)} className="p-1">
+                  <Text className="text-blue-600 text-base">✎</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDeleteCategory(cat.id ?? "")} style={styles.actionBtn}>
-                  <Text style={styles.deleteText}>✕</Text>
+                <TouchableOpacity onPress={() => handleDeleteCategory(cat.id ?? "")} className="p-1">
+                  <Text className="text-red-500 text-sm font-semibold">✕</Text>
                 </TouchableOpacity>
-                <Text style={styles.chevron}>{expandedId === cat.id ? "▲" : "▼"}</Text>
+                <Text className="text-neutral-400 text-xs">{expandedId === cat.id ? "▲" : "▼"}</Text>
               </View>
             </TouchableOpacity>
 
             {expandedId === cat.id && (
-              <View style={styles.subcategorySection}>
+              <View className="px-4 pb-3 border-t border-neutral-100">
                 {(cat.subcategories ?? []).filter(Boolean).map((sub: Subcategory) => (
-                  <View key={sub?.id ?? ""} style={styles.subRow}>
-                    <Text style={styles.subName}>{sub?.name}</Text>
+                  <View key={sub?.id ?? ""} className="flex-row justify-between items-center py-2 border-b border-neutral-50">
+                    <Text className="text-sm text-neutral-600">{sub?.name}</Text>
                     <TouchableOpacity onPress={() => handleDeleteSubcategory(sub?.id ?? "")}>
-                      <Text style={styles.deleteText}>✕</Text>
+                      <Text className="text-red-500 text-sm font-semibold">✕</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
-                <View style={styles.addRow}>
+                <View className="flex-row gap-2 mt-2">
                   <TextInput
-                    style={[styles.addInput, styles.addInputSm]}
+                    className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white"
                     placeholder="Nova subcategoria..."
                     value={newSubName[cat.id ?? ""] ?? ""}
                     onChangeText={(t) => setNewSubName((prev) => ({ ...prev, [cat.id ?? ""]: t }))}
                   />
-                  <TouchableOpacity style={styles.addButton} onPress={() => handleAddSubcategory(cat.id ?? "")}>
-                    <Text style={styles.addButtonText}>+</Text>
+                  <TouchableOpacity className="bg-blue-600 rounded-lg px-4 items-center justify-center" onPress={() => handleAddSubcategory(cat.id ?? "")}>
+                    <Text className="text-white text-xl font-bold">+</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -142,56 +133,3 @@ export function CategoriesScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f5f5f5" },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  list: { padding: 16, gap: 10 },
-  addRow: { flexDirection: "row", gap: 8, marginBottom: 16 },
-  addInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    backgroundColor: "#fff",
-  },
-  addInputSm: { marginBottom: 0 },
-  addButton: {
-    backgroundColor: "#2563EB",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addButtonText: { color: "#fff", fontSize: 20, fontWeight: "bold" },
-  categoryCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  categoryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-  },
-  categoryName: { fontSize: 15, fontWeight: "600", color: "#333", flex: 1 },
-  categoryActions: { flexDirection: "row", alignItems: "center", gap: 12 },
-  actionBtn: { padding: 4 },
-  editText: { color: "#2563EB", fontSize: 16 },
-  deleteText: { color: "#ef4444", fontSize: 14, fontWeight: "600" },
-  chevron: { color: "#999", fontSize: 12 },
-  subcategorySection: { paddingHorizontal: 16, paddingBottom: 12, borderTopWidth: 1, borderTopColor: "#f0f0f0" },
-  subRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f9f9f9",
-  },
-  subName: { fontSize: 14, color: "#555" },
-});
