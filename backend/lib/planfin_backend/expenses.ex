@@ -31,15 +31,9 @@ defmodule PlanfinBackend.Expenses do
   end
 
   @doc """
-  Deletes an expense that belongs to the given user.
-
-  Returns `{:ok, expense}` on success, `{:error, :not_found}` if the expense
-  does not exist or belongs to a different user.
-  """
-  @doc """
   Updates an expense that belongs to the given user.
 
-  Allowed fields: amount, note, subcategory_id.
+  Allowed fields: amount, date, note, subcategory_id.
   If the date changes, re-links to the correct budget_day.
   """
   def update_expense(user_id, expense_id, attrs) do
@@ -67,6 +61,12 @@ defmodule PlanfinBackend.Expenses do
     end
   end
 
+  @doc """
+  Deletes an expense that belongs to the given user.
+
+  Returns `{:ok, expense}` on success, `{:error, :not_found}` if the expense
+  does not exist or belongs to a different user.
+  """
   def delete_expense(user_id, expense_id) do
     case Repo.get_by(Expense, id: expense_id, user_id: user_id) do
       nil ->
