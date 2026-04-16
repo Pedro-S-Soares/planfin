@@ -39,6 +39,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :date, :string
     field :note, :string
     field :subcategory, :subcategory
+    field :created_by, :user
   end
 
   object :expense_day do

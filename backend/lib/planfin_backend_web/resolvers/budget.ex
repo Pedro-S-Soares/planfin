@@ -336,9 +336,17 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       amount: Decimal.to_string(expense.amount),
       date: Date.to_iso8601(expense.date),
       note: expense.note,
-      subcategory: if(expense.subcategory, do: format_subcategory(expense.subcategory), else: nil)
+      subcategory:
+        if(expense.subcategory, do: format_subcategory(expense.subcategory), else: nil),
+      created_by: format_created_by(expense)
     }
   end
+
+  defp format_created_by(%{created_by: %{id: id, email: email}}) do
+    %{id: to_string(id), email: email}
+  end
+
+  defp format_created_by(_), do: nil
 
   defp format_subcategory(subcategory) do
     %{
