@@ -4,7 +4,8 @@ defmodule PlanfinBackend.Repo.Migrations.CreateExpenses do
   def change do
     create table(:expenses, primary_key: false) do
       add :id, :uuid, primary_key: true, default: fragment("gen_random_uuid()")
-      add :user_id, references(:users, on_delete: :delete_all), null: false
+      add :group_id, references(:groups, type: :uuid, on_delete: :delete_all), null: false
+      add :created_by_id, references(:users, on_delete: :restrict), null: false
       add :period_id, references(:periods, type: :uuid, on_delete: :delete_all), null: false
 
       add :budget_day_id, references(:budget_days, type: :uuid, on_delete: :delete_all),
@@ -18,7 +19,8 @@ defmodule PlanfinBackend.Repo.Migrations.CreateExpenses do
       timestamps()
     end
 
-    create index(:expenses, [:user_id])
+    create index(:expenses, [:group_id])
+    create index(:expenses, [:created_by_id])
     create index(:expenses, [:budget_day_id])
     create index(:expenses, [:period_id])
   end
