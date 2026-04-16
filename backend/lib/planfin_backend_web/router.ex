@@ -21,6 +21,7 @@ defmodule PlanfinBackendWeb.Router do
     plug :accepts, ["json"]
     plug CORSPlug
     plug PlanfinBackendWeb.Plugs.AuthContext
+    plug PlanfinBackendWeb.Plugs.LoadCurrentGroup
   end
 
   scope "/", PlanfinBackendWeb do

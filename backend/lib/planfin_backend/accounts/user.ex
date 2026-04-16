@@ -9,7 +9,22 @@ defmodule PlanfinBackend.Accounts.User do
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
 
+    belongs_to :active_group, PlanfinBackend.Groups.Group, type: :binary_id
+
+    has_many :memberships, PlanfinBackend.Groups.GroupMembership
+
+    many_to_many :groups, PlanfinBackend.Groups.Group,
+      join_through: PlanfinBackend.Groups.GroupMembership
+
     timestamps(type: :utc_datetime)
+  end
+
+  @doc """
+  Changeset for switching a user's active group.
+  """
+  def active_group_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:active_group_id])
   end
 
   @doc """
