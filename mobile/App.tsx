@@ -9,6 +9,7 @@ import { enableScreens } from "react-native-screens";
 import { Text } from "react-native";
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
+import { GroupProvider, useGroup } from "./src/context/GroupContext";
 import { apolloClient } from "./src/lib/apollo";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { RegisterScreen } from "./src/screens/RegisterScreen";
@@ -20,6 +21,8 @@ import { AddExpenseScreen } from "./src/screens/AddExpenseScreen";
 import { EditExpenseScreen } from "./src/screens/EditExpenseScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
+import { OnboardingGroupScreen } from "./src/screens/OnboardingGroupScreen";
+import { GroupsScreen } from "./src/screens/GroupsScreen";
 import { usePeriod } from "./src/context/PeriodContext";
 import { PeriodProvider } from "./src/context/PeriodContext";
 
@@ -33,8 +36,10 @@ export type AuthStackParamList = {
 };
 
 export type AppStackParamList = {
+  Onboarding: undefined;
   CreatePeriod: undefined;
   MainTabs: undefined;
+  Groups: undefined;
   AddExpense: undefined;
   EditExpense: {
     id: string;
@@ -100,6 +105,11 @@ function AppNavigator() {
         <>
           <AppStack.Screen name="MainTabs" component={MainTabs} />
           <AppStack.Screen
+            name="Groups"
+            component={GroupsScreen}
+            options={{ headerShown: true, title: "Grupos" }}
+          />
+          <AppStack.Screen
             name="AddExpense"
             component={AddExpenseScreen}
             options={{ presentation: "modal", headerShown: true, title: "Novo gasto" }}
@@ -112,6 +122,26 @@ function AppNavigator() {
         </>
       )}
     </AppStack.Navigator>
+  );
+}
+
+function AuthenticatedNavigator() {
+  const { activeGroup, isLoading } = useGroup();
+
+  if (isLoading) return null;
+
+  if (!activeGroup) {
+    return (
+      <AppStack.Navigator screenOptions={{ headerShown: false }}>
+        <AppStack.Screen name="Onboarding" component={OnboardingGroupScreen} />
+      </AppStack.Navigator>
+    );
+  }
+
+  return (
+    <PeriodProvider>
+      <AppNavigator />
+    </PeriodProvider>
   );
 }
 
@@ -132,9 +162,9 @@ function Navigation() {
   }
 
   return (
-    <PeriodProvider>
-      <AppNavigator />
-    </PeriodProvider>
+    <GroupProvider>
+      <AuthenticatedNavigator />
+    </GroupProvider>
   );
 }
 

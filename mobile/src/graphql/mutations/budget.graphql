@@ -15,6 +15,10 @@ mutation CreateExpense($amount: String!, $date: String!, $note: String, $subcate
       id
       name
     }
+    createdBy {
+      id
+      email
+    }
   }
 }
 
