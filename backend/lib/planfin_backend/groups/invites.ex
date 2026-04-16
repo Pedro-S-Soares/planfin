@@ -145,8 +145,11 @@ defmodule PlanfinBackend.Groups.Invites do
 
   defp compute_expires_at(opts) do
     case Keyword.get(opts, :expires_in_days, @default_ttl_days) do
-      nil -> nil
-      days when is_integer(days) and days > 0 -> DateTime.utc_now(:second) |> DateTime.add(days * 86_400, :second)
+      nil ->
+        nil
+
+      days when is_integer(days) and days > 0 ->
+        DateTime.utc_now(:second) |> DateTime.add(days * 86_400, :second)
     end
   end
 

@@ -6,31 +6,30 @@ defmodule PlanfinBackend.CategoriesTest do
 
   import PlanfinBackend.AccountsFixtures
 
+  @default_count 6
+
   describe "list_categories/1" do
-    test "returns only categories belonging to the given user (isolation)" do
-      user1 = user_fixture()
-      user2 = user_fixture()
+    test "returns only categories belonging to the given group (isolation)" do
+      {_u1, g1} = user_with_group_fixture()
+      {_u2, g2} = user_with_group_fixture()
 
-      # Each user already has 5 seeded categories from registration
-      user1_categories = Categories.list_categories(user1.id)
-      user2_categories = Categories.list_categories(user2.id)
+      g1_categories = Categories.list_categories(g1.id)
+      g2_categories = Categories.list_categories(g2.id)
 
-      user1_ids = MapSet.new(user1_categories, & &1.id)
-      user2_ids = MapSet.new(user2_categories, & &1.id)
+      g1_ids = MapSet.new(g1_categories, & &1.id)
+      g2_ids = MapSet.new(g2_categories, & &1.id)
 
-      # No overlap between users' categories
-      assert MapSet.disjoint?(user1_ids, user2_ids)
-      # Each user should have exactly 5 default categories
-      assert length(user1_categories) == 5
-      assert length(user2_categories) == 5
+      assert MapSet.disjoint?(g1_ids, g2_ids)
+      assert length(g1_categories) == @default_count
+      assert length(g2_categories) == @default_count
     end
 
     test "returns categories with subcategories preloaded" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "ExtraCategory"})
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "ExtraCategory"})
       {:ok, sub} = Categories.create_subcategory(cat, %{name: "ExtraSub"})
 
-      result = Categories.list_categories(user.id)
+      result = Categories.list_categories(group.id)
       extra = Enum.find(result, &(&1.name == "ExtraCategory"))
 
       assert extra != nil
@@ -40,59 +39,59 @@ defmodule PlanfinBackend.CategoriesTest do
 
   describe "create_category/2" do
     test "creates a category with a valid name" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
 
       assert {:ok, %Category{name: "Lazer"}} =
-               Categories.create_category(user.id, %{name: "Lazer"})
+               Categories.create_category(group.id, %{name: "Lazer"})
     end
 
     test "returns error changeset when name is empty" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
 
-      assert {:error, changeset} = Categories.create_category(user.id, %{name: ""})
+      assert {:error, changeset} = Categories.create_category(group.id, %{name: ""})
       assert %{name: [_ | _]} = errors_on(changeset)
     end
 
     test "returns error changeset when name is missing" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
 
-      assert {:error, changeset} = Categories.create_category(user.id, %{})
+      assert {:error, changeset} = Categories.create_category(group.id, %{})
       assert %{name: ["can't be blank"]} = errors_on(changeset)
     end
   end
 
   describe "get_category!/2" do
-    test "returns the category when it belongs to the user" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "Saúde"})
+    test "returns the category when it belongs to the group" do
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "Saúde"})
 
-      assert %Category{id: id} = Categories.get_category!(user.id, cat.id)
+      assert %Category{id: id} = Categories.get_category!(group.id, cat.id)
       assert id == cat.id
     end
 
-    test "raises when the category belongs to another user" do
-      user1 = user_fixture()
-      user2 = user_fixture()
-      {:ok, cat} = Categories.create_category(user2.id, %{name: "Saúde"})
+    test "raises when the category belongs to another group" do
+      {_u1, g1} = user_with_group_fixture()
+      {_u2, g2} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(g2.id, %{name: "Saúde"})
 
       assert_raise Ecto.NoResultsError, fn ->
-        Categories.get_category!(user1.id, cat.id)
+        Categories.get_category!(g1.id, cat.id)
       end
     end
   end
 
   describe "update_category/2" do
     test "updates the category name" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "Lazer"})
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "Lazer"})
 
       assert {:ok, %Category{name: "Entretenimento"}} =
                Categories.update_category(cat, %{name: "Entretenimento"})
     end
 
     test "returns error changeset when new name is empty" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "Lazer"})
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "Lazer"})
 
       assert {:error, changeset} = Categories.update_category(cat, %{name: ""})
       assert %{name: [_ | _]} = errors_on(changeset)
@@ -101,14 +100,14 @@ defmodule PlanfinBackend.CategoriesTest do
 
   describe "delete_category/1" do
     test "deletes the category and its subcategories in cascade" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "Alimentação"})
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "Alimentação Extra"})
       {:ok, sub} = Categories.create_subcategory(cat, %{name: "Mercado"})
 
       assert {:ok, %Category{}} = Categories.delete_category(cat)
 
       assert_raise Ecto.NoResultsError, fn ->
-        Categories.get_category!(user.id, cat.id)
+        Categories.get_category!(group.id, cat.id)
       end
 
       refute Repo.get(Subcategory, sub.id)
@@ -117,16 +116,16 @@ defmodule PlanfinBackend.CategoriesTest do
 
   describe "create_subcategory/2" do
     test "creates a subcategory associated with the category" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "Alimentação"})
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "ExtraCat"})
 
       assert {:ok, %Subcategory{name: "Restaurante"}} =
                Categories.create_subcategory(cat, %{name: "Restaurante"})
     end
 
     test "returns error changeset when name is missing" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "Alimentação"})
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "ExtraCat"})
 
       assert {:error, changeset} = Categories.create_subcategory(cat, %{})
       assert %{name: ["can't be blank"]} = errors_on(changeset)
@@ -134,31 +133,31 @@ defmodule PlanfinBackend.CategoriesTest do
   end
 
   describe "get_subcategory!/2" do
-    test "returns the subcategory when it belongs to the user" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "Alimentação"})
+    test "returns the subcategory when it belongs to the group" do
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "ExtraCat"})
       {:ok, sub} = Categories.create_subcategory(cat, %{name: "Mercado"})
 
-      assert %Subcategory{id: id} = Categories.get_subcategory!(user.id, sub.id)
+      assert %Subcategory{id: id} = Categories.get_subcategory!(group.id, sub.id)
       assert id == sub.id
     end
 
-    test "raises when subcategory belongs to another user" do
-      user1 = user_fixture()
-      user2 = user_fixture()
-      {:ok, cat2} = Categories.create_category(user2.id, %{name: "Alimentação"})
+    test "raises when subcategory belongs to another group" do
+      {_u1, g1} = user_with_group_fixture()
+      {_u2, g2} = user_with_group_fixture()
+      {:ok, cat2} = Categories.create_category(g2.id, %{name: "ExtraCat"})
       {:ok, sub2} = Categories.create_subcategory(cat2, %{name: "Mercado"})
 
       assert_raise Ecto.NoResultsError, fn ->
-        Categories.get_subcategory!(user1.id, sub2.id)
+        Categories.get_subcategory!(g1.id, sub2.id)
       end
     end
   end
 
   describe "update_subcategory/2" do
     test "updates the subcategory name" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "Alimentação"})
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "ExtraCat"})
       {:ok, sub} = Categories.create_subcategory(cat, %{name: "Mercado"})
 
       assert {:ok, %Subcategory{name: "Supermercado"}} =
@@ -168,8 +167,8 @@ defmodule PlanfinBackend.CategoriesTest do
 
   describe "delete_subcategory/1" do
     test "deletes the subcategory" do
-      user = user_fixture()
-      {:ok, cat} = Categories.create_category(user.id, %{name: "Alimentação"})
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "ExtraCat"})
       {:ok, sub} = Categories.create_subcategory(cat, %{name: "Mercado"})
 
       assert {:ok, %Subcategory{}} = Categories.delete_subcategory(sub)
@@ -178,17 +177,20 @@ defmodule PlanfinBackend.CategoriesTest do
   end
 
   describe "seed_default_categories/1" do
-    test "creates the 5 default categories with their subcategories" do
-      user = user_fixture()
+    test "creates the #{@default_count} default categories with their subcategories" do
+      {_user, group} = user_with_group_fixture()
 
-      assert {:ok, seeded} = Categories.seed_default_categories(user.id)
-      assert length(seeded) == 5
+      # The fixture already called seed via Groups.create_group, so we just
+      # list them here to verify the seed output.
+      seeded = Categories.list_categories(group.id)
+      assert length(seeded) == @default_count
 
       names = Enum.map(seeded, & &1.name)
       assert "Alimentação" in names
       assert "Transporte" in names
       assert "Lazer" in names
       assert "Saúde" in names
+      assert "Contas da Casa" in names
       assert "Outros" in names
 
       alimentacao = Enum.find(seeded, &(&1.name == "Alimentação"))
@@ -197,36 +199,25 @@ defmodule PlanfinBackend.CategoriesTest do
       assert "Mercado" in sub_names
       assert "Lanche" in sub_names
 
-      transporte = Enum.find(seeded, &(&1.name == "Transporte"))
-      tsub_names = Enum.map(transporte.subcategories, & &1.name)
-      assert "Combustível" in tsub_names
-      assert "Transporte público" in tsub_names
-      assert "Aplicativo" in tsub_names
-
-      lazer = Enum.find(seeded, &(&1.name == "Lazer"))
-      lsub_names = Enum.map(lazer.subcategories, & &1.name)
-      assert "Cinema" in lsub_names
-      assert "Viagem" in lsub_names
-      assert "Assinatura" in lsub_names
-
-      saude = Enum.find(seeded, &(&1.name == "Saúde"))
-      ssub_names = Enum.map(saude.subcategories, & &1.name)
-      assert "Farmácia" in ssub_names
-      assert "Consulta" in ssub_names
-      assert "Academia" in ssub_names
+      contas = Enum.find(seeded, &(&1.name == "Contas da Casa"))
+      csub_names = Enum.map(contas.subcategories, & &1.name)
+      assert "Luz" in csub_names
+      assert "Água" in csub_names
+      assert "Internet" in csub_names
+      assert "Aluguel" in csub_names
 
       outros = Enum.find(seeded, &(&1.name == "Outros"))
       assert outros.subcategories == []
     end
 
-    test "seed_default_categories is called when register_user succeeds" do
+    test "register_user no longer seeds categories (seed now lives on Groups.create_group)" do
       email = unique_user_email()
 
-      {:ok, user} =
-        PlanfinBackend.Accounts.register_user(%{email: email})
+      {:ok, user} = PlanfinBackend.Accounts.register_user(%{email: email})
 
-      categories = Categories.list_categories(user.id)
-      assert length(categories) == 5
+      # User has no group yet → no categories
+      groups = PlanfinBackend.Groups.list_user_groups(user)
+      assert groups == []
     end
   end
 end

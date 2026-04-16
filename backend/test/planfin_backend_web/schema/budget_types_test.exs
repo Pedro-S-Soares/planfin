@@ -11,6 +11,14 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
     put_req_header(conn, "authorization", "Bearer #{token}")
   end
 
+  # Returns {conn, user, group} with a group already active for the user.
+  defp authed_conn_with_group(conn) do
+    {user, group} = user_with_group_fixture()
+    # Reload user so active_group_id reflects the setup
+    user = PlanfinBackend.Repo.get!(PlanfinBackend.Accounts.User, user.id)
+    {authed_conn(conn, user), user, group}
+  end
+
   defp post_graphql(conn, query, variables \\ %{}) do
     conn
     |> put_req_header("content-type", "application/json")
@@ -34,9 +42,8 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
   # ---- activePeriod ----
 
   describe "activePeriod" do
-    test "returns nil when user has no active period", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
+    test "returns nil when group has no active period", %{conn: conn} do
+      {conn, _user, _group} = authed_conn_with_group(conn)
 
       query = """
         query {
@@ -53,10 +60,9 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
     end
 
     test "returns period with today.availableBalance when period is active", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
+      {conn, _user, group} = authed_conn_with_group(conn)
 
-      {:ok, _period} = Periods.create_period(user.id, valid_period_attrs())
+      {:ok, _period} = Periods.create_period(group.id, valid_period_attrs())
 
       query = """
         query {
@@ -82,7 +88,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert period_data["today"]["availableBalance"] != nil
     end
 
-    test "returns error when not authenticated", %{conn: conn} do
+    test "returns 'Not authenticated' error when not authenticated", %{conn: conn} do
       query = """
         query {
           activePeriod {
@@ -95,14 +101,30 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert resp["errors"] != nil
       assert hd(resp["errors"])["message"] == "Not authenticated"
     end
+
+    test "returns 'No active group' error when authenticated but no active group", %{conn: conn} do
+      user = user_fixture()
+      conn = authed_conn(conn, user)
+
+      query = """
+        query {
+          activePeriod {
+            id
+          }
+        }
+      """
+
+      resp = post_graphql(conn, query)
+      assert resp["errors"] != nil
+      assert hd(resp["errors"])["message"] == "No active group"
+    end
   end
 
   # ---- createPeriod ----
 
   describe "createPeriod" do
     test "creates a period and returns it", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
+      {conn, _user, _group} = authed_conn_with_group(conn)
       today = Date.utc_today()
 
       query = """
@@ -130,12 +152,11 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert period["dailyLimit"] == "100.00"
     end
 
-    test "fails if user already has an active period", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
+    test "fails if group already has an active period", %{conn: conn} do
+      {conn, _user, group} = authed_conn_with_group(conn)
       today = Date.utc_today()
 
-      {:ok, _period} = Periods.create_period(user.id, valid_period_attrs())
+      {:ok, _period} = Periods.create_period(group.id, valid_period_attrs())
 
       query = """
         mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {
@@ -183,11 +204,10 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
 
   describe "createExpense" do
     test "creates expense and reduces available balance", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
+      {conn, _user, group} = authed_conn_with_group(conn)
       today = Date.utc_today()
 
-      {:ok, _period} = Periods.create_period(user.id, valid_period_attrs())
+      {:ok, _period} = Periods.create_period(group.id, valid_period_attrs())
 
       create_query = """
         mutation CreateExpense($amount: String!, $date: String!) {
@@ -209,7 +229,6 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       expense = resp["data"]["createExpense"]
       assert expense["amount"] == "25.00"
 
-      # Check that available balance decreased
       active_query = """
         query {
           activePeriod {
@@ -245,14 +264,13 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
 
   describe "deleteExpense" do
     test "removes an expense", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
+      {conn, user, group} = authed_conn_with_group(conn)
       today = Date.utc_today()
 
-      {:ok, _period} = Periods.create_period(user.id, valid_period_attrs())
+      {:ok, _period} = Periods.create_period(group.id, valid_period_attrs())
 
       {:ok, expense} =
-        Expenses.create_expense(user.id, %{
+        Expenses.create_expense(group.id, user.id, %{
           amount: Decimal.new("30.00"),
           date: today
         })
@@ -285,17 +303,22 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
 
   describe "expenseHistory" do
     test "returns expenses grouped by day", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
+      {conn, user, group} = authed_conn_with_group(conn)
       today = Date.utc_today()
 
-      {:ok, period} = Periods.create_period(user.id, valid_period_attrs())
+      {:ok, period} = Periods.create_period(group.id, valid_period_attrs())
 
       {:ok, _e1} =
-        Expenses.create_expense(user.id, %{amount: Decimal.new("10.00"), date: today})
+        Expenses.create_expense(group.id, user.id, %{
+          amount: Decimal.new("10.00"),
+          date: today
+        })
 
       {:ok, _e2} =
-        Expenses.create_expense(user.id, %{amount: Decimal.new("20.00"), date: today})
+        Expenses.create_expense(group.id, user.id, %{
+          amount: Decimal.new("20.00"),
+          date: today
+        })
 
       query = """
         query ExpenseHistory($periodId: ID!) {
@@ -338,11 +361,8 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
   # ---- categories ----
 
   describe "categories" do
-    test "returns categories for the user", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
-
-      {:ok, _categories} = Categories.seed_default_categories(user.id)
+    test "returns categories for the group (seeded defaults)", %{conn: conn} do
+      {conn, _user, _group} = authed_conn_with_group(conn)
 
       query = """
         query {
@@ -384,8 +404,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
 
   describe "createCategory" do
     test "creates a category", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
+      {conn, _user, _group} = authed_conn_with_group(conn)
 
       query = """
         mutation CreateCategory($name: String!) {
@@ -423,10 +442,9 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
 
   describe "deleteCategory" do
     test "removes a category", %{conn: conn} do
-      user = user_fixture()
-      conn = authed_conn(conn, user)
+      {conn, _user, group} = authed_conn_with_group(conn)
 
-      {:ok, category} = Categories.create_category(user.id, %{name: "ToDelete"})
+      {:ok, category} = Categories.create_category(group.id, %{name: "ToDelete"})
 
       query = """
         mutation DeleteCategory($id: ID!) {

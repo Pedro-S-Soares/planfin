@@ -19,11 +19,11 @@ defmodule PlanfinBackend.PeriodsTest do
 
   describe "create_period/2" do
     test "creates period with valid attrs and also creates budget_day for start_date" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
 
-      assert {:ok, %Period{} = period} = Periods.create_period(user.id, valid_period_attrs())
+      assert {:ok, %Period{} = period} = Periods.create_period(group.id, valid_period_attrs())
 
-      assert period.user_id == user.id
+      assert period.group_id == group.id
       assert period.status == "active"
       assert period.start_date == ~D[2026-04-01]
       assert period.end_date == ~D[2026-04-30]
@@ -39,42 +39,42 @@ defmodule PlanfinBackend.PeriodsTest do
       assert Decimal.equal?(day.daily_limit, period.daily_limit)
     end
 
-    test "returns error when user already has an active period" do
-      user = user_fixture()
+    test "returns error when group already has an active period" do
+      {_user, group} = user_with_group_fixture()
 
-      {:ok, _period} = Periods.create_period(user.id, valid_period_attrs())
+      {:ok, _period} = Periods.create_period(group.id, valid_period_attrs())
 
       assert {:error, :already_has_active_period} =
                Periods.create_period(
-                 user.id,
+                 group.id,
                  valid_period_attrs(%{start_date: ~D[2026-05-01], end_date: ~D[2026-05-31]})
                )
     end
 
     test "returns changeset error when end_date <= start_date" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
 
       assert {:error, changeset} =
-               Periods.create_period(user.id, valid_period_attrs(%{end_date: ~D[2026-04-01]}))
+               Periods.create_period(group.id, valid_period_attrs(%{end_date: ~D[2026-04-01]}))
 
       assert %{end_date: [_ | _]} = errors_on(changeset)
     end
 
     test "returns changeset error when end_date is before start_date" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
 
       assert {:error, changeset} =
-               Periods.create_period(user.id, valid_period_attrs(%{end_date: ~D[2026-03-01]}))
+               Periods.create_period(group.id, valid_period_attrs(%{end_date: ~D[2026-03-01]}))
 
       assert %{end_date: [_ | _]} = errors_on(changeset)
     end
 
     test "returns changeset error when daily_limit is zero" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
 
       assert {:error, changeset} =
                Periods.create_period(
-                 user.id,
+                 group.id,
                  valid_period_attrs(%{daily_limit: Decimal.new("0")})
                )
 
@@ -82,92 +82,92 @@ defmodule PlanfinBackend.PeriodsTest do
     end
 
     test "returns changeset error when daily_limit is negative" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
 
       assert {:error, changeset} =
                Periods.create_period(
-                 user.id,
+                 group.id,
                  valid_period_attrs(%{daily_limit: Decimal.new("-10")})
                )
 
       assert %{daily_limit: [_ | _]} = errors_on(changeset)
     end
 
-    test "allows second user to create period even when first user has active period" do
-      user1 = user_fixture()
-      user2 = user_fixture()
+    test "allows another group to create period even when first group has active period" do
+      {_u1, g1} = user_with_group_fixture()
+      {_u2, g2} = user_with_group_fixture()
 
-      {:ok, _period} = Periods.create_period(user1.id, valid_period_attrs())
+      {:ok, _period} = Periods.create_period(g1.id, valid_period_attrs())
 
-      assert {:ok, %Period{}} = Periods.create_period(user2.id, valid_period_attrs())
+      assert {:ok, %Period{}} = Periods.create_period(g2.id, valid_period_attrs())
     end
   end
 
   describe "get_active_period/1" do
-    test "returns the active period for the user" do
-      user = user_fixture()
-      {:ok, period} = Periods.create_period(user.id, valid_period_attrs())
+    test "returns the active period for the group" do
+      {_user, group} = user_with_group_fixture()
+      {:ok, period} = Periods.create_period(group.id, valid_period_attrs())
 
-      assert {:ok, found} = Periods.get_active_period(user.id)
+      assert {:ok, found} = Periods.get_active_period(group.id)
       assert found.id == period.id
       assert found.status == "active"
     end
 
     test "preloads budget_days in the result" do
-      user = user_fixture()
-      {:ok, _period} = Periods.create_period(user.id, valid_period_attrs())
+      {_user, group} = user_with_group_fixture()
+      {:ok, _period} = Periods.create_period(group.id, valid_period_attrs())
 
-      {:ok, found} = Periods.get_active_period(user.id)
+      {:ok, found} = Periods.get_active_period(group.id)
       assert is_list(found.budget_days)
       assert length(found.budget_days) == 1
     end
 
-    test "returns {:ok, nil} when user has no active period" do
-      user = user_fixture()
+    test "returns {:ok, nil} when group has no active period" do
+      {_user, group} = user_with_group_fixture()
 
-      assert {:ok, nil} = Periods.get_active_period(user.id)
+      assert {:ok, nil} = Periods.get_active_period(group.id)
     end
 
-    test "does not return active period belonging to another user" do
-      user1 = user_fixture()
-      user2 = user_fixture()
+    test "does not return active period belonging to another group" do
+      {_u1, g1} = user_with_group_fixture()
+      {_u2, g2} = user_with_group_fixture()
 
-      {:ok, _period} = Periods.create_period(user1.id, valid_period_attrs())
+      {:ok, _period} = Periods.create_period(g1.id, valid_period_attrs())
 
-      assert {:ok, nil} = Periods.get_active_period(user2.id)
+      assert {:ok, nil} = Periods.get_active_period(g2.id)
     end
   end
 
   describe "get_period/2" do
-    test "returns the period when it belongs to the user" do
-      user = user_fixture()
-      {:ok, period} = Periods.create_period(user.id, valid_period_attrs())
+    test "returns the period when it belongs to the group" do
+      {_user, group} = user_with_group_fixture()
+      {:ok, period} = Periods.create_period(group.id, valid_period_attrs())
 
-      assert {:ok, found} = Periods.get_period(user.id, period.id)
+      assert {:ok, found} = Periods.get_period(group.id, period.id)
       assert found.id == period.id
     end
 
-    test "returns {:error, :not_found} when period belongs to another user" do
-      user1 = user_fixture()
-      user2 = user_fixture()
+    test "returns {:error, :not_found} when period belongs to another group" do
+      {_u1, g1} = user_with_group_fixture()
+      {_u2, g2} = user_with_group_fixture()
 
-      {:ok, period} = Periods.create_period(user1.id, valid_period_attrs())
+      {:ok, period} = Periods.create_period(g1.id, valid_period_attrs())
 
-      assert {:error, :not_found} = Periods.get_period(user2.id, period.id)
+      assert {:error, :not_found} = Periods.get_period(g2.id, period.id)
     end
 
     test "returns {:error, :not_found} for non-existent period" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
       fake_id = Ecto.UUID.generate()
 
-      assert {:error, :not_found} = Periods.get_period(user.id, fake_id)
+      assert {:error, :not_found} = Periods.get_period(group.id, fake_id)
     end
   end
 
   describe "close_period/1" do
     test "changes period status to closed" do
-      user = user_fixture()
-      {:ok, period} = Periods.create_period(user.id, valid_period_attrs())
+      {_user, group} = user_with_group_fixture()
+      {:ok, period} = Periods.create_period(group.id, valid_period_attrs())
 
       assert {:ok, closed} = Periods.close_period(period)
       assert closed.status == "closed"
@@ -176,8 +176,8 @@ defmodule PlanfinBackend.PeriodsTest do
 
   describe "abandon_period/1" do
     test "changes period status to abandoned" do
-      user = user_fixture()
-      {:ok, period} = Periods.create_period(user.id, valid_period_attrs())
+      {_user, group} = user_with_group_fixture()
+      {:ok, period} = Periods.create_period(group.id, valid_period_attrs())
 
       assert {:ok, abandoned} = Periods.abandon_period(period)
       assert abandoned.status == "abandoned"
@@ -186,7 +186,7 @@ defmodule PlanfinBackend.PeriodsTest do
 
   describe "get_period_summary/1" do
     test "calculates total_budgeted, total_spent, difference and days_count correctly" do
-      user = user_fixture()
+      {_user, group} = user_with_group_fixture()
 
       # 5-day period at 50/day = 250 total budgeted
       attrs = %{
@@ -195,7 +195,7 @@ defmodule PlanfinBackend.PeriodsTest do
         daily_limit: Decimal.new("50.00")
       }
 
-      {:ok, period} = Periods.create_period(user.id, attrs)
+      {:ok, period} = Periods.create_period(group.id, attrs)
 
       # No expenses, so total_spent = 0
       summary = Periods.get_period_summary(period)
@@ -208,11 +208,11 @@ defmodule PlanfinBackend.PeriodsTest do
   end
 
   describe "list_periods/1" do
-    test "returns all periods for the user ordered by start_date descending" do
-      user = user_fixture()
+    test "returns all periods for the group ordered by start_date descending" do
+      {_user, group} = user_with_group_fixture()
 
       {:ok, period1} =
-        Periods.create_period(user.id, %{
+        Periods.create_period(group.id, %{
           start_date: ~D[2026-01-01],
           end_date: ~D[2026-01-31],
           daily_limit: Decimal.new("100.00")
@@ -222,13 +222,13 @@ defmodule PlanfinBackend.PeriodsTest do
       {:ok, _} = Periods.close_period(period1)
 
       {:ok, period2} =
-        Periods.create_period(user.id, %{
+        Periods.create_period(group.id, %{
           start_date: ~D[2026-02-01],
           end_date: ~D[2026-02-28],
           daily_limit: Decimal.new("80.00")
         })
 
-      periods = Periods.list_periods(user.id)
+      periods = Periods.list_periods(group.id)
 
       assert length(periods) == 2
       [first, second] = periods
@@ -236,13 +236,13 @@ defmodule PlanfinBackend.PeriodsTest do
       assert second.id == period1.id
     end
 
-    test "does not return periods from other users" do
-      user1 = user_fixture()
-      user2 = user_fixture()
+    test "does not return periods from other groups" do
+      {_u1, g1} = user_with_group_fixture()
+      {_u2, g2} = user_with_group_fixture()
 
-      {:ok, _period} = Periods.create_period(user1.id, valid_period_attrs())
+      {:ok, _period} = Periods.create_period(g1.id, valid_period_attrs())
 
-      assert [] == Periods.list_periods(user2.id)
+      assert [] == Periods.list_periods(g2.id)
     end
   end
 end

@@ -3,10 +3,10 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   # ---- Queries ----
 
-  def active_period(_parent, args, %{context: %{current_user: user}}) do
+  def active_period(_parent, args, %{context: %{current_group: group}}) do
     today = parse_today(args)
 
-    case Periods.get_active_period(user.id) do
+    case Periods.get_active_period(group.id) do
       {:ok, nil} ->
         {:ok, nil}
 
@@ -29,13 +29,13 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def active_period(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def active_period(_parent, _args, context), do: access_error(context)
 
-  def expense_history(_parent, %{period_id: period_id}, %{context: %{current_user: user}}) do
-    case Periods.get_period(user.id, period_id) do
+  def expense_history(_parent, %{period_id: period_id}, %{context: %{current_group: group}}) do
+    case Periods.get_period(group.id, period_id) do
       {:ok, period} ->
         days =
-          Expenses.list_expenses_by_period(user.id, period.id)
+          Expenses.list_expenses_by_period(group.id, period.id)
           |> Enum.map(fn %{date: date, expenses: expenses, total: total} ->
             %{
               date: Date.to_iso8601(date),
@@ -51,10 +51,10 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def expense_history(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def expense_history(_parent, _args, context), do: access_error(context)
 
-  def period_summary(_parent, %{period_id: period_id}, %{context: %{current_user: user}}) do
-    case Periods.get_period(user.id, period_id) do
+  def period_summary(_parent, %{period_id: period_id}, %{context: %{current_group: group}}) do
+    case Periods.get_period(group.id, period_id) do
       {:ok, period} ->
         summary = Periods.get_period_summary(period)
 
@@ -71,11 +71,11 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def period_summary(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def period_summary(_parent, _args, context), do: access_error(context)
 
-  def list_categories(_parent, _args, %{context: %{current_user: user}}) do
+  def list_categories(_parent, _args, %{context: %{current_group: group}}) do
     categories =
-      Categories.list_categories(user.id)
+      Categories.list_categories(group.id)
       |> Enum.map(fn category ->
         %{
           id: to_string(category.id),
@@ -87,42 +87,42 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     {:ok, categories}
   end
 
-  def list_categories(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def list_categories(_parent, _args, context), do: access_error(context)
 
-  def list_periods(_parent, _args, %{context: %{current_user: user}}) do
+  def list_periods(_parent, _args, %{context: %{current_group: group}}) do
     periods =
-      Periods.list_periods(user.id)
+      Periods.list_periods(group.id)
       |> Enum.map(fn period -> format_period(period, nil) end)
 
     {:ok, periods}
   end
 
-  def list_periods(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def list_periods(_parent, _args, context), do: access_error(context)
 
   # ---- Mutations ----
 
-  def create_period(_parent, args, %{context: %{current_user: user}}) do
+  def create_period(_parent, args, %{context: %{current_group: group}}) do
     attrs = %{
       start_date: Date.from_iso8601!(args.start_date),
       end_date: Date.from_iso8601!(args.end_date),
       daily_limit: Decimal.new(args.daily_limit)
     }
 
-    case Periods.create_period(user.id, attrs) do
+    case Periods.create_period(group.id, attrs) do
       {:ok, period} ->
         {:ok, format_period(period, nil)}
 
       {:error, :already_has_active_period} ->
-        {:error, "User already has an active period"}
+        {:error, "Group already has an active period"}
 
       {:error, changeset} ->
         {:error, format_errors(changeset)}
     end
   end
 
-  def create_period(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def create_period(_parent, _args, context), do: access_error(context)
 
-  def create_expense(_parent, args, %{context: %{current_user: user}}) do
+  def create_expense(_parent, args, %{context: %{current_user: user, current_group: group}}) do
     attrs = %{
       amount: Decimal.new(args.amount),
       date: Date.from_iso8601!(args.date),
@@ -130,7 +130,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       subcategory_id: Map.get(args, :subcategory_id)
     }
 
-    case Expenses.create_expense(user.id, attrs) do
+    case Expenses.create_expense(group.id, user.id, attrs) do
       {:ok, expense} ->
         {:ok, format_expense(expense)}
 
@@ -145,9 +145,9 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def create_expense(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def create_expense(_parent, _args, context), do: access_error(context)
 
-  def update_expense(_parent, %{id: id} = args, %{context: %{current_user: user}}) do
+  def update_expense(_parent, %{id: id} = args, %{context: %{current_group: group}}) do
     attrs =
       %{}
       |> maybe_put(:amount, args[:amount], &Decimal.new/1)
@@ -155,7 +155,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       |> maybe_put(:note, args[:note], & &1)
       |> maybe_put(:subcategory_id, args[:subcategory_id], & &1)
 
-    case Expenses.update_expense(user.id, id, attrs) do
+    case Expenses.update_expense(group.id, id, attrs) do
       {:ok, expense} ->
         {:ok, format_expense(expense)}
 
@@ -170,19 +170,19 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def update_expense(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def update_expense(_parent, _args, context), do: access_error(context)
 
-  def delete_expense(_parent, %{id: id}, %{context: %{current_user: user}}) do
-    case Expenses.delete_expense(user.id, id) do
+  def delete_expense(_parent, %{id: id}, %{context: %{current_group: group}}) do
+    case Expenses.delete_expense(group.id, id) do
       {:ok, _expense} -> {:ok, true}
       {:error, :not_found} -> {:error, "Expense not found"}
     end
   end
 
-  def delete_expense(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def delete_expense(_parent, _args, context), do: access_error(context)
 
-  def create_category(_parent, %{name: name}, %{context: %{current_user: user}}) do
-    case Categories.create_category(user.id, %{name: name}) do
+  def create_category(_parent, %{name: name}, %{context: %{current_group: group}}) do
+    case Categories.create_category(group.id, %{name: name}) do
       {:ok, category} ->
         {:ok,
          %{
@@ -196,11 +196,11 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def create_category(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def create_category(_parent, _args, context), do: access_error(context)
 
-  def update_category(_parent, %{id: id, name: name}, %{context: %{current_user: user}}) do
+  def update_category(_parent, %{id: id, name: name}, %{context: %{current_group: group}}) do
     try do
-      category = Categories.get_category!(user.id, id)
+      category = Categories.get_category!(group.id, id)
 
       case Categories.update_category(category, %{name: name}) do
         {:ok, updated} ->
@@ -221,11 +221,11 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def update_category(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def update_category(_parent, _args, context), do: access_error(context)
 
-  def delete_category(_parent, %{id: id}, %{context: %{current_user: user}}) do
+  def delete_category(_parent, %{id: id}, %{context: %{current_group: group}}) do
     try do
-      category = Categories.get_category!(user.id, id)
+      category = Categories.get_category!(group.id, id)
 
       case Categories.delete_category(category) do
         {:ok, _} -> {:ok, true}
@@ -236,13 +236,13 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def delete_category(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def delete_category(_parent, _args, context), do: access_error(context)
 
   def create_subcategory(_parent, %{category_id: category_id, name: name}, %{
-        context: %{current_user: user}
+        context: %{current_group: group}
       }) do
     try do
-      category = Categories.get_category!(user.id, category_id)
+      category = Categories.get_category!(group.id, category_id)
 
       case Categories.create_subcategory(category, %{name: name}) do
         {:ok, subcategory} ->
@@ -256,11 +256,11 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def create_subcategory(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def create_subcategory(_parent, _args, context), do: access_error(context)
 
-  def update_subcategory(_parent, %{id: id, name: name}, %{context: %{current_user: user}}) do
+  def update_subcategory(_parent, %{id: id, name: name}, %{context: %{current_group: group}}) do
     try do
-      subcategory = Categories.get_subcategory!(user.id, id)
+      subcategory = Categories.get_subcategory!(group.id, id)
 
       case Categories.update_subcategory(subcategory, %{name: name}) do
         {:ok, updated} ->
@@ -274,11 +274,11 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def update_subcategory(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def update_subcategory(_parent, _args, context), do: access_error(context)
 
-  def delete_subcategory(_parent, %{id: id}, %{context: %{current_user: user}}) do
+  def delete_subcategory(_parent, %{id: id}, %{context: %{current_group: group}}) do
     try do
-      subcategory = Categories.get_subcategory!(user.id, id)
+      subcategory = Categories.get_subcategory!(group.id, id)
 
       case Categories.delete_subcategory(subcategory) do
         {:ok, _} -> {:ok, true}
@@ -289,9 +289,12 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     end
   end
 
-  def delete_subcategory(_parent, _args, _context), do: {:error, "Not authenticated"}
+  def delete_subcategory(_parent, _args, context), do: access_error(context)
 
   # ---- Private helpers ----
+
+  defp access_error(%{context: %{current_user: _}}), do: {:error, "No active group"}
+  defp access_error(_), do: {:error, "Not authenticated"}
 
   defp maybe_put(map, _key, nil, _transform), do: map
   defp maybe_put(map, key, value, transform), do: Map.put(map, key, transform.(value))
