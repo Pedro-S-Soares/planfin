@@ -40,9 +40,13 @@ config :planfin_backend, PlanfinBackendWeb.Endpoint,
 # By default it uses the "Local" adapter which stores the emails
 # locally. You can see the emails in your browser, at "/dev/mailbox".
 #
-# For production it's recommended to configure a different adapter
-# at the `config/runtime.exs`.
+# Production uses Swoosh.Adapters.Resend, configured in config/runtime.exs.
 config :planfin_backend, PlanfinBackend.Mailer, adapter: Swoosh.Adapters.Local
+
+# Defaults for dev/test; overridden in runtime.exs for prod.
+config :planfin_backend,
+  mail_from: "Planfin <no-reply@localhost>",
+  app_url: "http://localhost:8081"
 
 # Configure Elixir's Logger
 config :logger, :default_formatter,

@@ -9,12 +9,28 @@ defmodule PlanfinBackend.Accounts.UserNotifier do
     email =
       new()
       |> to(recipient)
-      |> from({"PlanfinBackend", "contact@example.com"})
+      |> from(from_address())
       |> subject(subject)
       |> text_body(body)
 
     with {:ok, _metadata} <- Mailer.deliver(email) do
       {:ok, email}
+    end
+  end
+
+  defp from_address do
+    case Application.get_env(:planfin_backend, :mail_from) do
+      value when is_binary(value) -> parse_from(value)
+      {_name, _email} = tuple -> tuple
+      _ -> {"Planfin", "no-reply@localhost"}
+    end
+  end
+
+  # Accepts either "Name <email@host>" or a bare "email@host".
+  defp parse_from(value) do
+    case Regex.run(~r/^\s*(?<name>.+?)\s*<(?<email>[^>]+)>\s*$/, value) do
+      [_full, name, email] -> {name, email}
+      _ -> {"Planfin", String.trim(value)}
     end
   end
 

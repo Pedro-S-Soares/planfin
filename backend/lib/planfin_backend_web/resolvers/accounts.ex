@@ -35,9 +35,11 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
 
   def forgot_password(_parent, %{email: email}, _context) do
     if user = Accounts.get_user_by_email(email) do
+      app_url = Application.get_env(:planfin_backend, :app_url, "http://localhost:8081")
+
       Accounts.deliver_user_reset_password_instructions(
         user,
-        fn token -> "planfin://reset-password/#{token}" end
+        fn token -> "#{app_url}/reset-password/#{token}" end
       )
     end
 

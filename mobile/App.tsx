@@ -62,7 +62,11 @@ const AppStack = createNativeStackNavigator<AppStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 
 const linking: LinkingOptions<AuthStackParamList> = {
-  prefixes: ["planfin://"],
+  prefixes: [
+    "planfin://",
+    "https://mobile-steel-nine.vercel.app",
+    "https://mobile-pedro-s-soares-projects.vercel.app",
+  ],
   config: {
     screens: {
       ResetPassword: "reset-password/:token",
