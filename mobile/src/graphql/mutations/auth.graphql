@@ -29,3 +29,11 @@ mutation ForgotPassword($email: String!) {
 mutation ResetPassword($token: String!, $password: String!, $passwordConfirmation: String!) {
   resetPassword(token: $token, password: $password, passwordConfirmation: $passwordConfirmation)
 }
+
+mutation UpdateProfile($name: String) {
+  updateProfile(name: $name) {
+    id
+    email
+    name
+  }
+}
