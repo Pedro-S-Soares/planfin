@@ -4,6 +4,7 @@ defmodule PlanfinBackend.Accounts.User do
 
   schema "users" do
     field :email, :string
+    field :name, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
@@ -17,6 +18,12 @@ defmodule PlanfinBackend.Accounts.User do
       join_through: PlanfinBackend.Groups.GroupMembership
 
     timestamps(type: :utc_datetime)
+  end
+
+  def profile_changeset(user, attrs) do
+    user
+    |> cast(attrs, [:name])
+    |> validate_length(:name, max: 100)
   end
 
   @doc """

@@ -60,6 +60,12 @@ defmodule PlanfinBackend.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  def update_user_profile(user, attrs) do
+    user
+    |> User.profile_changeset(attrs)
+    |> Repo.update()
+  end
+
   ## User registration
 
   @doc """
