@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useGroup } from "../context/GroupContext";
 import { useAuth } from "../context/AuthContext";
+import { Btn } from "../components/ui/Btn";
+import { FieldInput } from "../components/ui/FieldInput";
+import { Colors, Radius, Shadow } from "../theme/tokens";
 
 type Mode = "menu" | "create" | "join";
 
@@ -15,10 +19,7 @@ export function OnboardingGroupScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const handleCreate = async () => {
-    if (!groupName.trim()) {
-      setError("Digite um nome para o grupo.");
-      return;
-    }
+    if (!groupName.trim()) { setError("Digite um nome para o grupo."); return; }
     setBusy(true);
     setError(null);
     try {
@@ -33,10 +34,7 @@ export function OnboardingGroupScreen() {
 
   const handleJoin = async () => {
     const normalized = code.trim().toUpperCase();
-    if (normalized.length < 6) {
-      setError("Código deve ter pelo menos 6 caracteres.");
-      return;
-    }
+    if (normalized.length < 6) { setError("Código deve ter pelo menos 6 caracteres."); return; }
     setBusy(true);
     setError(null);
     try {
@@ -57,105 +55,116 @@ export function OnboardingGroupScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white p-6 justify-center">
-      <Text className="text-3xl font-bold text-center mb-2">Bem-vindo ao Planfin</Text>
-      <Text className="text-base text-neutral-500 text-center mb-10">
-        Para começar, crie um grupo ou entre em um existente com um código de convite.
-      </Text>
+    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
+      {/* Header */}
+      <View style={{
+        backgroundColor: Colors.bg,
+        paddingTop: 72,
+        paddingBottom: 28,
+        alignItems: "center",
+        borderBottomLeftRadius: 28,
+        borderBottomRightRadius: 28,
+      }}>
+        <LinearGradient
+          colors={[Colors.gradStart, Colors.gradEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 22,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: Colors.fabShadow,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 1,
+            shadowRadius: 20,
+            elevation: 8,
+          }}
+        >
+          <Text style={{ fontSize: 32 }}>👥</Text>
+        </LinearGradient>
+        <Text style={{ marginTop: 14, fontSize: 22, fontWeight: "800", color: Colors.text, letterSpacing: -0.4 }}>
+          Bem-vindo ao Planfin
+        </Text>
+        <Text style={{ marginTop: 5, fontSize: 13, color: Colors.textSec, textAlign: "center", paddingHorizontal: 32, lineHeight: 20 }}>
+          Crie um grupo ou entre em um existente para começar.
+        </Text>
+      </View>
 
-      {mode === "menu" && (
-        <>
-          <TouchableOpacity
-            className="bg-blue-600 rounded-lg p-4 items-center mb-3"
-            onPress={() => {
-              setError(null);
-              setMode("create");
-            }}
-          >
-            <Text className="text-white text-base font-semibold">Criar novo grupo</Text>
-          </TouchableOpacity>
+      <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 24 }}>
+        {mode === "menu" && (
+          <>
+            <Btn label="Criar novo grupo" onPress={() => { setError(null); setMode("create"); }} size="lg" />
+            <View style={{ height: 10 }} />
+            <Btn label="Entrar com código" variant="secondary" size="lg" onPress={() => { setError(null); setMode("join"); }} />
+            <TouchableOpacity onPress={handleSignOut} style={{ marginTop: 28, alignItems: "center" }}>
+              <Text style={{ color: Colors.textSec, fontSize: 13 }}>Sair da conta</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
-          <TouchableOpacity
-            className="border border-blue-600 rounded-lg p-4 items-center"
-            onPress={() => {
-              setError(null);
-              setMode("join");
-            }}
-          >
-            <Text className="text-blue-600 text-base font-semibold">Entrar com código</Text>
-          </TouchableOpacity>
-        </>
-      )}
+        {mode === "create" && (
+          <>
+            <TouchableOpacity
+              onPress={() => setMode("menu")}
+              style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 16 }}
+            >
+              <Text style={{ color: Colors.primary, fontSize: 18 }}>‹</Text>
+              <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "600" }}>Voltar</Text>
+            </TouchableOpacity>
+            <FieldInput
+              label="Nome do grupo"
+              placeholder="Ex.: Casa, Família, República"
+              value={groupName}
+              onChange={setGroupName}
+              autoFocus
+            />
+            {error && <Text style={{ color: Colors.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
+            <Btn label="Criar grupo" onPress={handleCreate} loading={busy} />
+          </>
+        )}
 
-      {mode === "create" && (
-        <>
-          <Text className="text-sm text-neutral-600 mb-2">Nome do grupo</Text>
-          <TextInput
-            className="border border-neutral-300 rounded-lg p-3 text-base mb-3"
-            placeholder="Ex.: Casa, Família, República"
-            value={groupName}
-            onChangeText={setGroupName}
-            maxLength={80}
-            autoFocus
-          />
-
-          {error && <Text className="text-red-500 text-sm mb-2">{error}</Text>}
-
-          <TouchableOpacity
-            className="bg-blue-600 rounded-lg p-4 items-center mb-2"
-            onPress={handleCreate}
-            disabled={busy}
-          >
-            {busy ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white text-base font-semibold">Criar grupo</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => setMode("menu")} disabled={busy}>
-            <Text className="text-blue-600 text-center mt-2 text-sm">Voltar</Text>
-          </TouchableOpacity>
-        </>
-      )}
-
-      {mode === "join" && (
-        <>
-          <Text className="text-sm text-neutral-600 mb-2">Código de convite</Text>
-          <TextInput
-            className="border border-neutral-300 rounded-lg p-3 text-base mb-3 tracking-widest text-center"
-            placeholder="AB12CD34"
-            value={code}
-            onChangeText={(v) => setCode(v.toUpperCase())}
-            maxLength={8}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            autoFocus
-          />
-
-          {error && <Text className="text-red-500 text-sm mb-2">{error}</Text>}
-
-          <TouchableOpacity
-            className="bg-blue-600 rounded-lg p-4 items-center mb-2"
-            onPress={handleJoin}
-            disabled={busy}
-          >
-            {busy ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="text-white text-base font-semibold">Entrar no grupo</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => setMode("menu")} disabled={busy}>
-            <Text className="text-blue-600 text-center mt-2 text-sm">Voltar</Text>
-          </TouchableOpacity>
-        </>
-      )}
-
-      <TouchableOpacity onPress={handleSignOut} className="mt-8">
-        <Text className="text-neutral-500 text-center text-xs">Sair da conta</Text>
-      </TouchableOpacity>
+        {mode === "join" && (
+          <>
+            <TouchableOpacity
+              onPress={() => setMode("menu")}
+              style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 16 }}
+            >
+              <Text style={{ color: Colors.primary, fontSize: 18 }}>‹</Text>
+              <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "600" }}>Voltar</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+              Código de convite
+            </Text>
+            <TextInput
+              value={code}
+              onChangeText={(v) => setCode(v.toUpperCase())}
+              maxLength={8}
+              placeholder="AB12CD34"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              autoFocus
+              style={{
+                height: 56,
+                textAlign: "center",
+                letterSpacing: 6,
+                fontSize: 22,
+                fontWeight: "800",
+                color: Colors.text,
+                borderWidth: 1.5,
+                borderColor: Colors.border,
+                borderRadius: Radius.md,
+                backgroundColor: Colors.surface,
+                marginBottom: 16,
+              }}
+              placeholderTextColor={Colors.textTer}
+            />
+            {error && <Text style={{ color: Colors.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
+            <Btn label="Entrar no grupo" onPress={handleJoin} loading={busy} />
+          </>
+        )}
+      </ScrollView>
     </View>
   );
 }

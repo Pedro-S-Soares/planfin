@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { TextInput, Text, View } from "react-native";
 import { formatCents } from "../lib/currency";
+import { Colors, Radius, Shadow } from "../theme/tokens";
 
 interface CurrencyInputProps {
   value: string;
@@ -9,6 +11,8 @@ interface CurrencyInputProps {
 }
 
 export function CurrencyInput({ value, onChange, error, autoFocus }: CurrencyInputProps) {
+  const [focused, setFocused] = useState(false);
+
   const handleChangeText = (raw: string) => {
     const digits = raw.replace(/\D/g, "");
     const cents = parseInt(digits, 10) || 0;
@@ -16,19 +20,32 @@ export function CurrencyInput({ value, onChange, error, autoFocus }: CurrencyInp
   };
 
   return (
-    <View className="mb-5">
-      <View className={`flex-row items-center border rounded-lg px-3 ${error ? "border-red-500" : "border-neutral-300"}`}>
-        <Text className="text-base text-neutral-500 mr-1">R$</Text>
+    <View style={{ marginBottom: 16 }}>
+      <View style={{
+        flexDirection: "row",
+        alignItems: "center",
+        height: 52,
+        borderRadius: Radius.md,
+        borderWidth: 1.5,
+        borderColor: error ? Colors.danger : focused ? Colors.primary : Colors.border,
+        backgroundColor: Colors.surface,
+        paddingHorizontal: 16,
+        ...Shadow.xs,
+      }}>
+        <Text style={{ fontSize: 16, color: Colors.textSec, fontWeight: "600", marginRight: 4 }}>R$</Text>
         <TextInput
-          className="flex-1 text-base py-3"
+          style={{ flex: 1, fontSize: 16, color: Colors.text }}
           value={value}
           onChangeText={handleChangeText}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           keyboardType="number-pad"
           autoFocus={autoFocus}
           selection={{ start: value.length, end: value.length }}
+          placeholderTextColor={Colors.textTer}
         />
       </View>
-      {error && <Text className="text-red-500 text-xs mt-1">{error}</Text>}
+      {error && <Text style={{ marginTop: 5, fontSize: 12, color: Colors.danger }}>{error}</Text>}
     </View>
   );
 }

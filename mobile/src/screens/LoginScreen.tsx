@@ -1,10 +1,14 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useLoginMutation } from "../graphql/__generated__/hooks";
 import { useAuth } from "../context/AuthContext";
+import { Logo } from "../components/ui/Logo";
+import { Btn } from "../components/ui/Btn";
+import { FieldInput } from "../components/ui/FieldInput";
+import { Colors } from "../theme/tokens";
 import type { AuthStackParamList } from "../../App";
 
 const schema = yup.object({
@@ -13,18 +17,12 @@ const schema = yup.object({
 });
 
 type FormValues = yup.InferType<typeof schema>;
-
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
 export function LoginScreen({ navigation }: Props) {
   const { signIn } = useAuth();
 
-  const {
-    control,
-    handleSubmit,
-    setError,
-    formState: { errors },
-  } = useForm<FormValues>({
+  const { control, handleSubmit, setError, formState: { errors } } = useForm<FormValues>({
     resolver: yupResolver(schema),
   });
 
@@ -36,72 +34,95 @@ export function LoginScreen({ navigation }: Props) {
         await signIn(token, { id: user.id, email: user.email });
       }
     },
-    onError: (error) => {
-      setError("root", { message: error.message });
-    },
+    onError: (error) => setError("root", { message: error.message }),
   });
 
-  const onSubmit = (values: FormValues) => {
-    login({ variables: values });
-  };
+  const onSubmit = (values: FormValues) => login({ variables: values });
 
   return (
-    <View className="flex-1 p-6 justify-center bg-white">
-      <Text className="text-3xl font-bold mb-2 text-center">Planfin</Text>
-      <Text className="text-base text-neutral-500 mb-8 text-center">Entrar na sua conta</Text>
+    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
+      {/* Header */}
+      <View style={{
+        backgroundColor: Colors.bg,
+        paddingTop: 72,
+        paddingBottom: 32,
+        alignItems: "center",
+        borderBottomLeftRadius: 32,
+        borderBottomRightRadius: 32,
+      }}>
+        <Logo size={60} />
+        <Text style={{ marginTop: 14, fontSize: 27, fontWeight: "800", color: Colors.text, letterSpacing: -0.6 }}>
+          Planfin
+        </Text>
+        <Text style={{ marginTop: 4, fontSize: 13, color: Colors.textSec }}>
+          Controle financeiro em grupo
+        </Text>
+      </View>
 
-      <Controller
-        control={control}
-        name="email"
-        render={({ field: { onChange, onBlur, value } }) => (
-          <View className="mb-4">
-            <TextInput
-              className={`border rounded-lg p-3 text-base ${errors.email ? "border-red-500" : "border-neutral-300"}`}
-              placeholder="Email"
+      {/* Form */}
+      <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 28 }}>
+        <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.text, letterSpacing: -0.4, marginBottom: 20 }}>
+          Entrar na conta
+        </Text>
+
+        <Controller
+          control={control}
+          name="email"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <FieldInput
+              label="E-mail"
+              placeholder="seu@email.com"
               value={value}
-              onChangeText={onChange}
+              onChange={onChange}
               onBlur={onBlur}
-              autoCapitalize="none"
+              error={errors.email?.message}
               keyboardType="email-address"
+              autoCapitalize="none"
               autoComplete="email"
             />
-            {errors.email && <Text className="text-red-500 text-xs mt-1">{errors.email.message}</Text>}
-          </View>
-        )}
-      />
+          )}
+        />
 
-      <Controller
-        control={control}
-        name="password"
-        render={({ field: { onChange, onBlur, value } }) => (
-          <View className="mb-4">
-            <TextInput
-              className={`border rounded-lg p-3 text-base ${errors.password ? "border-red-500" : "border-neutral-300"}`}
-              placeholder="Senha"
+        <Controller
+          control={control}
+          name="password"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <FieldInput
+              label="Senha"
+              placeholder="••••••••"
               value={value}
-              onChangeText={onChange}
+              onChange={onChange}
               onBlur={onBlur}
+              error={errors.password?.message}
               secureTextEntry
               autoComplete="password"
             />
-            {errors.password && <Text className="text-red-500 text-xs mt-1">{errors.password.message}</Text>}
-          </View>
+          )}
+        />
+
+        {errors.root && (
+          <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+            {errors.root.message}
+          </Text>
         )}
-      />
 
-      {errors.root && <Text className="text-red-500 text-sm text-center mb-3">{errors.root.message}</Text>}
+        <View style={{ marginBottom: 12 }}>
+          <Btn label="Entrar" onPress={handleSubmit(onSubmit)} loading={loading} />
+        </View>
 
-      <TouchableOpacity className="bg-blue-600 rounded-lg p-4 items-center mb-4" onPress={handleSubmit(onSubmit)} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-base font-semibold">Entrar</Text>}
-      </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+          <Text style={{ color: Colors.primary, textAlign: "center", fontSize: 14, fontWeight: "500", paddingVertical: 8 }}>
+            Esqueci minha senha
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
-        <Text className="text-blue-600 text-center mt-2 text-sm">Esqueci minha senha</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-        <Text className="text-blue-600 text-center mt-2 text-sm">Criar conta</Text>
-      </TouchableOpacity>
+        <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: Colors.border, flexDirection: "row", justifyContent: "center", gap: 4 }}>
+          <Text style={{ color: Colors.textSec, fontSize: 14 }}>Não tem conta?</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+            <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "700" }}>Criar conta</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 }
