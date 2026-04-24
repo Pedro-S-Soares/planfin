@@ -9,6 +9,7 @@ import { enableScreens } from "react-native-screens";
 import { Text } from "react-native";
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
+import { GroupProvider, useGroup } from "./src/context/GroupContext";
 import { apolloClient } from "./src/lib/apollo";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { RegisterScreen } from "./src/screens/RegisterScreen";
@@ -20,6 +21,9 @@ import { AddExpenseScreen } from "./src/screens/AddExpenseScreen";
 import { EditExpenseScreen } from "./src/screens/EditExpenseScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
+import { OnboardingGroupScreen } from "./src/screens/OnboardingGroupScreen";
+import { GroupsScreen } from "./src/screens/GroupsScreen";
+import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { usePeriod } from "./src/context/PeriodContext";
 import { PeriodProvider } from "./src/context/PeriodContext";
 
@@ -33,8 +37,11 @@ export type AuthStackParamList = {
 };
 
 export type AppStackParamList = {
+  Onboarding: undefined;
   CreatePeriod: undefined;
   MainTabs: undefined;
+  Groups: undefined;
+  Profile: undefined;
   AddExpense: undefined;
   EditExpense: {
     id: string;
@@ -57,7 +64,11 @@ const AppStack = createNativeStackNavigator<AppStackParamList>();
 const MainTab = createBottomTabNavigator<MainTabParamList>();
 
 const linking: LinkingOptions<AuthStackParamList> = {
-  prefixes: ["planfin://"],
+  prefixes: [
+    "planfin://",
+    "https://mobile-steel-nine.vercel.app",
+    "https://mobile-pedro-s-soares-projects.vercel.app",
+  ],
   config: {
     screens: {
       ResetPassword: "reset-password/:token",
@@ -67,11 +78,30 @@ const linking: LinkingOptions<AuthStackParamList> = {
 
 function MainTabs() {
   return (
-    <MainTab.Navigator screenOptions={{ headerShown: false }}>
+    <MainTab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: "#FFFFFF",
+          borderTopColor: "#E4E2F0",
+          borderTopWidth: 1,
+          paddingBottom: 20,
+          paddingTop: 8,
+          height: 72,
+        },
+        tabBarActiveTintColor: "#6255EA",
+        tabBarInactiveTintColor: "#ADABCA",
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "600",
+          letterSpacing: 0.1,
+        },
+      }}
+    >
       <MainTab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: "Hoje" , tabBarIcon: () => <Text>💰</Text> }}
+        options={{ tabBarLabel: "Hoje", tabBarIcon: () => <Text>🏠</Text> }}
       />
       <MainTab.Screen
         name="History"
@@ -100,18 +130,71 @@ function AppNavigator() {
         <>
           <AppStack.Screen name="MainTabs" component={MainTabs} />
           <AppStack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <AppStack.Screen
+            name="Groups"
+            component={GroupsScreen}
+            options={{
+              headerShown: true,
+              title: "Grupos",
+              headerStyle: { backgroundColor: "#FFFFFF" },
+              headerTintColor: "#6255EA",
+              headerTitleStyle: { color: "#17162B", fontWeight: "800" },
+              headerShadowVisible: false,
+            }}
+          />
+          <AppStack.Screen
             name="AddExpense"
             component={AddExpenseScreen}
-            options={{ presentation: "modal", headerShown: true, title: "Novo gasto" }}
+            options={{
+              presentation: "modal",
+              headerShown: true,
+              title: "Novo gasto",
+              headerStyle: { backgroundColor: "#FFFFFF" },
+              headerTintColor: "#6255EA",
+              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
+              headerShadowVisible: false,
+            }}
           />
           <AppStack.Screen
             name="EditExpense"
             component={EditExpenseScreen}
-            options={{ presentation: "modal", headerShown: true, title: "Editar gasto" }}
+            options={{
+              presentation: "modal",
+              headerShown: true,
+              title: "Editar gasto",
+              headerStyle: { backgroundColor: "#FFFFFF" },
+              headerTintColor: "#6255EA",
+              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
+              headerShadowVisible: false,
+            }}
           />
         </>
       )}
     </AppStack.Navigator>
+  );
+}
+
+function AuthenticatedNavigator() {
+  const { activeGroup, isLoading } = useGroup();
+
+  if (isLoading) return null;
+
+  if (!activeGroup) {
+    return (
+      <AppStack.Navigator screenOptions={{ headerShown: false }}>
+        <AppStack.Screen name="Onboarding" component={OnboardingGroupScreen} />
+      </AppStack.Navigator>
+    );
+  }
+
+  return (
+    <PeriodProvider>
+      <AppNavigator />
+    </PeriodProvider>
   );
 }
 
@@ -132,9 +215,9 @@ function Navigation() {
   }
 
   return (
-    <PeriodProvider>
-      <AppNavigator />
-    </PeriodProvider>
+    <GroupProvider>
+      <AuthenticatedNavigator />
+    </GroupProvider>
   );
 }
 

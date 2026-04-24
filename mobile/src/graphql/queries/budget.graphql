@@ -29,6 +29,10 @@ query ExpenseHistory($periodId: ID!) {
         id
         name
       }
+      createdBy {
+        id
+        email
+      }
     }
   }
 }

@@ -8,7 +8,6 @@ defmodule PlanfinBackend.Categories.Subcategory do
   schema "subcategories" do
     field :name, :string
     belongs_to :category, PlanfinBackend.Categories.Category
-    belongs_to :user, PlanfinBackend.Accounts.User, type: :integer, foreign_key: :user_id
 
     timestamps()
   end
@@ -18,8 +17,8 @@ defmodule PlanfinBackend.Categories.Subcategory do
   """
   def changeset(subcategory, attrs) do
     subcategory
-    |> cast(attrs, [:name, :category_id, :user_id])
-    |> validate_required([:name])
+    |> cast(attrs, [:name, :category_id])
+    |> validate_required([:name, :category_id])
     |> validate_length(:name, min: 1)
   end
 end

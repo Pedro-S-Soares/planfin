@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Text, TouchableOpacity, Platform } from "react-native";
 import { formatDateBR, parseISODate, toISODate } from "../lib/date";
+import { Colors, Radius, Shadow } from "../theme/tokens";
 
 interface DatePickerFieldProps {
   value: string;
@@ -47,14 +48,12 @@ function WebDateInput({ value, onChange, minDate, maxDate }: {
       value={value}
       min={minDate}
       max={maxDate}
-      onChange={(e) => {
-        if (e.target.value) onChange(e.target.value);
-      }}
+      onChange={(e) => { if (e.target.value) onChange(e.target.value); }}
       style={{
         border: "none",
         background: "transparent",
         fontSize: 16,
-        color: "#404040",
+        color: Colors.text,
         outline: "none",
         width: "100%",
         padding: 0,
@@ -69,19 +68,37 @@ export function DatePickerField({ value, onChange, error, minDate, maxDate }: Da
   const isWeb = Platform.OS === "web";
 
   return (
-    <View className="mb-5">
+    <View style={{ marginBottom: 16 }}>
       {isWeb ? (
-        <View className={`border rounded-lg p-3 bg-white ${error ? "border-red-500" : "border-neutral-300"}`}>
+        <View style={{
+          height: 52,
+          borderRadius: Radius.md,
+          borderWidth: 1.5,
+          borderColor: error ? Colors.danger : Colors.border,
+          backgroundColor: Colors.surface,
+          paddingHorizontal: 16,
+          justifyContent: "center",
+          ...Shadow.xs,
+        }}>
           <WebDateInput value={value} onChange={onChange} minDate={minDate} maxDate={maxDate} />
         </View>
       ) : (
         <>
           <TouchableOpacity
-            className={`border rounded-lg p-3 bg-white ${error ? "border-red-500" : "border-neutral-300"}`}
+            style={{
+              height: 52,
+              borderRadius: Radius.md,
+              borderWidth: 1.5,
+              borderColor: error ? Colors.danger : Colors.border,
+              backgroundColor: Colors.surface,
+              paddingHorizontal: 16,
+              justifyContent: "center",
+              ...Shadow.xs,
+            }}
             onPress={() => setShow(true)}
             activeOpacity={0.7}
           >
-            <Text className="text-base text-neutral-700">{formatDateBR(value)}</Text>
+            <Text style={{ fontSize: 15, color: Colors.text }}>{formatDateBR(value)}</Text>
           </TouchableOpacity>
 
           {show && (
@@ -96,7 +113,7 @@ export function DatePickerField({ value, onChange, error, minDate, maxDate }: Da
         </>
       )}
 
-      {error && <Text className="text-red-500 text-xs mt-1">{error}</Text>}
+      {error && <Text style={{ marginTop: 5, fontSize: 12, color: Colors.danger }}>{error}</Text>}
     </View>
   );
 }

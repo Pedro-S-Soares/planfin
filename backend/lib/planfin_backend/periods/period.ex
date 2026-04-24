@@ -3,7 +3,7 @@ defmodule PlanfinBackend.Periods.Period do
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :integer
+  @foreign_key_type :binary_id
 
   @valid_statuses ~w(active closed abandoned)
 
@@ -13,7 +13,7 @@ defmodule PlanfinBackend.Periods.Period do
     field :daily_limit, :decimal
     field :status, :string, default: "active"
 
-    belongs_to :user, PlanfinBackend.Accounts.User
+    belongs_to :group, PlanfinBackend.Groups.Group
 
     has_many :budget_days, PlanfinBackend.Periods.BudgetDay,
       foreign_key: :period_id,
@@ -29,8 +29,8 @@ defmodule PlanfinBackend.Periods.Period do
   """
   def changeset(period, attrs) do
     period
-    |> cast(attrs, [:start_date, :end_date, :daily_limit, :status, :user_id])
-    |> validate_required([:start_date, :end_date, :daily_limit])
+    |> cast(attrs, [:start_date, :end_date, :daily_limit, :status, :group_id])
+    |> validate_required([:start_date, :end_date, :daily_limit, :group_id])
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_end_date_after_start_date()
     |> validate_daily_limit_positive()

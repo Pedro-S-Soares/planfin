@@ -3,11 +3,11 @@ defmodule PlanfinBackend.Categories.Category do
   import Ecto.Changeset
 
   @primary_key {:id, :binary_id, autogenerate: true}
-  @foreign_key_type :integer
+  @foreign_key_type :binary_id
 
   schema "categories" do
     field :name, :string
-    belongs_to :user, PlanfinBackend.Accounts.User
+    belongs_to :group, PlanfinBackend.Groups.Group
     has_many :subcategories, PlanfinBackend.Categories.Subcategory
 
     timestamps()
@@ -18,8 +18,8 @@ defmodule PlanfinBackend.Categories.Category do
   """
   def changeset(category, attrs) do
     category
-    |> cast(attrs, [:name, :user_id])
-    |> validate_required([:name])
+    |> cast(attrs, [:name, :group_id])
+    |> validate_required([:name, :group_id])
     |> validate_length(:name, min: 1)
   end
 end

@@ -4,6 +4,15 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
   def me(_parent, _args, %{context: %{current_user: user}}), do: {:ok, user}
   def me(_parent, _args, _context), do: {:error, "Not authenticated"}
 
+  def update_profile(_parent, args, %{context: %{current_user: user}}) do
+    case Accounts.update_user_profile(user, args) do
+      {:ok, updated_user} -> {:ok, updated_user}
+      {:error, changeset} -> {:error, format_errors(changeset)}
+    end
+  end
+
+  def update_profile(_parent, _args, _context), do: {:error, "Not authenticated"}
+
   def register_user(_parent, args, _context) do
     case Accounts.register_user(args) do
       {:ok, user} ->
@@ -35,9 +44,11 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
 
   def forgot_password(_parent, %{email: email}, _context) do
     if user = Accounts.get_user_by_email(email) do
+      app_url = Application.get_env(:planfin_backend, :app_url, "http://localhost:8081")
+
       Accounts.deliver_user_reset_password_instructions(
         user,
-        fn token -> "planfin://reset-password/#{token}" end
+        fn token -> "#{app_url}/reset-password/#{token}" end
       )
     end
 

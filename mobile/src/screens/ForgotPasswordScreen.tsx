@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useForgotPasswordMutation } from "../graphql/__generated__/hooks";
+import { Btn } from "../components/ui/Btn";
+import { FieldInput } from "../components/ui/FieldInput";
+import { Colors, Radius } from "../theme/tokens";
 import type { AuthStackParamList } from "../../App";
 
 const schema = yup.object({
@@ -12,17 +15,12 @@ const schema = yup.object({
 });
 
 type FormValues = yup.InferType<typeof schema>;
-
 type Props = NativeStackScreenProps<AuthStackParamList, "ForgotPassword">;
 
 export function ForgotPasswordScreen({ navigation }: Props) {
   const [sent, setSent] = useState(false);
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({
+  const { control, handleSubmit, formState: { errors } } = useForm<FormValues>({
     resolver: yupResolver(schema),
   });
 
@@ -31,62 +29,74 @@ export function ForgotPasswordScreen({ navigation }: Props) {
     onError: () => setSent(true),
   });
 
-  const onSubmit = (values: FormValues) => {
-    forgotPassword({ variables: values });
-  };
-
-  if (sent) {
-    return (
-      <View className="flex-1 p-6 justify-center bg-white">
-        <Text className="text-2xl font-bold mb-3 text-center">Email enviado</Text>
-        <Text className="text-sm text-neutral-500 text-center mb-8 leading-5">
-          Se esse email estiver cadastrado, você receberá um link para redefinir sua senha.
-        </Text>
-        <TouchableOpacity className="bg-blue-600 rounded-lg p-4 items-center mb-4" onPress={() => navigation.navigate("Login")}>
-          <Text className="text-white text-base font-semibold">Voltar para login</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const onSubmit = (values: FormValues) => forgotPassword({ variables: values });
 
   return (
-    <View className="flex-1 p-6 justify-center bg-white">
-      <Text className="text-2xl font-bold mb-3 text-center">Esqueceu a senha?</Text>
-      <Text className="text-sm text-neutral-500 text-center mb-8 leading-5">
-        Informe seu email e enviaremos instruções para redefinir sua senha.
-      </Text>
+    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
+      {/* Header */}
+      <View style={{
+        backgroundColor: Colors.bg,
+        paddingTop: 62,
+        paddingBottom: 22,
+        paddingHorizontal: 22,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+      }}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 16 }}
+        >
+          <Text style={{ color: Colors.primary, fontSize: 18 }}>‹</Text>
+          <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "600" }}>Voltar</Text>
+        </TouchableOpacity>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.text, letterSpacing: -0.5 }}>
+          Recuperar senha
+        </Text>
+        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 3 }}>
+          Enviaremos um link para o seu e-mail
+        </Text>
+      </View>
 
-      <Controller
-        control={control}
-        name="email"
-        render={({ field: { onChange, onBlur, value } }) => (
-          <View className="mb-4">
-            <TextInput
-              className={`border rounded-lg p-3 text-base ${errors.email ? "border-red-500" : "border-neutral-300"}`}
-              placeholder="Email"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-            />
-            {errors.email && <Text className="text-red-500 text-xs mt-1">{errors.email.message}</Text>}
+      <View style={{ padding: 22, paddingTop: 22 }}>
+        {sent ? (
+          <View style={{
+            backgroundColor: Colors.successLight,
+            borderRadius: Radius.lg,
+            padding: 18,
+            borderWidth: 1,
+            borderColor: "rgba(14,173,112,0.3)",
+          }}>
+            <Text style={{ fontSize: 15, color: Colors.successText, fontWeight: "700" }}>
+              ✓ Link enviado!
+            </Text>
+            <Text style={{ fontSize: 13, color: Colors.successText, marginTop: 5, lineHeight: 20 }}>
+              Verifique seu e-mail e siga as instruções para redefinir sua senha.
+            </Text>
           </View>
-        )}
-      />
-
-      <TouchableOpacity className="bg-blue-600 rounded-lg p-4 items-center mb-4" onPress={handleSubmit(onSubmit)} disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color="#fff" />
         ) : (
-          <Text className="text-white text-base font-semibold">Enviar instruções</Text>
+          <>
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <FieldInput
+                  label="E-mail"
+                  placeholder="seu@email.com"
+                  value={value}
+                  onChange={onChange}
+                  onBlur={onBlur}
+                  error={errors.email?.message}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  autoFocus
+                />
+              )}
+            />
+            <Btn label="Enviar link de recuperação" onPress={handleSubmit(onSubmit)} loading={loading} />
+          </>
         )}
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text className="text-blue-600 text-center mt-2 text-sm">Voltar</Text>
-      </TouchableOpacity>
+      </View>
     </View>
   );
 }

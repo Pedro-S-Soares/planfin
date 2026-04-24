@@ -1,0 +1,60 @@
+mutation CreateGroup($name: String!) {
+  createGroup(name: $name) {
+    id
+    name
+    ownerId
+  }
+}
+
+mutation RenameGroup($id: ID!, $name: String!) {
+  renameGroup(id: $id, name: $name) {
+    id
+    name
+  }
+}
+
+mutation DeleteGroup($id: ID!) {
+  deleteGroup(id: $id)
+}
+
+mutation SwitchActiveGroup($id: ID!) {
+  switchActiveGroup(id: $id) {
+    id
+    name
+  }
+}
+
+mutation LeaveGroup($id: ID!) {
+  leaveGroup(id: $id)
+}
+
+mutation RemoveMember($groupId: ID!, $userId: Int!) {
+  removeMember(groupId: $groupId, userId: $userId)
+}
+
+mutation GenerateInviteCode($groupId: ID!, $expiresInDays: Int, $maxUses: Int) {
+  generateInviteCode(groupId: $groupId, expiresInDays: $expiresInDays, maxUses: $maxUses) {
+    id
+    code
+    expiresAt
+    maxUses
+    usesCount
+  }
+}
+
+mutation RevokeInviteCode($inviteId: ID!) {
+  revokeInviteCode(inviteId: $inviteId)
+}
+
+mutation RedeemInviteCode($code: String!) {
+  redeemInviteCode(code: $code) {
+    group {
+      id
+      name
+    }
+    invite {
+      id
+      code
+    }
+  }
+}

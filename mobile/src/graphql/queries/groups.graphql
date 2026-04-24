@@ -1,0 +1,36 @@
+query MyGroups {
+  myGroups {
+    id
+    name
+    ownerId
+    insertedAt
+  }
+}
+
+query ActiveGroup {
+  activeGroup {
+    id
+    name
+    ownerId
+  }
+}
+
+query GroupMembers($groupId: ID!) {
+  groupMembers(groupId: $groupId) {
+    id
+    email
+    joinedAt
+    isOwner
+  }
+}
+
+query GroupInvites($groupId: ID!) {
+  groupInvites(groupId: $groupId) {
+    id
+    code
+    expiresAt
+    maxUses
+    usesCount
+    insertedAt
+  }
+}

@@ -1,6 +1,6 @@
 defmodule PlanfinBackend.Periods do
   @moduledoc """
-  The Periods context.
+  The Periods context. Periods are scoped by group.
   """
 
   import Ecto.Query, warn: false
@@ -9,24 +9,24 @@ defmodule PlanfinBackend.Periods do
   alias PlanfinBackend.Periods.{Period, BudgetDay}
 
   @doc """
-  Creates a period for the given user.
+  Creates a period for the given group.
 
-  Returns `{:error, :already_has_active_period}` if the user already has an
+  Returns `{:error, :already_has_active_period}` if the group already has an
   active period. Otherwise, creates the period and the budget_day for the
   start_date with carryover=0 and daily_limit = period.daily_limit.
   """
-  def create_period(user_id, attrs) do
-    with :ok <- check_no_active_period(user_id),
-         {:ok, period} <- insert_period(user_id, attrs),
+  def create_period(group_id, attrs) do
+    with :ok <- check_no_active_period(group_id),
+         {:ok, period} <- insert_period(group_id, attrs),
          {:ok, _budget_day} <- create_first_budget_day(period) do
       {:ok, period}
     end
   end
 
-  defp check_no_active_period(user_id) do
+  defp check_no_active_period(group_id) do
     exists =
       Period
-      |> where([p], p.user_id == ^user_id and p.status == "active")
+      |> where([p], p.group_id == ^group_id and p.status == "active")
       |> Repo.exists?()
 
     if exists do
@@ -36,9 +36,9 @@ defmodule PlanfinBackend.Periods do
     end
   end
 
-  defp insert_period(user_id, attrs) do
+  defp insert_period(group_id, attrs) do
     %Period{}
-    |> Period.changeset(Map.put(attrs, :user_id, user_id))
+    |> Period.changeset(Map.put(attrs, :group_id, group_id))
     |> Repo.insert()
   end
 
@@ -54,13 +54,13 @@ defmodule PlanfinBackend.Periods do
   end
 
   @doc """
-  Returns `{:ok, period}` with budget_days preloaded if the user has an active
+  Returns `{:ok, period}` with budget_days preloaded if the group has an active
   period, or `{:ok, nil}` otherwise.
   """
-  def get_active_period(user_id) do
+  def get_active_period(group_id) do
     period =
       Period
-      |> where([p], p.user_id == ^user_id and p.status == "active")
+      |> where([p], p.group_id == ^group_id and p.status == "active")
       |> preload(:budget_days)
       |> Repo.one()
 
@@ -68,11 +68,11 @@ defmodule PlanfinBackend.Periods do
   end
 
   @doc """
-  Returns `{:ok, period}` if the period belongs to the user, or
+  Returns `{:ok, period}` if the period belongs to the group, or
   `{:error, :not_found}` otherwise.
   """
-  def get_period(user_id, period_id) do
-    case Repo.get_by(Period, id: period_id, user_id: user_id) do
+  def get_period(group_id, period_id) do
+    case Repo.get_by(Period, id: period_id, group_id: group_id) do
       nil -> {:error, :not_found}
       period -> {:ok, period}
     end
@@ -134,11 +134,11 @@ defmodule PlanfinBackend.Periods do
   end
 
   @doc """
-  Lists all periods for a user ordered by start_date descending.
+  Lists all periods for a group ordered by start_date descending.
   """
-  def list_periods(user_id) do
+  def list_periods(group_id) do
     Period
-    |> where([p], p.user_id == ^user_id)
+    |> where([p], p.group_id == ^group_id)
     |> order_by([p], desc: p.start_date)
     |> Repo.all()
   end

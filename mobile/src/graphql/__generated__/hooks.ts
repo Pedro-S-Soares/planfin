@@ -43,6 +43,7 @@ export type Category = {
 export type Expense = {
   __typename?: 'Expense';
   amount?: Maybe<Scalars['String']['output']>;
+  createdBy?: Maybe<User>;
   date?: Maybe<Scalars['String']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
   note?: Maybe<Scalars['String']['output']>;
@@ -54,6 +55,33 @@ export type ExpenseDay = {
   date?: Maybe<Scalars['String']['output']>;
   expenses?: Maybe<Array<Maybe<Expense>>>;
   total?: Maybe<Scalars['String']['output']>;
+};
+
+export type Group = {
+  __typename?: 'Group';
+  id?: Maybe<Scalars['ID']['output']>;
+  insertedAt?: Maybe<Scalars['String']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
+  ownerId?: Maybe<Scalars['Int']['output']>;
+};
+
+export type GroupInvite = {
+  __typename?: 'GroupInvite';
+  code?: Maybe<Scalars['String']['output']>;
+  expiresAt?: Maybe<Scalars['String']['output']>;
+  id?: Maybe<Scalars['ID']['output']>;
+  insertedAt?: Maybe<Scalars['String']['output']>;
+  maxUses?: Maybe<Scalars['Int']['output']>;
+  revokedAt?: Maybe<Scalars['String']['output']>;
+  usesCount?: Maybe<Scalars['Int']['output']>;
+};
+
+export type GroupMember = {
+  __typename?: 'GroupMember';
+  email?: Maybe<Scalars['String']['output']>;
+  id?: Maybe<Scalars['Int']['output']>;
+  isOwner?: Maybe<Scalars['Boolean']['output']>;
+  joinedAt?: Maybe<Scalars['String']['output']>;
 };
 
 export type Period = {
@@ -74,22 +102,38 @@ export type PeriodSummary = {
   totalSpent?: Maybe<Scalars['String']['output']>;
 };
 
+export type RedeemInvitePayload = {
+  __typename?: 'RedeemInvitePayload';
+  group?: Maybe<Group>;
+  invite?: Maybe<GroupInvite>;
+};
+
 export type RootMutationType = {
   __typename?: 'RootMutationType';
   createCategory?: Maybe<Category>;
   createExpense?: Maybe<Expense>;
+  createGroup?: Maybe<Group>;
   createPeriod?: Maybe<Period>;
   createSubcategory?: Maybe<Subcategory>;
   deleteCategory?: Maybe<Scalars['Boolean']['output']>;
   deleteExpense?: Maybe<Scalars['Boolean']['output']>;
+  deleteGroup?: Maybe<Scalars['Boolean']['output']>;
   deleteSubcategory?: Maybe<Scalars['Boolean']['output']>;
   forgotPassword?: Maybe<Scalars['Boolean']['output']>;
+  generateInviteCode?: Maybe<GroupInvite>;
+  leaveGroup?: Maybe<Scalars['Boolean']['output']>;
   login?: Maybe<AuthPayload>;
   logout?: Maybe<Scalars['Boolean']['output']>;
+  redeemInviteCode?: Maybe<RedeemInvitePayload>;
   registerUser?: Maybe<AuthPayload>;
+  removeMember?: Maybe<Scalars['Boolean']['output']>;
+  renameGroup?: Maybe<Group>;
   resetPassword?: Maybe<Scalars['Boolean']['output']>;
+  revokeInviteCode?: Maybe<Scalars['Boolean']['output']>;
+  switchActiveGroup?: Maybe<Group>;
   updateCategory?: Maybe<Category>;
   updateExpense?: Maybe<Expense>;
+  updateProfile?: Maybe<User>;
   updateSubcategory?: Maybe<Subcategory>;
 };
 
@@ -104,6 +148,11 @@ export type RootMutationTypeCreateExpenseArgs = {
   date: Scalars['String']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type RootMutationTypeCreateGroupArgs = {
+  name: Scalars['String']['input'];
 };
 
 
@@ -130,6 +179,11 @@ export type RootMutationTypeDeleteExpenseArgs = {
 };
 
 
+export type RootMutationTypeDeleteGroupArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type RootMutationTypeDeleteSubcategoryArgs = {
   id: Scalars['ID']['input'];
 };
@@ -140,9 +194,26 @@ export type RootMutationTypeForgotPasswordArgs = {
 };
 
 
+export type RootMutationTypeGenerateInviteCodeArgs = {
+  expiresInDays?: InputMaybe<Scalars['Int']['input']>;
+  groupId: Scalars['ID']['input'];
+  maxUses?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type RootMutationTypeLeaveGroupArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type RootMutationTypeLoginArgs = {
   email: Scalars['String']['input'];
   password: Scalars['String']['input'];
+};
+
+
+export type RootMutationTypeRedeemInviteCodeArgs = {
+  code: Scalars['String']['input'];
 };
 
 
@@ -153,10 +224,32 @@ export type RootMutationTypeRegisterUserArgs = {
 };
 
 
+export type RootMutationTypeRemoveMemberArgs = {
+  groupId: Scalars['ID']['input'];
+  userId: Scalars['Int']['input'];
+};
+
+
+export type RootMutationTypeRenameGroupArgs = {
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+};
+
+
 export type RootMutationTypeResetPasswordArgs = {
   password: Scalars['String']['input'];
   passwordConfirmation: Scalars['String']['input'];
   token: Scalars['String']['input'];
+};
+
+
+export type RootMutationTypeRevokeInviteCodeArgs = {
+  inviteId: Scalars['ID']['input'];
+};
+
+
+export type RootMutationTypeSwitchActiveGroupArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -175,6 +268,11 @@ export type RootMutationTypeUpdateExpenseArgs = {
 };
 
 
+export type RootMutationTypeUpdateProfileArgs = {
+  name?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type RootMutationTypeUpdateSubcategoryArgs = {
   id: Scalars['ID']['input'];
   name: Scalars['String']['input'];
@@ -182,10 +280,14 @@ export type RootMutationTypeUpdateSubcategoryArgs = {
 
 export type RootQueryType = {
   __typename?: 'RootQueryType';
+  activeGroup?: Maybe<Group>;
   activePeriod?: Maybe<Period>;
   categories?: Maybe<Array<Maybe<Category>>>;
   expenseHistory?: Maybe<Array<Maybe<ExpenseDay>>>;
+  groupInvites?: Maybe<Array<Maybe<GroupInvite>>>;
+  groupMembers?: Maybe<Array<Maybe<GroupMember>>>;
   me?: Maybe<User>;
+  myGroups?: Maybe<Array<Maybe<Group>>>;
   periodSummary?: Maybe<PeriodSummary>;
   periods?: Maybe<Array<Maybe<Period>>>;
 };
@@ -198,6 +300,16 @@ export type RootQueryTypeActivePeriodArgs = {
 
 export type RootQueryTypeExpenseHistoryArgs = {
   periodId: Scalars['ID']['input'];
+};
+
+
+export type RootQueryTypeGroupInvitesArgs = {
+  groupId: Scalars['ID']['input'];
+};
+
+
+export type RootQueryTypeGroupMembersArgs = {
+  groupId: Scalars['ID']['input'];
 };
 
 
@@ -216,6 +328,7 @@ export type User = {
   __typename?: 'User';
   email?: Maybe<Scalars['String']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
 };
 
 export type LoginMutationVariables = Exact<{
@@ -256,6 +369,13 @@ export type ResetPasswordMutationVariables = Exact<{
 
 export type ResetPasswordMutation = { __typename?: 'RootMutationType', resetPassword?: boolean | null };
 
+export type UpdateProfileMutationVariables = Exact<{
+  name?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type UpdateProfileMutation = { __typename?: 'RootMutationType', updateProfile?: { __typename?: 'User', id?: string | null, email?: string | null, name?: string | null } | null };
+
 export type CreatePeriodMutationVariables = Exact<{
   startDate: Scalars['String']['input'];
   endDate: Scalars['String']['input'];
@@ -273,7 +393,7 @@ export type CreateExpenseMutationVariables = Exact<{
 }>;
 
 
-export type CreateExpenseMutation = { __typename?: 'RootMutationType', createExpense?: { __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null };
+export type CreateExpenseMutation = { __typename?: 'RootMutationType', createExpense?: { __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null };
 
 export type UpdateExpenseMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -330,6 +450,73 @@ export type DeleteSubcategoryMutationVariables = Exact<{
 
 export type DeleteSubcategoryMutation = { __typename?: 'RootMutationType', deleteSubcategory?: boolean | null };
 
+export type CreateGroupMutationVariables = Exact<{
+  name: Scalars['String']['input'];
+}>;
+
+
+export type CreateGroupMutation = { __typename?: 'RootMutationType', createGroup?: { __typename?: 'Group', id?: string | null, name?: string | null, ownerId?: number | null } | null };
+
+export type RenameGroupMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+}>;
+
+
+export type RenameGroupMutation = { __typename?: 'RootMutationType', renameGroup?: { __typename?: 'Group', id?: string | null, name?: string | null } | null };
+
+export type DeleteGroupMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteGroupMutation = { __typename?: 'RootMutationType', deleteGroup?: boolean | null };
+
+export type SwitchActiveGroupMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type SwitchActiveGroupMutation = { __typename?: 'RootMutationType', switchActiveGroup?: { __typename?: 'Group', id?: string | null, name?: string | null } | null };
+
+export type LeaveGroupMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type LeaveGroupMutation = { __typename?: 'RootMutationType', leaveGroup?: boolean | null };
+
+export type RemoveMemberMutationVariables = Exact<{
+  groupId: Scalars['ID']['input'];
+  userId: Scalars['Int']['input'];
+}>;
+
+
+export type RemoveMemberMutation = { __typename?: 'RootMutationType', removeMember?: boolean | null };
+
+export type GenerateInviteCodeMutationVariables = Exact<{
+  groupId: Scalars['ID']['input'];
+  expiresInDays?: InputMaybe<Scalars['Int']['input']>;
+  maxUses?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GenerateInviteCodeMutation = { __typename?: 'RootMutationType', generateInviteCode?: { __typename?: 'GroupInvite', id?: string | null, code?: string | null, expiresAt?: string | null, maxUses?: number | null, usesCount?: number | null } | null };
+
+export type RevokeInviteCodeMutationVariables = Exact<{
+  inviteId: Scalars['ID']['input'];
+}>;
+
+
+export type RevokeInviteCodeMutation = { __typename?: 'RootMutationType', revokeInviteCode?: boolean | null };
+
+export type RedeemInviteCodeMutationVariables = Exact<{
+  code: Scalars['String']['input'];
+}>;
+
+
+export type RedeemInviteCodeMutation = { __typename?: 'RootMutationType', redeemInviteCode?: { __typename?: 'RedeemInvitePayload', group?: { __typename?: 'Group', id?: string | null, name?: string | null } | null, invite?: { __typename?: 'GroupInvite', id?: string | null, code?: string | null } | null } | null };
+
 export type ActivePeriodQueryVariables = Exact<{
   today: Scalars['String']['input'];
 }>;
@@ -342,17 +529,41 @@ export type ExpenseHistoryQueryVariables = Exact<{
 }>;
 
 
-export type ExpenseHistoryQuery = { __typename?: 'RootQueryType', expenseHistory?: Array<{ __typename?: 'ExpenseDay', date?: string | null, total?: string | null, expenses?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null> | null } | null> | null };
+export type ExpenseHistoryQuery = { __typename?: 'RootQueryType', expenseHistory?: Array<{ __typename?: 'ExpenseDay', date?: string | null, total?: string | null, expenses?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null> | null } | null> | null };
 
 export type CategoriesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type CategoriesQuery = { __typename?: 'RootQueryType', categories?: Array<{ __typename?: 'Category', id?: string | null, name?: string | null, subcategories?: Array<{ __typename?: 'Subcategory', id?: string | null, name?: string | null } | null> | null } | null> | null };
 
+export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyGroupsQuery = { __typename?: 'RootQueryType', myGroups?: Array<{ __typename?: 'Group', id?: string | null, name?: string | null, ownerId?: number | null, insertedAt?: string | null } | null> | null };
+
+export type ActiveGroupQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ActiveGroupQuery = { __typename?: 'RootQueryType', activeGroup?: { __typename?: 'Group', id?: string | null, name?: string | null, ownerId?: number | null } | null };
+
+export type GroupMembersQueryVariables = Exact<{
+  groupId: Scalars['ID']['input'];
+}>;
+
+
+export type GroupMembersQuery = { __typename?: 'RootQueryType', groupMembers?: Array<{ __typename?: 'GroupMember', id?: number | null, email?: string | null, joinedAt?: string | null, isOwner?: boolean | null } | null> | null };
+
+export type GroupInvitesQueryVariables = Exact<{
+  groupId: Scalars['ID']['input'];
+}>;
+
+
+export type GroupInvitesQuery = { __typename?: 'RootQueryType', groupInvites?: Array<{ __typename?: 'GroupInvite', id?: string | null, code?: string | null, expiresAt?: string | null, maxUses?: number | null, usesCount?: number | null, insertedAt?: string | null } | null> | null };
+
 export type MeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MeQuery = { __typename?: 'RootQueryType', me?: { __typename?: 'User', id?: string | null, email?: string | null } | null };
+export type MeQuery = { __typename?: 'RootQueryType', me?: { __typename?: 'User', id?: string | null, email?: string | null, name?: string | null } | null };
 
 
 export const LoginDocument = gql`
@@ -534,6 +745,41 @@ export function useResetPasswordMutation(baseOptions?: Apollo.MutationHookOption
 export type ResetPasswordMutationHookResult = ReturnType<typeof useResetPasswordMutation>;
 export type ResetPasswordMutationResult = Apollo.MutationResult<ResetPasswordMutation>;
 export type ResetPasswordMutationOptions = Apollo.BaseMutationOptions<ResetPasswordMutation, ResetPasswordMutationVariables>;
+export const UpdateProfileDocument = gql`
+    mutation UpdateProfile($name: String) {
+  updateProfile(name: $name) {
+    id
+    email
+    name
+  }
+}
+    `;
+export type UpdateProfileMutationFn = Apollo.MutationFunction<UpdateProfileMutation, UpdateProfileMutationVariables>;
+
+/**
+ * __useUpdateProfileMutation__
+ *
+ * To run a mutation, you first call `useUpdateProfileMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateProfileMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateProfileMutation, { data, loading, error }] = useUpdateProfileMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useUpdateProfileMutation(baseOptions?: Apollo.MutationHookOptions<UpdateProfileMutation, UpdateProfileMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateProfileMutation, UpdateProfileMutationVariables>(UpdateProfileDocument, options);
+      }
+export type UpdateProfileMutationHookResult = ReturnType<typeof useUpdateProfileMutation>;
+export type UpdateProfileMutationResult = Apollo.MutationResult<UpdateProfileMutation>;
+export type UpdateProfileMutationOptions = Apollo.BaseMutationOptions<UpdateProfileMutation, UpdateProfileMutationVariables>;
 export const CreatePeriodDocument = gql`
     mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {
   createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit) {
@@ -585,6 +831,10 @@ export const CreateExpenseDocument = gql`
     subcategory {
       id
       name
+    }
+    createdBy {
+      id
+      email
     }
   }
 }
@@ -869,6 +1119,318 @@ export function useDeleteSubcategoryMutation(baseOptions?: Apollo.MutationHookOp
 export type DeleteSubcategoryMutationHookResult = ReturnType<typeof useDeleteSubcategoryMutation>;
 export type DeleteSubcategoryMutationResult = Apollo.MutationResult<DeleteSubcategoryMutation>;
 export type DeleteSubcategoryMutationOptions = Apollo.BaseMutationOptions<DeleteSubcategoryMutation, DeleteSubcategoryMutationVariables>;
+export const CreateGroupDocument = gql`
+    mutation CreateGroup($name: String!) {
+  createGroup(name: $name) {
+    id
+    name
+    ownerId
+  }
+}
+    `;
+export type CreateGroupMutationFn = Apollo.MutationFunction<CreateGroupMutation, CreateGroupMutationVariables>;
+
+/**
+ * __useCreateGroupMutation__
+ *
+ * To run a mutation, you first call `useCreateGroupMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateGroupMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createGroupMutation, { data, loading, error }] = useCreateGroupMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useCreateGroupMutation(baseOptions?: Apollo.MutationHookOptions<CreateGroupMutation, CreateGroupMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateGroupMutation, CreateGroupMutationVariables>(CreateGroupDocument, options);
+      }
+export type CreateGroupMutationHookResult = ReturnType<typeof useCreateGroupMutation>;
+export type CreateGroupMutationResult = Apollo.MutationResult<CreateGroupMutation>;
+export type CreateGroupMutationOptions = Apollo.BaseMutationOptions<CreateGroupMutation, CreateGroupMutationVariables>;
+export const RenameGroupDocument = gql`
+    mutation RenameGroup($id: ID!, $name: String!) {
+  renameGroup(id: $id, name: $name) {
+    id
+    name
+  }
+}
+    `;
+export type RenameGroupMutationFn = Apollo.MutationFunction<RenameGroupMutation, RenameGroupMutationVariables>;
+
+/**
+ * __useRenameGroupMutation__
+ *
+ * To run a mutation, you first call `useRenameGroupMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRenameGroupMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [renameGroupMutation, { data, loading, error }] = useRenameGroupMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useRenameGroupMutation(baseOptions?: Apollo.MutationHookOptions<RenameGroupMutation, RenameGroupMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RenameGroupMutation, RenameGroupMutationVariables>(RenameGroupDocument, options);
+      }
+export type RenameGroupMutationHookResult = ReturnType<typeof useRenameGroupMutation>;
+export type RenameGroupMutationResult = Apollo.MutationResult<RenameGroupMutation>;
+export type RenameGroupMutationOptions = Apollo.BaseMutationOptions<RenameGroupMutation, RenameGroupMutationVariables>;
+export const DeleteGroupDocument = gql`
+    mutation DeleteGroup($id: ID!) {
+  deleteGroup(id: $id)
+}
+    `;
+export type DeleteGroupMutationFn = Apollo.MutationFunction<DeleteGroupMutation, DeleteGroupMutationVariables>;
+
+/**
+ * __useDeleteGroupMutation__
+ *
+ * To run a mutation, you first call `useDeleteGroupMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteGroupMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteGroupMutation, { data, loading, error }] = useDeleteGroupMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteGroupMutation(baseOptions?: Apollo.MutationHookOptions<DeleteGroupMutation, DeleteGroupMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteGroupMutation, DeleteGroupMutationVariables>(DeleteGroupDocument, options);
+      }
+export type DeleteGroupMutationHookResult = ReturnType<typeof useDeleteGroupMutation>;
+export type DeleteGroupMutationResult = Apollo.MutationResult<DeleteGroupMutation>;
+export type DeleteGroupMutationOptions = Apollo.BaseMutationOptions<DeleteGroupMutation, DeleteGroupMutationVariables>;
+export const SwitchActiveGroupDocument = gql`
+    mutation SwitchActiveGroup($id: ID!) {
+  switchActiveGroup(id: $id) {
+    id
+    name
+  }
+}
+    `;
+export type SwitchActiveGroupMutationFn = Apollo.MutationFunction<SwitchActiveGroupMutation, SwitchActiveGroupMutationVariables>;
+
+/**
+ * __useSwitchActiveGroupMutation__
+ *
+ * To run a mutation, you first call `useSwitchActiveGroupMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSwitchActiveGroupMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [switchActiveGroupMutation, { data, loading, error }] = useSwitchActiveGroupMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSwitchActiveGroupMutation(baseOptions?: Apollo.MutationHookOptions<SwitchActiveGroupMutation, SwitchActiveGroupMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SwitchActiveGroupMutation, SwitchActiveGroupMutationVariables>(SwitchActiveGroupDocument, options);
+      }
+export type SwitchActiveGroupMutationHookResult = ReturnType<typeof useSwitchActiveGroupMutation>;
+export type SwitchActiveGroupMutationResult = Apollo.MutationResult<SwitchActiveGroupMutation>;
+export type SwitchActiveGroupMutationOptions = Apollo.BaseMutationOptions<SwitchActiveGroupMutation, SwitchActiveGroupMutationVariables>;
+export const LeaveGroupDocument = gql`
+    mutation LeaveGroup($id: ID!) {
+  leaveGroup(id: $id)
+}
+    `;
+export type LeaveGroupMutationFn = Apollo.MutationFunction<LeaveGroupMutation, LeaveGroupMutationVariables>;
+
+/**
+ * __useLeaveGroupMutation__
+ *
+ * To run a mutation, you first call `useLeaveGroupMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useLeaveGroupMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [leaveGroupMutation, { data, loading, error }] = useLeaveGroupMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useLeaveGroupMutation(baseOptions?: Apollo.MutationHookOptions<LeaveGroupMutation, LeaveGroupMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<LeaveGroupMutation, LeaveGroupMutationVariables>(LeaveGroupDocument, options);
+      }
+export type LeaveGroupMutationHookResult = ReturnType<typeof useLeaveGroupMutation>;
+export type LeaveGroupMutationResult = Apollo.MutationResult<LeaveGroupMutation>;
+export type LeaveGroupMutationOptions = Apollo.BaseMutationOptions<LeaveGroupMutation, LeaveGroupMutationVariables>;
+export const RemoveMemberDocument = gql`
+    mutation RemoveMember($groupId: ID!, $userId: Int!) {
+  removeMember(groupId: $groupId, userId: $userId)
+}
+    `;
+export type RemoveMemberMutationFn = Apollo.MutationFunction<RemoveMemberMutation, RemoveMemberMutationVariables>;
+
+/**
+ * __useRemoveMemberMutation__
+ *
+ * To run a mutation, you first call `useRemoveMemberMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRemoveMemberMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [removeMemberMutation, { data, loading, error }] = useRemoveMemberMutation({
+ *   variables: {
+ *      groupId: // value for 'groupId'
+ *      userId: // value for 'userId'
+ *   },
+ * });
+ */
+export function useRemoveMemberMutation(baseOptions?: Apollo.MutationHookOptions<RemoveMemberMutation, RemoveMemberMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RemoveMemberMutation, RemoveMemberMutationVariables>(RemoveMemberDocument, options);
+      }
+export type RemoveMemberMutationHookResult = ReturnType<typeof useRemoveMemberMutation>;
+export type RemoveMemberMutationResult = Apollo.MutationResult<RemoveMemberMutation>;
+export type RemoveMemberMutationOptions = Apollo.BaseMutationOptions<RemoveMemberMutation, RemoveMemberMutationVariables>;
+export const GenerateInviteCodeDocument = gql`
+    mutation GenerateInviteCode($groupId: ID!, $expiresInDays: Int, $maxUses: Int) {
+  generateInviteCode(
+    groupId: $groupId
+    expiresInDays: $expiresInDays
+    maxUses: $maxUses
+  ) {
+    id
+    code
+    expiresAt
+    maxUses
+    usesCount
+  }
+}
+    `;
+export type GenerateInviteCodeMutationFn = Apollo.MutationFunction<GenerateInviteCodeMutation, GenerateInviteCodeMutationVariables>;
+
+/**
+ * __useGenerateInviteCodeMutation__
+ *
+ * To run a mutation, you first call `useGenerateInviteCodeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGenerateInviteCodeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [generateInviteCodeMutation, { data, loading, error }] = useGenerateInviteCodeMutation({
+ *   variables: {
+ *      groupId: // value for 'groupId'
+ *      expiresInDays: // value for 'expiresInDays'
+ *      maxUses: // value for 'maxUses'
+ *   },
+ * });
+ */
+export function useGenerateInviteCodeMutation(baseOptions?: Apollo.MutationHookOptions<GenerateInviteCodeMutation, GenerateInviteCodeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GenerateInviteCodeMutation, GenerateInviteCodeMutationVariables>(GenerateInviteCodeDocument, options);
+      }
+export type GenerateInviteCodeMutationHookResult = ReturnType<typeof useGenerateInviteCodeMutation>;
+export type GenerateInviteCodeMutationResult = Apollo.MutationResult<GenerateInviteCodeMutation>;
+export type GenerateInviteCodeMutationOptions = Apollo.BaseMutationOptions<GenerateInviteCodeMutation, GenerateInviteCodeMutationVariables>;
+export const RevokeInviteCodeDocument = gql`
+    mutation RevokeInviteCode($inviteId: ID!) {
+  revokeInviteCode(inviteId: $inviteId)
+}
+    `;
+export type RevokeInviteCodeMutationFn = Apollo.MutationFunction<RevokeInviteCodeMutation, RevokeInviteCodeMutationVariables>;
+
+/**
+ * __useRevokeInviteCodeMutation__
+ *
+ * To run a mutation, you first call `useRevokeInviteCodeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRevokeInviteCodeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [revokeInviteCodeMutation, { data, loading, error }] = useRevokeInviteCodeMutation({
+ *   variables: {
+ *      inviteId: // value for 'inviteId'
+ *   },
+ * });
+ */
+export function useRevokeInviteCodeMutation(baseOptions?: Apollo.MutationHookOptions<RevokeInviteCodeMutation, RevokeInviteCodeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RevokeInviteCodeMutation, RevokeInviteCodeMutationVariables>(RevokeInviteCodeDocument, options);
+      }
+export type RevokeInviteCodeMutationHookResult = ReturnType<typeof useRevokeInviteCodeMutation>;
+export type RevokeInviteCodeMutationResult = Apollo.MutationResult<RevokeInviteCodeMutation>;
+export type RevokeInviteCodeMutationOptions = Apollo.BaseMutationOptions<RevokeInviteCodeMutation, RevokeInviteCodeMutationVariables>;
+export const RedeemInviteCodeDocument = gql`
+    mutation RedeemInviteCode($code: String!) {
+  redeemInviteCode(code: $code) {
+    group {
+      id
+      name
+    }
+    invite {
+      id
+      code
+    }
+  }
+}
+    `;
+export type RedeemInviteCodeMutationFn = Apollo.MutationFunction<RedeemInviteCodeMutation, RedeemInviteCodeMutationVariables>;
+
+/**
+ * __useRedeemInviteCodeMutation__
+ *
+ * To run a mutation, you first call `useRedeemInviteCodeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRedeemInviteCodeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [redeemInviteCodeMutation, { data, loading, error }] = useRedeemInviteCodeMutation({
+ *   variables: {
+ *      code: // value for 'code'
+ *   },
+ * });
+ */
+export function useRedeemInviteCodeMutation(baseOptions?: Apollo.MutationHookOptions<RedeemInviteCodeMutation, RedeemInviteCodeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RedeemInviteCodeMutation, RedeemInviteCodeMutationVariables>(RedeemInviteCodeDocument, options);
+      }
+export type RedeemInviteCodeMutationHookResult = ReturnType<typeof useRedeemInviteCodeMutation>;
+export type RedeemInviteCodeMutationResult = Apollo.MutationResult<RedeemInviteCodeMutation>;
+export type RedeemInviteCodeMutationOptions = Apollo.BaseMutationOptions<RedeemInviteCodeMutation, RedeemInviteCodeMutationVariables>;
 export const ActivePeriodDocument = gql`
     query ActivePeriod($today: String!) {
   activePeriod(today: $today) {
@@ -937,6 +1499,10 @@ export const ExpenseHistoryDocument = gql`
       subcategory {
         id
         name
+      }
+      createdBy {
+        id
+        email
       }
     }
   }
@@ -1025,11 +1591,195 @@ export type CategoriesQueryHookResult = ReturnType<typeof useCategoriesQuery>;
 export type CategoriesLazyQueryHookResult = ReturnType<typeof useCategoriesLazyQuery>;
 export type CategoriesSuspenseQueryHookResult = ReturnType<typeof useCategoriesSuspenseQuery>;
 export type CategoriesQueryResult = Apollo.QueryResult<CategoriesQuery, CategoriesQueryVariables>;
+export const MyGroupsDocument = gql`
+    query MyGroups {
+  myGroups {
+    id
+    name
+    ownerId
+    insertedAt
+  }
+}
+    `;
+
+/**
+ * __useMyGroupsQuery__
+ *
+ * To run a query within a React component, call `useMyGroupsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useMyGroupsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useMyGroupsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useMyGroupsQuery(baseOptions?: Apollo.QueryHookOptions<MyGroupsQuery, MyGroupsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<MyGroupsQuery, MyGroupsQueryVariables>(MyGroupsDocument, options);
+      }
+export function useMyGroupsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<MyGroupsQuery, MyGroupsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<MyGroupsQuery, MyGroupsQueryVariables>(MyGroupsDocument, options);
+        }
+// @ts-ignore
+export function useMyGroupsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<MyGroupsQuery, MyGroupsQueryVariables>): Apollo.UseSuspenseQueryResult<MyGroupsQuery, MyGroupsQueryVariables>;
+export function useMyGroupsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MyGroupsQuery, MyGroupsQueryVariables>): Apollo.UseSuspenseQueryResult<MyGroupsQuery | undefined, MyGroupsQueryVariables>;
+export function useMyGroupsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<MyGroupsQuery, MyGroupsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<MyGroupsQuery, MyGroupsQueryVariables>(MyGroupsDocument, options);
+        }
+export type MyGroupsQueryHookResult = ReturnType<typeof useMyGroupsQuery>;
+export type MyGroupsLazyQueryHookResult = ReturnType<typeof useMyGroupsLazyQuery>;
+export type MyGroupsSuspenseQueryHookResult = ReturnType<typeof useMyGroupsSuspenseQuery>;
+export type MyGroupsQueryResult = Apollo.QueryResult<MyGroupsQuery, MyGroupsQueryVariables>;
+export const ActiveGroupDocument = gql`
+    query ActiveGroup {
+  activeGroup {
+    id
+    name
+    ownerId
+  }
+}
+    `;
+
+/**
+ * __useActiveGroupQuery__
+ *
+ * To run a query within a React component, call `useActiveGroupQuery` and pass it any options that fit your needs.
+ * When your component renders, `useActiveGroupQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useActiveGroupQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useActiveGroupQuery(baseOptions?: Apollo.QueryHookOptions<ActiveGroupQuery, ActiveGroupQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ActiveGroupQuery, ActiveGroupQueryVariables>(ActiveGroupDocument, options);
+      }
+export function useActiveGroupLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ActiveGroupQuery, ActiveGroupQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ActiveGroupQuery, ActiveGroupQueryVariables>(ActiveGroupDocument, options);
+        }
+// @ts-ignore
+export function useActiveGroupSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<ActiveGroupQuery, ActiveGroupQueryVariables>): Apollo.UseSuspenseQueryResult<ActiveGroupQuery, ActiveGroupQueryVariables>;
+export function useActiveGroupSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ActiveGroupQuery, ActiveGroupQueryVariables>): Apollo.UseSuspenseQueryResult<ActiveGroupQuery | undefined, ActiveGroupQueryVariables>;
+export function useActiveGroupSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ActiveGroupQuery, ActiveGroupQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ActiveGroupQuery, ActiveGroupQueryVariables>(ActiveGroupDocument, options);
+        }
+export type ActiveGroupQueryHookResult = ReturnType<typeof useActiveGroupQuery>;
+export type ActiveGroupLazyQueryHookResult = ReturnType<typeof useActiveGroupLazyQuery>;
+export type ActiveGroupSuspenseQueryHookResult = ReturnType<typeof useActiveGroupSuspenseQuery>;
+export type ActiveGroupQueryResult = Apollo.QueryResult<ActiveGroupQuery, ActiveGroupQueryVariables>;
+export const GroupMembersDocument = gql`
+    query GroupMembers($groupId: ID!) {
+  groupMembers(groupId: $groupId) {
+    id
+    email
+    joinedAt
+    isOwner
+  }
+}
+    `;
+
+/**
+ * __useGroupMembersQuery__
+ *
+ * To run a query within a React component, call `useGroupMembersQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGroupMembersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGroupMembersQuery({
+ *   variables: {
+ *      groupId: // value for 'groupId'
+ *   },
+ * });
+ */
+export function useGroupMembersQuery(baseOptions: Apollo.QueryHookOptions<GroupMembersQuery, GroupMembersQueryVariables> & ({ variables: GroupMembersQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GroupMembersQuery, GroupMembersQueryVariables>(GroupMembersDocument, options);
+      }
+export function useGroupMembersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GroupMembersQuery, GroupMembersQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GroupMembersQuery, GroupMembersQueryVariables>(GroupMembersDocument, options);
+        }
+// @ts-ignore
+export function useGroupMembersSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GroupMembersQuery, GroupMembersQueryVariables>): Apollo.UseSuspenseQueryResult<GroupMembersQuery, GroupMembersQueryVariables>;
+export function useGroupMembersSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GroupMembersQuery, GroupMembersQueryVariables>): Apollo.UseSuspenseQueryResult<GroupMembersQuery | undefined, GroupMembersQueryVariables>;
+export function useGroupMembersSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GroupMembersQuery, GroupMembersQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GroupMembersQuery, GroupMembersQueryVariables>(GroupMembersDocument, options);
+        }
+export type GroupMembersQueryHookResult = ReturnType<typeof useGroupMembersQuery>;
+export type GroupMembersLazyQueryHookResult = ReturnType<typeof useGroupMembersLazyQuery>;
+export type GroupMembersSuspenseQueryHookResult = ReturnType<typeof useGroupMembersSuspenseQuery>;
+export type GroupMembersQueryResult = Apollo.QueryResult<GroupMembersQuery, GroupMembersQueryVariables>;
+export const GroupInvitesDocument = gql`
+    query GroupInvites($groupId: ID!) {
+  groupInvites(groupId: $groupId) {
+    id
+    code
+    expiresAt
+    maxUses
+    usesCount
+    insertedAt
+  }
+}
+    `;
+
+/**
+ * __useGroupInvitesQuery__
+ *
+ * To run a query within a React component, call `useGroupInvitesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGroupInvitesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGroupInvitesQuery({
+ *   variables: {
+ *      groupId: // value for 'groupId'
+ *   },
+ * });
+ */
+export function useGroupInvitesQuery(baseOptions: Apollo.QueryHookOptions<GroupInvitesQuery, GroupInvitesQueryVariables> & ({ variables: GroupInvitesQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GroupInvitesQuery, GroupInvitesQueryVariables>(GroupInvitesDocument, options);
+      }
+export function useGroupInvitesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GroupInvitesQuery, GroupInvitesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GroupInvitesQuery, GroupInvitesQueryVariables>(GroupInvitesDocument, options);
+        }
+// @ts-ignore
+export function useGroupInvitesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GroupInvitesQuery, GroupInvitesQueryVariables>): Apollo.UseSuspenseQueryResult<GroupInvitesQuery, GroupInvitesQueryVariables>;
+export function useGroupInvitesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GroupInvitesQuery, GroupInvitesQueryVariables>): Apollo.UseSuspenseQueryResult<GroupInvitesQuery | undefined, GroupInvitesQueryVariables>;
+export function useGroupInvitesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GroupInvitesQuery, GroupInvitesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GroupInvitesQuery, GroupInvitesQueryVariables>(GroupInvitesDocument, options);
+        }
+export type GroupInvitesQueryHookResult = ReturnType<typeof useGroupInvitesQuery>;
+export type GroupInvitesLazyQueryHookResult = ReturnType<typeof useGroupInvitesLazyQuery>;
+export type GroupInvitesSuspenseQueryHookResult = ReturnType<typeof useGroupInvitesSuspenseQuery>;
+export type GroupInvitesQueryResult = Apollo.QueryResult<GroupInvitesQuery, GroupInvitesQueryVariables>;
 export const MeDocument = gql`
     query Me {
   me {
     id
     email
+    name
   }
 }
     `;
