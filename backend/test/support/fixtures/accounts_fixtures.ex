@@ -8,6 +8,7 @@ defmodule PlanfinBackend.AccountsFixtures do
 
   alias PlanfinBackend.Accounts
   alias PlanfinBackend.Accounts.Scope
+  alias PlanfinBackend.Groups
 
   def unique_user_email, do: "user#{System.unique_integer()}@example.com"
   def valid_user_password, do: "hello world!"
@@ -48,6 +49,26 @@ defmodule PlanfinBackend.AccountsFixtures do
 
   def user_scope_fixture(user) do
     Scope.for_user(user)
+  end
+
+  @doc """
+  Creates a user and a group owned by them. Returns `{user, group}`.
+
+  The user is automatically added as a member and has their `active_group_id`
+  pointed at the new group. Default categories are seeded.
+  """
+  def user_with_group_fixture(attrs \\ %{}) do
+    user = user_fixture(attrs)
+    {:ok, %{group: group, user: user}} = Groups.create_group(user, %{name: "Test Group"})
+    {user, group}
+  end
+
+  @doc """
+  Adds an existing user to an existing group. Returns the updated user.
+  """
+  def join_group_fixture(user, group) do
+    {:ok, _membership} = Groups.add_member(user, group)
+    user
   end
 
   def set_password(user) do

@@ -7,18 +7,21 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   useCategoriesQuery,
   useUpdateExpenseMutation,
+  useDeleteExpenseMutation,
   ActivePeriodDocument,
   CategoriesQuery,
 } from "../graphql/__generated__/hooks";
 import { usePeriod } from "../context/PeriodContext";
 import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
-import { displayToAPI, formatCents, parseCents } from "../lib/currency";
+import { Btn } from "../components/ui/Btn";
+import { Chip } from "../components/ui/Chip";
+import { displayToAPI, formatCents } from "../lib/currency";
+import { categoryColor, Colors, Radius } from "../theme/tokens";
 import type { AppStackParamList } from "../../App";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
-type RouteParams = AppStackParamList["EditExpense"];
 
 const schema = yup.object({
   amount: yup
@@ -45,13 +48,7 @@ export function EditExpenseScreen() {
   const { data: catData } = useCategoriesQuery();
   const categories = catData?.categories ?? [];
 
-  const {
-    control,
-    handleSubmit,
-    watch,
-    setError,
-    formState: { errors },
-  } = useForm({
+  const { control, handleSubmit, watch, setError, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
       amount: apiToDisplay(amount),
@@ -66,11 +63,14 @@ export function EditExpenseScreen() {
   const subcategories: NonNullable<Subcategory>[] =
     categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
 
-  const [updateExpense, { loading }] = useUpdateExpenseMutation({
-    onCompleted: () => {
-      refetch();
-      navigation.goBack();
-    },
+  const [updateExpense, { loading: updating }] = useUpdateExpenseMutation({
+    onCompleted: () => { refetch(); navigation.goBack(); },
+    onError: (error) => setError("root", { message: error.message }),
+    refetchQueries: [{ query: ActivePeriodDocument }, "ExpenseHistory"],
+  });
+
+  const [deleteExpense, { loading: deleting }] = useDeleteExpenseMutation({
+    onCompleted: () => { refetch(); navigation.goBack(); },
     onError: (error) => setError("root", { message: error.message }),
     refetchQueries: [{ query: ActivePeriodDocument }, "ExpenseHistory"],
   });
@@ -87,9 +87,17 @@ export function EditExpenseScreen() {
     });
   };
 
+  const isLoading = updating || deleting;
+
   return (
-    <ScrollView contentContainerClassName="flex-grow p-6 bg-white">
-      <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Valor</Text>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: Colors.surface }}
+      contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+        Valor
+      </Text>
       <Controller
         control={control}
         name="amount"
@@ -98,7 +106,9 @@ export function EditExpenseScreen() {
         )}
       />
 
-      <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Data</Text>
+      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+        Data
+      </Text>
       <Controller
         control={control}
         name="date"
@@ -113,82 +123,94 @@ export function EditExpenseScreen() {
         )}
       />
 
-      <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Categoria</Text>
+      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 }}>
+        Categoria
+      </Text>
       <Controller
         control={control}
         name="categoryId"
         render={({ field: { onChange, value } }) => (
-          <View className="mb-5">
-            <View className="flex-row flex-wrap gap-2">
-              {(categories as NonNullable<Category>[]).map((cat) => (
-                <TouchableOpacity
-                  key={cat.id}
-                  className={`px-3.5 py-2 rounded-full border ${
-                    value === cat.id ? "border-blue-600 bg-blue-50" : "border-neutral-300 bg-neutral-50"
-                  }`}
-                  onPress={() => onChange(cat.id)}
-                >
-                  <Text className={`text-[13px] ${value === cat.id ? "text-blue-600 font-semibold" : "text-neutral-600"}`}>
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 16 }}>
+            {(categories as NonNullable<Category>[]).map((cat) => (
+              <Chip
+                key={cat.id}
+                label={cat.name ?? ""}
+                selected={value === cat.id}
+                dot={categoryColor(cat.name ?? "").dot}
+                onPress={() => onChange(value === cat.id ? "" : cat.id)}
+              />
+            ))}
           </View>
         )}
       />
 
       {subcategories.length > 0 && (
         <>
-          <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Subcategoria</Text>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 }}>
+            Subcategoria
+          </Text>
           <Controller
             control={control}
             name="subcategoryId"
             render={({ field: { onChange, value } }) => (
-              <View className="mb-5">
-                <View className="flex-row flex-wrap gap-2">
-                  {subcategories.map((sub) => (
-                    <TouchableOpacity
-                      key={sub.id}
-                      className={`px-3.5 py-2 rounded-full border ${
-                        value === sub.id ? "border-blue-600 bg-blue-50" : "border-neutral-300 bg-neutral-50"
-                      }`}
-                      onPress={() => onChange(sub.id)}
-                    >
-                      <Text className={`text-[13px] ${value === sub.id ? "text-blue-600 font-semibold" : "text-neutral-600"}`}>
-                        {sub.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 16 }}>
+                {subcategories.map((sub) => (
+                  <Chip
+                    key={sub.id}
+                    label={sub.name ?? ""}
+                    selected={value === sub.id}
+                    onPress={() => onChange(value === sub.id ? "" : sub.id)}
+                  />
+                ))}
               </View>
             )}
           />
         </>
       )}
 
-      <Text className="text-sm font-semibold text-neutral-700 mb-1.5">Nota (opcional)</Text>
+      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+        Nota (opcional)
+      </Text>
       <Controller
         control={control}
         name="note"
         render={({ field: { onChange, onBlur, value } }) => (
-          <View className="mb-5">
+          <View style={{ marginBottom: 16 }}>
             <TextInput
-              className="border border-neutral-300 rounded-lg p-3 text-base"
+              style={{
+                height: 52,
+                borderWidth: 1.5,
+                borderColor: Colors.border,
+                borderRadius: Radius.md,
+                paddingHorizontal: 16,
+                fontSize: 16,
+                color: Colors.text,
+                backgroundColor: Colors.surface,
+              }}
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
               placeholder="Ex: almoço com amigos"
+              placeholderTextColor={Colors.textTer}
             />
           </View>
         )}
       />
 
-      {errors.root && <Text className="text-red-500 text-sm text-center mb-3">{errors.root.message}</Text>}
+      {errors.root && (
+        <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+          {errors.root.message}
+        </Text>
+      )}
 
-      <TouchableOpacity className="bg-blue-600 rounded-lg p-4 items-center mt-2" onPress={handleSubmit(onSubmit)} disabled={loading}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text className="text-white text-base font-semibold">Salvar alterações</Text>}
-      </TouchableOpacity>
+      <Btn label="Salvar alterações" onPress={handleSubmit(onSubmit)} loading={isLoading} />
+      <View style={{ height: 12 }} />
+      <Btn
+        label="Excluir gasto"
+        variant="danger"
+        onPress={() => deleteExpense({ variables: { id } })}
+        loading={isLoading}
+      />
     </ScrollView>
   );
 }

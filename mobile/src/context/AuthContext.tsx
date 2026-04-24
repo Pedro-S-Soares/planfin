@@ -5,6 +5,7 @@ import { apolloClient, setOnAuthError } from "../lib/apollo";
 type User = {
   id: string;
   email: string;
+  name?: string | null;
 };
 
 type AuthContextValue = {
@@ -13,6 +14,7 @@ type AuthContextValue = {
   isLoading: boolean;
   signIn: (token: string, user: User) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (patch: Partial<User>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -48,6 +50,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
   }, []);
 
+  const updateUser = useCallback(async (patch: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...patch };
+      storage.setItem("auth_user", JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   const signOut = useCallback(async () => {
     await Promise.all([
       storage.deleteItem("auth_token"),
@@ -63,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [signOut]);
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, token, isLoading, signIn, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -6,6 +6,7 @@ defmodule PlanfinBackendWeb.Schema.AccountTypes do
   object :user do
     field :id, :id
     field :email, :string
+    field :name, :string
   end
 
   object :auth_payload do
@@ -47,6 +48,11 @@ defmodule PlanfinBackendWeb.Schema.AccountTypes do
       arg(:password, non_null(:string))
       arg(:password_confirmation, non_null(:string))
       resolve(&Accounts.reset_password/3)
+    end
+
+    field :update_profile, :user do
+      arg(:name, :string)
+      resolve(&Accounts.update_profile/3)
     end
   end
 end

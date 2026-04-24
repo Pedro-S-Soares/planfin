@@ -10,6 +10,8 @@ import {
   CategoriesDocument,
   CategoriesQuery,
 } from "../graphql/__generated__/hooks";
+import { Card } from "../components/ui/Card";
+import { Colors, Radius, Shadow, categoryColor } from "../theme/tokens";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -61,74 +63,142 @@ export function CategoriesScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#2563EB" />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: Colors.bg }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 pt-14 bg-neutral-100">
+    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
       <FlatList
         data={categories}
         keyExtractor={(item) => item?.id ?? ""}
-        contentContainerClassName="p-4 gap-2.5"
+        contentContainerStyle={{ padding: 16, gap: 10 }}
         ListHeaderComponent={
-          <View className="flex-row gap-2 mb-4">
+          <Card padding={12} style={{ marginBottom: 4, flexDirection: "row", gap: 8 }}>
             <TextInput
-              className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white"
+              style={{
+                flex: 1,
+                height: 40,
+                borderWidth: 1.5,
+                borderColor: Colors.border,
+                borderRadius: Radius.sm,
+                paddingHorizontal: 12,
+                fontSize: 14,
+                color: Colors.text,
+                backgroundColor: Colors.surface,
+              }}
               placeholder="Nova categoria..."
+              placeholderTextColor={Colors.textTer}
               value={newCategoryName}
               onChangeText={setNewCategoryName}
             />
-            <TouchableOpacity className="bg-blue-600 rounded-lg px-4 items-center justify-center" onPress={handleAddCategory}>
-              <Text className="text-white text-xl font-bold">+</Text>
-            </TouchableOpacity>
-          </View>
-        }
-        renderItem={({ item: cat }) => (
-          <View className="bg-white rounded-xl overflow-hidden">
             <TouchableOpacity
-              className="flex-row items-center justify-between p-4"
-              onPress={() => setExpandedId(expandedId === cat.id ? null : cat.id ?? null)}
+              onPress={handleAddCategory}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: Radius.sm,
+                backgroundColor: Colors.primary,
+                alignItems: "center",
+                justifyContent: "center",
+                ...Shadow.sm,
+              }}
             >
-              <Text className="text-[15px] font-semibold text-neutral-700 flex-1">{cat.name}</Text>
-              <View className="flex-row items-center gap-3">
-                <TouchableOpacity onPress={() => handleRenameCategory(cat)} className="p-1">
-                  <Text className="text-blue-600 text-base">✎</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDeleteCategory(cat.id ?? "")} className="p-1">
-                  <Text className="text-red-500 text-sm font-semibold">✕</Text>
-                </TouchableOpacity>
-                <Text className="text-neutral-400 text-xs">{expandedId === cat.id ? "▲" : "▼"}</Text>
-              </View>
+              <Text style={{ color: "#fff", fontSize: 22, lineHeight: 28, fontWeight: "300" }}>+</Text>
             </TouchableOpacity>
+          </Card>
+        }
+        renderItem={({ item: cat }) => {
+          const cc = categoryColor(cat.name ?? "");
+          const isOpen = expandedId === cat.id;
 
-            {expandedId === cat.id && (
-              <View className="px-4 pb-3 border-t border-neutral-100">
-                {(cat.subcategories ?? []).filter(Boolean).map((sub: Subcategory) => (
-                  <View key={sub?.id ?? ""} className="flex-row justify-between items-center py-2 border-b border-neutral-50">
-                    <Text className="text-sm text-neutral-600">{sub?.name}</Text>
-                    <TouchableOpacity onPress={() => handleDeleteSubcategory(sub?.id ?? "")}>
-                      <Text className="text-red-500 text-sm font-semibold">✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                <View className="flex-row gap-2 mt-2">
-                  <TextInput
-                    className="flex-1 border border-neutral-300 rounded-lg px-3 py-2 text-sm bg-white"
-                    placeholder="Nova subcategoria..."
-                    value={newSubName[cat.id ?? ""] ?? ""}
-                    onChangeText={(t) => setNewSubName((prev) => ({ ...prev, [cat.id ?? ""]: t }))}
-                  />
-                  <TouchableOpacity className="bg-blue-600 rounded-lg px-4 items-center justify-center" onPress={() => handleAddSubcategory(cat.id ?? "")}>
-                    <Text className="text-white text-xl font-bold">+</Text>
+          return (
+            <Card padding={0} style={{ overflow: "hidden" }}>
+              <TouchableOpacity
+                style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}
+                onPress={() => setExpandedId(isOpen ? null : cat.id ?? null)}
+                activeOpacity={0.7}
+              >
+                <View style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: Radius.sm,
+                  backgroundColor: cc.bg,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <View style={{ width: 10, height: 10, borderRadius: 999, backgroundColor: cc.dot }} />
+                </View>
+                <Text style={{ flex: 1, fontSize: 15, fontWeight: "700", color: Colors.text }}>
+                  {cat.name}
+                </Text>
+                <Text style={{ fontSize: 12, color: Colors.textSec, marginRight: 4 }}>
+                  {cat.subcategories?.length ?? 0} subcats
+                </Text>
+                <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                  <TouchableOpacity onPress={() => handleRenameCategory(cat)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                    <Text style={{ color: Colors.primary, fontSize: 14 }}>✎</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDeleteCategory(cat.id ?? "")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                    <Text style={{ color: Colors.danger, fontSize: 13, fontWeight: "700" }}>✕</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            )}
-          </View>
-        )}
+                <Text style={{ color: Colors.textTer, fontSize: 11, marginLeft: 4 }}>{isOpen ? "▲" : "▼"}</Text>
+              </TouchableOpacity>
+
+              {isOpen && (
+                <View style={{ paddingHorizontal: 14, paddingBottom: 14, borderTopWidth: 1, borderTopColor: Colors.border }}>
+                  {(cat.subcategories ?? []).filter(Boolean).map((sub: Subcategory) => (
+                    <View key={sub?.id ?? ""} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+                      <Text style={{ fontSize: 13.5, color: Colors.text }}>{sub?.name}</Text>
+                      <TouchableOpacity
+                        onPress={() => handleDeleteSubcategory(sub?.id ?? "")}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      >
+                        <Text style={{ color: Colors.danger, fontSize: 13, fontWeight: "700" }}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                    <TextInput
+                      placeholder="Nova subcategoria..."
+                      placeholderTextColor={Colors.textTer}
+                      style={{
+                        flex: 1,
+                        height: 38,
+                        borderWidth: 1.5,
+                        borderColor: Colors.border,
+                        borderRadius: Radius.sm,
+                        paddingHorizontal: 10,
+                        fontSize: 13,
+                        color: Colors.text,
+                        backgroundColor: Colors.surface,
+                      }}
+                      value={newSubName[cat.id ?? ""] ?? ""}
+                      onChangeText={(t) => setNewSubName((prev) => ({ ...prev, [cat.id ?? ""]: t }))}
+                    />
+                    <TouchableOpacity
+                      onPress={() => handleAddSubcategory(cat.id ?? "")}
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: Radius.sm,
+                        backgroundColor: Colors.primaryLight,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ color: Colors.primaryText, fontSize: 20, fontWeight: "700", lineHeight: 26 }}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </Card>
+          );
+        }}
       />
     </View>
   );

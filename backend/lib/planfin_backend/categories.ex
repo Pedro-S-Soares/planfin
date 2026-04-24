@@ -1,6 +1,6 @@
 defmodule PlanfinBackend.Categories do
   @moduledoc """
-  The Categories context.
+  The Categories context. Categories and subcategories are scoped by group.
   """
 
   import Ecto.Query, warn: false
@@ -13,35 +13,36 @@ defmodule PlanfinBackend.Categories do
     {"Transporte", ["Combustível", "Transporte público", "Aplicativo"]},
     {"Lazer", ["Cinema", "Viagem", "Assinatura"]},
     {"Saúde", ["Farmácia", "Consulta", "Academia"]},
+    {"Contas da Casa", ["Luz", "Água", "Internet", "Aluguel"]},
     {"Outros", []}
   ]
 
   @doc """
-  Lists all categories for a given user, with subcategories preloaded.
+  Lists all categories for a given group, with subcategories preloaded.
   """
-  def list_categories(user_id) do
+  def list_categories(group_id) do
     Category
-    |> where([c], c.user_id == ^user_id)
+    |> where([c], c.group_id == ^group_id)
     |> preload(:subcategories)
     |> Repo.all()
   end
 
   @doc """
-  Gets a single category by user_id and category_id.
-  Raises `Ecto.NoResultsError` if not found or not belonging to the user.
+  Gets a single category by group_id and category_id.
+  Raises `Ecto.NoResultsError` if not found or not belonging to the group.
   """
-  def get_category!(user_id, category_id) do
+  def get_category!(group_id, category_id) do
     Category
-    |> where([c], c.user_id == ^user_id and c.id == ^category_id)
+    |> where([c], c.group_id == ^group_id and c.id == ^category_id)
     |> Repo.one!()
   end
 
   @doc """
-  Creates a category for the given user.
+  Creates a category for the given group.
   """
-  def create_category(user_id, attrs) do
+  def create_category(group_id, attrs) do
     %Category{}
-    |> Category.changeset(Map.put(attrs, :user_id, user_id))
+    |> Category.changeset(Map.put(attrs, :group_id, group_id))
     |> Repo.insert()
   end
 
@@ -66,21 +67,18 @@ defmodule PlanfinBackend.Categories do
   """
   def create_subcategory(%Category{} = category, attrs) do
     %Subcategory{}
-    |> Subcategory.changeset(
-      attrs
-      |> Map.put(:category_id, category.id)
-      |> Map.put(:user_id, category.user_id)
-    )
+    |> Subcategory.changeset(Map.put(attrs, :category_id, category.id))
     |> Repo.insert()
   end
 
   @doc """
-  Gets a single subcategory by user_id and subcategory_id.
-  Raises `Ecto.NoResultsError` if not found or not belonging to the user.
+  Gets a single subcategory by group_id and subcategory_id (via category).
+  Raises `Ecto.NoResultsError` if not found or not belonging to the group.
   """
-  def get_subcategory!(user_id, subcategory_id) do
+  def get_subcategory!(group_id, subcategory_id) do
     Subcategory
-    |> where([s], s.user_id == ^user_id and s.id == ^subcategory_id)
+    |> join(:inner, [s], c in Category, on: c.id == s.category_id)
+    |> where([s, c], s.id == ^subcategory_id and c.group_id == ^group_id)
     |> Repo.one!()
   end
 
@@ -101,13 +99,13 @@ defmodule PlanfinBackend.Categories do
   end
 
   @doc """
-  Seeds the default categories (with subcategories) for the given user.
+  Seeds the default categories (with subcategories) for the given group.
   Returns `{:ok, [%Category{subcategories: [...]}]}` on success.
   """
-  def seed_default_categories(user_id) do
+  def seed_default_categories(group_id) do
     results =
       Enum.map(@default_categories, fn {cat_name, sub_names} ->
-        {:ok, category} = create_category(user_id, %{name: cat_name})
+        {:ok, category} = create_category(group_id, %{name: cat_name})
 
         subcategories =
           Enum.map(sub_names, fn sub_name ->
