@@ -18,6 +18,7 @@ import { BalanceCard } from "../components/ui/BalanceCard";
 import { Card } from "../components/ui/Card";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { Colors, Radius, Shadow } from "../theme/tokens";
+import { usePageTitle } from "../hooks/usePageTitle";
 import type { AppStackParamList } from "../../App";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
@@ -30,6 +31,7 @@ function authorLabel(author: ExpenseWithAuthor["createdBy"], currentUserId?: str
 }
 
 export function HomeScreen() {
+  usePageTitle("Planfin");
   const { period, refetch: refetchPeriod } = usePeriod();
   const { signOut, user } = useAuth();
   const { activeGroup } = useGroup();

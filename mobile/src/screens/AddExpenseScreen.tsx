@@ -17,6 +17,7 @@ import { Chip } from "../components/ui/Chip";
 import { toISODate } from "../lib/date";
 import { displayToAPI } from "../lib/currency";
 import { categoryColor, Colors, Radius } from "../theme/tokens";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -33,6 +34,7 @@ const schema = yup.object({
 });
 
 export function AddExpenseScreen() {
+  usePageTitle("Planfin - Novo gasto");
   const navigation = useNavigation();
   const { period, refetch } = usePeriod();
 

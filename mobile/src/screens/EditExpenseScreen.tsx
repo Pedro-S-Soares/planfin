@@ -18,6 +18,7 @@ import { Btn } from "../components/ui/Btn";
 import { Chip } from "../components/ui/Chip";
 import { displayToAPI, formatCents } from "../lib/currency";
 import { categoryColor, Colors, Radius } from "../theme/tokens";
+import { usePageTitle } from "../hooks/usePageTitle";
 import type { AppStackParamList } from "../../App";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
@@ -40,6 +41,7 @@ function apiToDisplay(apiAmount: string): string {
 }
 
 export function EditExpenseScreen() {
+  usePageTitle("Planfin - Editar gasto");
   const navigation = useNavigation();
   const route = useRoute<NativeStackScreenProps<AppStackParamList, "EditExpense">["route"]>();
   const { id, amount, date, note, subcategoryId, categoryId } = route.params;
