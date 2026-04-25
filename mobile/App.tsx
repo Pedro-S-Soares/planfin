@@ -10,6 +10,7 @@ import { Text } from "react-native";
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { GroupProvider, useGroup } from "./src/context/GroupContext";
+import { CurrencyProvider } from "./src/context/CurrencyContext";
 import { apolloClient } from "./src/lib/apollo";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { RegisterScreen } from "./src/screens/RegisterScreen";
@@ -225,12 +226,14 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ApolloProvider client={apolloClient}>
-        <AuthProvider>
-          <NavigationContainer linking={linking}>
-            <Navigation />
-          </NavigationContainer>
-          <StatusBar style="auto" />
-        </AuthProvider>
+        <CurrencyProvider>
+          <AuthProvider>
+            <NavigationContainer linking={linking}>
+              <Navigation />
+            </NavigationContainer>
+            <StatusBar style="auto" />
+          </AuthProvider>
+        </CurrencyProvider>
       </ApolloProvider>
     </SafeAreaProvider>
   );

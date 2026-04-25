@@ -1,6 +1,7 @@
 import { Text, TouchableOpacity, View } from "react-native";
 import { Colors, Radius } from "../../theme/tokens";
 import { categoryColor } from "../../theme/tokens";
+import { useCurrency } from "../../context/CurrencyContext";
 
 interface ExpenseItem {
   id: string;
@@ -18,6 +19,7 @@ interface ExpenseRowProps {
 }
 
 export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowProps) {
+  const { currency } = useCurrency();
   const cc = categoryColor(item.subcategory?.name ?? "");
 
   return (
@@ -57,7 +59,7 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
       </View>
 
       <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text, flexShrink: 0, marginRight: onDelete ? 8 : 0 }}>
-        R$ {parseFloat(item.amount).toFixed(2).replace(".", ",")}
+        {currency.symbol} {parseFloat(item.amount).toFixed(2).replace(".", ",")}
       </Text>
 
       {onDelete && (
