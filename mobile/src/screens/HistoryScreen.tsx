@@ -19,6 +19,7 @@ import {
 import { Card } from "../components/ui/Card";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { Colors } from "../theme/tokens";
+import { usePageTitle } from "../hooks/usePageTitle";
 import type { AppStackParamList } from "../../App";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
@@ -31,6 +32,7 @@ function authorLabel(author: ExpenseWithAuthor["createdBy"], currentUserId?: str
 }
 
 export function HistoryScreen() {
+  usePageTitle("Planfin - Histórico");
   const navigation = useNavigation<Navigation>();
   const { period, refetch: refetchPeriod } = usePeriod();
   const { user } = useAuth();

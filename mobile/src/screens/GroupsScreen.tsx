@@ -23,10 +23,12 @@ import {
 import { Card } from "../components/ui/Card";
 import { Btn } from "../components/ui/Btn";
 import { Colors, Radius, Shadow } from "../theme/tokens";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 type GroupInvitesData = { groupInvites: GroupInvite[] };
 
 export function GroupsScreen() {
+  usePageTitle("Planfin - Grupos");
   const { groups, activeGroup, switchGroup, leaveGroup, createGroup, redeemCode, refetch } = useGroup();
   const { user } = useAuth();
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);

@@ -19,6 +19,7 @@ import { Btn } from "../components/ui/Btn";
 import { Card } from "../components/ui/Card";
 import { ProfileMenuItem } from "../components/ui/ProfileMenuItem";
 import { Colors, Radius } from "../theme/tokens";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 const SETTINGS_ITEMS = [
   { icon: "🔔", label: "Notificações",   subtitle: "Alertas de gastos e período" },
@@ -28,6 +29,7 @@ const SETTINGS_ITEMS = [
 ];
 
 export function ProfileScreen() {
+  usePageTitle("Planfin - Perfil");
   const navigation = useNavigation();
   const { user, signOut, updateUser } = useAuth();
   const { activeGroup } = useGroup();

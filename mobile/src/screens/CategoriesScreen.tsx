@@ -12,6 +12,7 @@ import {
 } from "../graphql/__generated__/hooks";
 import { Card } from "../components/ui/Card";
 import { Colors, Radius, Shadow, categoryColor } from "../theme/tokens";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -19,6 +20,7 @@ type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
 const refetchCategories = [{ query: CategoriesDocument }];
 
 export function CategoriesScreen() {
+  usePageTitle("Planfin - Categorias");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newSubName, setNewSubName] = useState<Record<string, string>>({});
