@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert, Platform } from "react-native";
 import {
   useCategoriesQuery,
   useCreateCategoryMutation,
@@ -61,16 +61,38 @@ export function CategoriesScreen() {
 
   const categories = (data?.categories ?? []).filter(Boolean) as NonNullable<Category>[];
 
+  const header = (
+    <View style={{
+      backgroundColor: Colors.surface,
+      paddingTop: Platform.OS === "ios" ? 58 : 24,
+      paddingBottom: 14,
+      paddingHorizontal: 18,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+    }}>
+      <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.text, letterSpacing: -0.4 }}>
+        Categorias
+      </Text>
+      <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
+        Organize seus gastos
+      </Text>
+    </View>
+  );
+
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: Colors.bg }}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+      <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+        {header}
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
       </View>
     );
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+      {header}
       <FlatList
         data={categories}
         keyExtractor={(item) => item?.id ?? ""}

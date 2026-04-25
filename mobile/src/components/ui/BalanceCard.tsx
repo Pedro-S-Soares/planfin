@@ -1,6 +1,7 @@
 import { Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Colors, Radius } from "../../theme/tokens";
+import { useCurrency } from "../../context/CurrencyContext";
 
 interface BalanceCardProps {
   available: string;
@@ -10,6 +11,9 @@ interface BalanceCardProps {
 }
 
 export function BalanceCard({ available, spent, dailyLimit, isPositive }: BalanceCardProps) {
+  const { currency } = useCurrency();
+  const sym = currency.symbol;
+
   const gradColors = isPositive
     ? ([Colors.gradStart, Colors.gradEnd] as const)
     : ([Colors.dangerGradStart, Colors.dangerGradEnd] as const);
@@ -45,7 +49,7 @@ export function BalanceCard({ available, spent, dailyLimit, isPositive }: Balanc
 
       <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 2, marginBottom: 14 }}>
         <Text style={{ fontSize: 16, fontWeight: "700", color: "rgba(255,255,255,0.8)", paddingTop: 6, marginRight: 2 }}>
-          {!isPositive ? "- " : ""}R$
+          {!isPositive ? "- " : ""}{sym}
         </Text>
         <Text style={{ fontSize: 48, fontWeight: "800", color: "#fff", letterSpacing: -1.5, lineHeight: 56 }}>
           {displayAvail}
@@ -58,7 +62,7 @@ export function BalanceCard({ available, spent, dailyLimit, isPositive }: Balanc
             Gasto hoje
           </Text>
           <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>
-            R$ {fmt(spent)}
+            {sym} {fmt(spent)}
           </Text>
         </View>
         <View style={{ width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.2)" }} />
@@ -67,7 +71,7 @@ export function BalanceCard({ available, spent, dailyLimit, isPositive }: Balanc
             Limite diário
           </Text>
           <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>
-            R$ {fmt(dailyLimit)}
+            {sym} {fmt(dailyLimit)}
           </Text>
         </View>
       </View>
