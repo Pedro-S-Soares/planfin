@@ -101,10 +101,25 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   # ---- Mutations ----
 
   def create_period(_parent, args, %{context: %{current_group: group}}) do
+    start_date = Date.from_iso8601!(args.start_date)
+    end_date = Date.from_iso8601!(args.end_date)
+    daily_limit = Decimal.new(args.daily_limit)
+
+    total_budget =
+      case Map.get(args, :total_budget) do
+        nil ->
+          days = Date.diff(end_date, start_date) + 1
+          Decimal.mult(daily_limit, Decimal.new(days))
+
+        tb ->
+          Decimal.new(tb)
+      end
+
     attrs = %{
-      start_date: Date.from_iso8601!(args.start_date),
-      end_date: Date.from_iso8601!(args.end_date),
-      daily_limit: Decimal.new(args.daily_limit)
+      start_date: start_date,
+      end_date: end_date,
+      daily_limit: daily_limit,
+      total_budget: total_budget
     }
 
     case Periods.create_period(group.id, attrs) do
@@ -121,11 +136,32 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   def create_period(_parent, _args, context), do: access_error(context)
 
+  def update_period(_parent, args, %{context: %{current_group: group}}) do
+    case Periods.get_active_period(group.id) do
+      {:ok, nil} ->
+        {:error, "No active period"}
+
+      {:ok, period} ->
+        attrs =
+          %{}
+          |> maybe_put(:daily_limit, args[:daily_limit], &Decimal.new/1)
+          |> maybe_put(:total_budget, args[:total_budget], &Decimal.new/1)
+
+        case Periods.update_period(period, attrs) do
+          {:ok, updated} -> {:ok, format_period(updated, nil)}
+          {:error, changeset} -> {:error, format_errors(changeset)}
+        end
+    end
+  end
+
+  def update_period(_parent, _args, context), do: access_error(context)
+
   def create_expense(_parent, args, %{context: %{current_user: user, current_group: group}}) do
     attrs = %{
       amount: Decimal.new(args.amount),
       date: Date.from_iso8601!(args.date),
       note: Map.get(args, :note),
+      is_extra: Map.get(args, :is_extra, false),
       subcategory_id: Map.get(args, :subcategory_id)
     }
 
@@ -152,6 +188,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       |> maybe_put(:amount, args[:amount], &Decimal.new/1)
       |> maybe_put(:date, args[:date], &Date.from_iso8601!/1)
       |> maybe_put(:note, args[:note], & &1)
+      |> maybe_put(:is_extra, args[:is_extra], & &1)
       |> maybe_put(:subcategory_id, args[:subcategory_id], & &1)
 
     case Expenses.update_expense(group.id, id, attrs) do
@@ -305,11 +342,15 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   defp parse_today(_args), do: Date.utc_today()
 
   defp format_period(period, today) do
+    remaining_total = BudgetDays.compute_remaining_total(period)
+
     %{
       id: to_string(period.id),
       start_date: Date.to_iso8601(period.start_date),
       end_date: Date.to_iso8601(period.end_date),
       daily_limit: Decimal.to_string(period.daily_limit),
+      total_budget: Decimal.to_string(period.total_budget),
+      remaining_total: Decimal.to_string(remaining_total),
       status: period.status,
       today: today
     }
@@ -335,6 +376,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       amount: Decimal.to_string(expense.amount),
       date: Date.to_iso8601(expense.date),
       note: expense.note,
+      is_extra: expense.is_extra,
       subcategory:
         if(expense.subcategory, do: format_subcategory(expense.subcategory), else: nil),
       created_by: format_created_by(expense)

@@ -9,6 +9,7 @@ defmodule PlanfinBackend.Expenses.Expense do
     field :amount, :decimal
     field :date, :date
     field :note, :string
+    field :is_extra, :boolean, default: false
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :created_by, PlanfinBackend.Accounts.User, type: :integer
@@ -28,6 +29,7 @@ defmodule PlanfinBackend.Expenses.Expense do
       :amount,
       :date,
       :note,
+      :is_extra,
       :group_id,
       :created_by_id,
       :period_id,

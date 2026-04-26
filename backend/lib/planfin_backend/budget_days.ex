@@ -104,13 +104,31 @@ defmodule PlanfinBackend.BudgetDays do
     days_elapsed = Date.diff(today, period.start_date) + 1
     total_budget = Decimal.mult(period.daily_limit, Decimal.new(days_elapsed))
 
+    # Only regular expenses count toward the daily balance
     total_spent =
       Expense
-      |> where([e], e.period_id == ^period.id and e.date <= ^today)
+      |> where([e], e.period_id == ^period.id and e.date <= ^today and e.is_extra == false)
       |> select([e], sum(e.amount))
       |> Repo.one()
 
     Decimal.sub(total_budget, total_spent || Decimal.new("0"))
+  end
+
+  @doc """
+  Computes the remaining total budget for a period.
+
+  Formula: `period.total_budget - sum(all expenses in period)`
+
+  Both regular and extra expenses reduce the total budget.
+  """
+  def compute_remaining_total(period) do
+    total_spent =
+      Expense
+      |> where([e], e.period_id == ^period.id)
+      |> select([e], sum(e.amount))
+      |> Repo.one()
+
+    Decimal.sub(period.total_budget, total_spent || Decimal.new("0"))
   end
 
   # Closes a single budget_day and propagates carryover to the next day

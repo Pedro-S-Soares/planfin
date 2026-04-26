@@ -29,6 +29,8 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :start_date, :string
     field :end_date, :string
     field :daily_limit, :string
+    field :total_budget, :string
+    field :remaining_total, :string
     field :status, :string
     field :today, :budget_day
   end
@@ -38,6 +40,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :amount, :string
     field :date, :string
     field :note, :string
+    field :is_extra, :boolean
     field :subcategory, :subcategory
     field :created_by, :user
   end
@@ -85,13 +88,21 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:start_date, non_null(:string))
       arg(:end_date, non_null(:string))
       arg(:daily_limit, non_null(:string))
+      arg(:total_budget, :string)
       resolve(&Budget.create_period/3)
+    end
+
+    field :update_period, :period do
+      arg(:daily_limit, :string)
+      arg(:total_budget, :string)
+      resolve(&Budget.update_period/3)
     end
 
     field :create_expense, :expense do
       arg(:amount, non_null(:string))
       arg(:date, non_null(:string))
       arg(:note, :string)
+      arg(:is_extra, :boolean)
       arg(:subcategory_id, :id)
       resolve(&Budget.create_expense/3)
     end
@@ -101,6 +112,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:amount, :string)
       arg(:date, :string)
       arg(:note, :string)
+      arg(:is_extra, :boolean)
       arg(:subcategory_id, :id)
       resolve(&Budget.update_expense/3)
     end

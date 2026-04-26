@@ -33,7 +33,8 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       %{
         start_date: today,
         end_date: Date.add(today, 29),
-        daily_limit: Decimal.new("100.00")
+        daily_limit: Decimal.new("100.00"),
+        total_budget: Decimal.new("3000.00")
       },
       overrides
     )

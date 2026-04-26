@@ -79,6 +79,17 @@ defmodule PlanfinBackend.Periods do
   end
 
   @doc """
+  Updates daily_limit and/or total_budget of an active period.
+
+  Returns `{:ok, period}` or `{:error, changeset}`.
+  """
+  def update_period(%Period{} = period, attrs) do
+    period
+    |> Period.update_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
   Closes a period by setting its status to "closed".
   """
   def close_period(%Period{} = period) do

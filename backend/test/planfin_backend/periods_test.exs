@@ -11,7 +11,8 @@ defmodule PlanfinBackend.PeriodsTest do
       %{
         start_date: ~D[2026-04-01],
         end_date: ~D[2026-04-30],
-        daily_limit: Decimal.new("100.00")
+        daily_limit: Decimal.new("100.00"),
+        total_budget: Decimal.new("3000.00")
       },
       overrides
     )
@@ -192,7 +193,8 @@ defmodule PlanfinBackend.PeriodsTest do
       attrs = %{
         start_date: ~D[2026-04-01],
         end_date: ~D[2026-04-05],
-        daily_limit: Decimal.new("50.00")
+        daily_limit: Decimal.new("50.00"),
+        total_budget: Decimal.new("250.00")
       }
 
       {:ok, period} = Periods.create_period(group.id, attrs)
@@ -215,7 +217,8 @@ defmodule PlanfinBackend.PeriodsTest do
         Periods.create_period(group.id, %{
           start_date: ~D[2026-01-01],
           end_date: ~D[2026-01-31],
-          daily_limit: Decimal.new("100.00")
+          daily_limit: Decimal.new("100.00"),
+          total_budget: Decimal.new("3100.00")
         })
 
       # Close the first so we can create a second
@@ -225,7 +228,8 @@ defmodule PlanfinBackend.PeriodsTest do
         Periods.create_period(group.id, %{
           start_date: ~D[2026-02-01],
           end_date: ~D[2026-02-28],
-          daily_limit: Decimal.new("80.00")
+          daily_limit: Decimal.new("80.00"),
+          total_budget: Decimal.new("2240.00")
         })
 
       periods = Periods.list_periods(group.id)

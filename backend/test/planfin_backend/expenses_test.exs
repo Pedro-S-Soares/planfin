@@ -13,7 +13,8 @@ defmodule PlanfinBackend.ExpensesTest do
   @period_attrs %{
     start_date: ~D[2026-04-01],
     end_date: ~D[2026-04-30],
-    daily_limit: Decimal.new("100.00")
+    daily_limit: Decimal.new("100.00"),
+    total_budget: Decimal.new("3000.00")
   }
 
   defp setup_group_with_period do

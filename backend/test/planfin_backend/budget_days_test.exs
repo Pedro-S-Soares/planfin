@@ -13,6 +13,7 @@ defmodule PlanfinBackend.BudgetDaysTest do
       start_date: ~D[2026-01-01],
       end_date: ~D[2026-12-31],
       daily_limit: Decimal.new("100.00"),
+      total_budget: Decimal.new("36600.00"),
       status: "active",
       group_id: group_id
     }
