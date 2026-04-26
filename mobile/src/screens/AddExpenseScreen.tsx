@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Switch, ScrollView } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -28,6 +28,7 @@ const schema = yup.object({
     .required("Valor é obrigatório")
     .test("not-zero", "Informe um valor maior que zero", (v) => !!v && v !== "0,00"),
   date: yup.string().required("Data é obrigatória"),
+  isExtra: yup.boolean().default(false),
   note: yup.string().optional(),
   categoryId: yup.string().optional(),
   subcategoryId: yup.string().optional(),
@@ -46,6 +47,7 @@ export function AddExpenseScreen() {
     defaultValues: {
       amount: "0,00",
       date: toISODate(new Date()),
+      isExtra: false,
       note: "",
       categoryId: "",
       subcategoryId: "",
@@ -67,6 +69,7 @@ export function AddExpenseScreen() {
       variables: {
         amount: displayToAPI(values.amount),
         date: values.date,
+        isExtra: values.isExtra ?? false,
         note: values.note || null,
         subcategoryId: values.subcategoryId || null,
       },
@@ -151,6 +154,44 @@ export function AddExpenseScreen() {
           />
         </>
       )}
+
+      <Controller
+        control={control}
+        name="isExtra"
+        render={({ field: { onChange, value } }) => (
+          <TouchableOpacity
+            onPress={() => onChange(!value)}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              backgroundColor: value ? Colors.primaryLight : Colors.bg,
+              borderRadius: Radius.md,
+              borderWidth: 1.5,
+              borderColor: value ? Colors.primary : Colors.border,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              marginBottom: 16,
+            }}
+          >
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: value ? Colors.primaryText : Colors.text }}>
+                Gasto extra
+              </Text>
+              <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
+                Não conta no limite diário, só no orçamento total
+              </Text>
+            </View>
+            <Switch
+              value={value ?? false}
+              onValueChange={onChange}
+              trackColor={{ false: Colors.border, true: Colors.primary }}
+              thumbColor="#fff"
+            />
+          </TouchableOpacity>
+        )}
+      />
 
       <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
         Nota (opcional)

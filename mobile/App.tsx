@@ -25,6 +25,7 @@ import { CategoriesScreen } from "./src/screens/CategoriesScreen";
 import { OnboardingGroupScreen } from "./src/screens/OnboardingGroupScreen";
 import { GroupsScreen } from "./src/screens/GroupsScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
+import { EditPeriodScreen } from "./src/screens/EditPeriodScreen";
 import { usePeriod } from "./src/context/PeriodContext";
 import { PeriodProvider } from "./src/context/PeriodContext";
 
@@ -43,12 +44,14 @@ export type AppStackParamList = {
   MainTabs: undefined;
   Groups: undefined;
   Profile: undefined;
+  EditPeriod: undefined;
   AddExpense: undefined;
   EditExpense: {
     id: string;
     amount: string;
     date: string;
     note?: string;
+    isExtra?: boolean;
     subcategoryId?: string;
     categoryId?: string;
   };
@@ -144,6 +147,19 @@ function AppNavigator() {
               headerStyle: { backgroundColor: "#FFFFFF" },
               headerTintColor: "#6255EA",
               headerTitleStyle: { color: "#17162B", fontWeight: "800" },
+              headerShadowVisible: false,
+            }}
+          />
+          <AppStack.Screen
+            name="EditPeriod"
+            component={EditPeriodScreen}
+            options={{
+              presentation: "modal",
+              headerShown: true,
+              title: "Editar período",
+              headerStyle: { backgroundColor: "#FFFFFF" },
+              headerTintColor: "#6255EA",
+              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
               headerShadowVisible: false,
             }}
           />

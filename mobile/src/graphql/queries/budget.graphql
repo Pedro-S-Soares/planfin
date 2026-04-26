@@ -4,6 +4,8 @@ query ActivePeriod($today: String!) {
     startDate
     endDate
     dailyLimit
+    totalBudget
+    remainingTotal
     status
     today {
       id

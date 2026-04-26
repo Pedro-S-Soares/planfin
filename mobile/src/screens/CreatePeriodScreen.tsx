@@ -8,12 +8,22 @@ import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
 import { Btn } from "../components/ui/Btn";
 import { toISODate } from "../lib/date";
-import { displayToAPI } from "../lib/currency";
+import { displayToAPI, formatCents } from "../lib/currency";
 import { Colors, Radius } from "../theme/tokens";
 
 const today = new Date();
 const in30Days = new Date(today);
 in30Days.setDate(today.getDate() + 29);
+
+function computeMinBudget(dailyLimit: string, startDate: string, endDate: string): string {
+  const limit = parseFloat(displayToAPI(dailyLimit) || "0");
+  if (!limit || !startDate || !endDate) return "0,00";
+  const start = new Date(startDate + "T00:00:00");
+  const end = new Date(endDate + "T00:00:00");
+  const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+  const cents = Math.round(limit * days * 100);
+  return formatCents(cents);
+}
 
 const schema = yup.object({
   startDate: yup.string().required("Data de início é obrigatória"),
@@ -22,6 +32,10 @@ const schema = yup.object({
     .string()
     .required("Limite diário é obrigatório")
     .test("not-zero", "Informe um valor maior que zero", (v) => !!v && v !== "0,00"),
+  totalBudget: yup
+    .string()
+    .required("Orçamento total é obrigatório")
+    .test("not-zero", "Informe um valor maior que zero", (v) => !!v && v !== "0,00"),
 });
 
 type FormValues = yup.InferType<typeof schema>;
@@ -29,14 +43,26 @@ type FormValues = yup.InferType<typeof schema>;
 export function CreatePeriodScreen() {
   const { refetch } = usePeriod();
 
-  const { control, handleSubmit, setError, formState: { errors } } = useForm<FormValues>({
+  const { control, handleSubmit, watch, setError, formState: { errors } } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
       startDate: toISODate(today),
       endDate: toISODate(in30Days),
       dailyLimit: "0,00",
+      totalBudget: "0,00",
     },
   });
+
+  const dailyLimit = watch("dailyLimit");
+  const startDate = watch("startDate");
+  const endDate = watch("endDate");
+  const totalBudget = watch("totalBudget");
+
+  const minBudget = computeMinBudget(dailyLimit, startDate, endDate);
+  const isBelowMin =
+    totalBudget !== "0,00" &&
+    parseFloat(displayToAPI(totalBudget) || "0") <
+      parseFloat(displayToAPI(minBudget) || "0");
 
   const [createPeriod, { loading }] = useCreatePeriodMutation({
     onCompleted: () => refetch(),
@@ -49,6 +75,7 @@ export function CreatePeriodScreen() {
         startDate: values.startDate,
         endDate: values.endDate,
         dailyLimit: displayToAPI(values.dailyLimit),
+        totalBudget: displayToAPI(values.totalBudget),
       },
     });
   };
@@ -68,7 +95,7 @@ export function CreatePeriodScreen() {
           Novo planejamento
         </Text>
         <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4, lineHeight: 20 }}>
-          Defina o período e quanto você quer gastar por dia.
+          Defina o período, o limite diário e o orçamento total.
         </Text>
       </View>
 
@@ -106,17 +133,28 @@ export function CreatePeriodScreen() {
           )}
         />
 
-        {/* Tip */}
-        <View style={{
-          backgroundColor: Colors.primaryLight,
-          borderRadius: Radius.lg,
-          padding: 12,
-          marginBottom: 16,
-        }}>
-          <Text style={{ fontSize: 12, color: Colors.primaryText, fontWeight: "600" }}>
-            💡 Dica: defina um limite realista para o seu dia a dia.
+        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>
+          Orçamento total
+        </Text>
+        <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 7 }}>
+          Mínimo: R$ {minBudget} ({dailyLimit}/dia × {(() => {
+            const s = new Date(startDate + "T00:00:00");
+            const e = new Date(endDate + "T00:00:00");
+            return Math.max(1, Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+          })()} dias)
+        </Text>
+        <Controller
+          control={control}
+          name="totalBudget"
+          render={({ field: { onChange, value } }) => (
+            <CurrencyInput value={value} onChange={onChange} error={errors.totalBudget?.message} />
+          )}
+        />
+        {isBelowMin && (
+          <Text style={{ color: Colors.danger, fontSize: 12, marginBottom: 12, marginTop: -8 }}>
+            O orçamento total deve ser ao menos R$ {minBudget}
           </Text>
-        </View>
+        )}
 
         {errors.root && (
           <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
@@ -124,7 +162,12 @@ export function CreatePeriodScreen() {
           </Text>
         )}
 
-        <Btn label="Começar planejamento" onPress={handleSubmit(onSubmit)} loading={loading} />
+        <Btn
+          label="Começar planejamento"
+          onPress={handleSubmit(onSubmit)}
+          loading={loading}
+          disabled={isBelowMin}
+        />
       </ScrollView>
     </View>
   );
