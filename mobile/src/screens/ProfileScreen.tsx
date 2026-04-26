@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { AppStackParamList } from "../../App";
 import { useAuth } from "../context/AuthContext";
 import { useGroup } from "../context/GroupContext";
 import { useCurrency, CURRENCIES, type CurrencyCode } from "../context/CurrencyContext";
@@ -28,9 +30,11 @@ const SETTINGS_ITEMS = [
   { icon: "📤", label: "Exportar dados", subtitle: "Baixar histórico em CSV" },
 ];
 
+type Navigation = NativeStackNavigationProp<AppStackParamList>;
+
 export function ProfileScreen() {
   usePageTitle("Planfin - Perfil");
-  const navigation = useNavigation();
+  const navigation = useNavigation<Navigation>();
   const { user, signOut, updateUser } = useAuth();
   const { activeGroup } = useGroup();
 
@@ -287,6 +291,16 @@ export function ProfileScreen() {
           ))}
         </Card>
         */}
+
+        {/* Period settings */}
+        <Card padding={0} style={{ overflow: "hidden" }}>
+          <ProfileMenuItem
+            icon="📅"
+            label="Editar período"
+            subtitle="Ajustar limite diário e orçamento total"
+            onPress={() => navigation.navigate("EditPeriod")}
+          />
+        </Card>
 
         {/* Logout card */}
         <Card padding={14} style={{ borderWidth: 1.5, borderColor: Colors.dangerLight }}>

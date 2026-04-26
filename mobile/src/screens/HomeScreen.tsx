@@ -143,6 +143,7 @@ export function HomeScreen() {
           spent={todaySpent}
           dailyLimit={period?.dailyLimit ?? "0.00"}
           isPositive={isPositive}
+          remainingTotal={period?.remainingTotal ?? undefined}
         />
 
         {/* Period info strip */}
@@ -188,6 +189,7 @@ export function HomeScreen() {
                   amount: item.amount,
                   date: item.date ?? todayStr,
                   note: item.note ?? undefined,
+                  isExtra: item.isExtra ?? undefined,
                   subcategoryId: item.subcategory?.id ?? undefined,
                   categoryId: undefined,
                 })}

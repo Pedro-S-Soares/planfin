@@ -8,9 +8,10 @@ interface BalanceCardProps {
   spent: string;
   dailyLimit: string;
   isPositive: boolean;
+  remainingTotal?: string;
 }
 
-export function BalanceCard({ available, spent, dailyLimit, isPositive }: BalanceCardProps) {
+export function BalanceCard({ available, spent, dailyLimit, isPositive, remainingTotal }: BalanceCardProps) {
   const { currency } = useCurrency();
   const sym = currency.symbol;
 
@@ -56,12 +57,12 @@ export function BalanceCard({ available, spent, dailyLimit, isPositive }: Balanc
         </Text>
       </View>
 
-      <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
+      <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
         <View>
           <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
             Gasto hoje
           </Text>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>
             {sym} {fmt(spent)}
           </Text>
         </View>
@@ -70,10 +71,23 @@ export function BalanceCard({ available, spent, dailyLimit, isPositive }: Balanc
           <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
             Limite diário
           </Text>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: "#fff" }}>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }}>
             {sym} {fmt(dailyLimit)}
           </Text>
         </View>
+        {remainingTotal !== undefined && (
+          <>
+            <View style={{ width: 1, height: 32, backgroundColor: "rgba(255,255,255,0.2)" }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 2 }}>
+                Restante
+              </Text>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: "#fff" }} numberOfLines={1}>
+                {sym} {fmt(remainingTotal)}
+              </Text>
+            </View>
+          </>
+        )}
       </View>
     </LinearGradient>
   );

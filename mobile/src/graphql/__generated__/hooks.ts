@@ -46,6 +46,7 @@ export type Expense = {
   createdBy?: Maybe<User>;
   date?: Maybe<Scalars['String']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
+  isExtra?: Maybe<Scalars['Boolean']['output']>;
   note?: Maybe<Scalars['String']['output']>;
   subcategory?: Maybe<Subcategory>;
 };
@@ -89,9 +90,11 @@ export type Period = {
   dailyLimit?: Maybe<Scalars['String']['output']>;
   endDate?: Maybe<Scalars['String']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
+  remainingTotal?: Maybe<Scalars['String']['output']>;
   startDate?: Maybe<Scalars['String']['output']>;
   status?: Maybe<Scalars['String']['output']>;
   today?: Maybe<BudgetDay>;
+  totalBudget?: Maybe<Scalars['String']['output']>;
 };
 
 export type PeriodSummary = {
@@ -133,6 +136,7 @@ export type RootMutationType = {
   switchActiveGroup?: Maybe<Group>;
   updateCategory?: Maybe<Category>;
   updateExpense?: Maybe<Expense>;
+  updatePeriod?: Maybe<Period>;
   updateProfile?: Maybe<User>;
   updateSubcategory?: Maybe<Subcategory>;
 };
@@ -146,6 +150,7 @@ export type RootMutationTypeCreateCategoryArgs = {
 export type RootMutationTypeCreateExpenseArgs = {
   amount: Scalars['String']['input'];
   date: Scalars['String']['input'];
+  isExtra?: InputMaybe<Scalars['Boolean']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
 };
@@ -160,6 +165,7 @@ export type RootMutationTypeCreatePeriodArgs = {
   dailyLimit: Scalars['String']['input'];
   endDate: Scalars['String']['input'];
   startDate: Scalars['String']['input'];
+  totalBudget?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -263,8 +269,15 @@ export type RootMutationTypeUpdateExpenseArgs = {
   amount?: InputMaybe<Scalars['String']['input']>;
   date?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
+  isExtra?: InputMaybe<Scalars['Boolean']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type RootMutationTypeUpdatePeriodArgs = {
+  dailyLimit?: InputMaybe<Scalars['String']['input']>;
+  totalBudget?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -380,31 +393,42 @@ export type CreatePeriodMutationVariables = Exact<{
   startDate: Scalars['String']['input'];
   endDate: Scalars['String']['input'];
   dailyLimit: Scalars['String']['input'];
+  totalBudget?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type CreatePeriodMutation = { __typename?: 'RootMutationType', createPeriod?: { __typename?: 'Period', id?: string | null, status?: string | null } | null };
+export type CreatePeriodMutation = { __typename?: 'RootMutationType', createPeriod?: { __typename?: 'Period', id?: string | null, status?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null } | null };
+
+export type UpdatePeriodMutationVariables = Exact<{
+  dailyLimit?: InputMaybe<Scalars['String']['input']>;
+  totalBudget?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type UpdatePeriodMutation = { __typename?: 'RootMutationType', updatePeriod?: { __typename?: 'Period', id?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null, status?: string | null } | null };
 
 export type CreateExpenseMutationVariables = Exact<{
   amount: Scalars['String']['input'];
   date: Scalars['String']['input'];
   note?: InputMaybe<Scalars['String']['input']>;
+  isExtra?: InputMaybe<Scalars['Boolean']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 
-export type CreateExpenseMutation = { __typename?: 'RootMutationType', createExpense?: { __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null };
+export type CreateExpenseMutation = { __typename?: 'RootMutationType', createExpense?: { __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, isExtra?: boolean | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null };
 
 export type UpdateExpenseMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   amount?: InputMaybe<Scalars['String']['input']>;
   date?: InputMaybe<Scalars['String']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
+  isExtra?: InputMaybe<Scalars['Boolean']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 
-export type UpdateExpenseMutation = { __typename?: 'RootMutationType', updateExpense?: { __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null };
+export type UpdateExpenseMutation = { __typename?: 'RootMutationType', updateExpense?: { __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, isExtra?: boolean | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null };
 
 export type DeleteExpenseMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -522,7 +546,7 @@ export type ActivePeriodQueryVariables = Exact<{
 }>;
 
 
-export type ActivePeriodQuery = { __typename?: 'RootQueryType', activePeriod?: { __typename?: 'Period', id?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null, status?: string | null, today?: { __typename?: 'BudgetDay', id?: string | null, date?: string | null, dailyLimit?: string | null, carryover?: string | null, availableBalance?: string | null, closedAt?: string | null } | null } | null };
+export type ActivePeriodQuery = { __typename?: 'RootQueryType', activePeriod?: { __typename?: 'Period', id?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null, status?: string | null, today?: { __typename?: 'BudgetDay', id?: string | null, date?: string | null, dailyLimit?: string | null, carryover?: string | null, availableBalance?: string | null, closedAt?: string | null } | null } | null };
 
 export type ExpenseHistoryQueryVariables = Exact<{
   periodId: Scalars['ID']['input'];
@@ -781,10 +805,18 @@ export type UpdateProfileMutationHookResult = ReturnType<typeof useUpdateProfile
 export type UpdateProfileMutationResult = Apollo.MutationResult<UpdateProfileMutation>;
 export type UpdateProfileMutationOptions = Apollo.BaseMutationOptions<UpdateProfileMutation, UpdateProfileMutationVariables>;
 export const CreatePeriodDocument = gql`
-    mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {
-  createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit) {
+    mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!, $totalBudget: String) {
+  createPeriod(
+    startDate: $startDate
+    endDate: $endDate
+    dailyLimit: $dailyLimit
+    totalBudget: $totalBudget
+  ) {
     id
     status
+    dailyLimit
+    totalBudget
+    remainingTotal
   }
 }
     `;
@@ -806,6 +838,7 @@ export type CreatePeriodMutationFn = Apollo.MutationFunction<CreatePeriodMutatio
  *      startDate: // value for 'startDate'
  *      endDate: // value for 'endDate'
  *      dailyLimit: // value for 'dailyLimit'
+ *      totalBudget: // value for 'totalBudget'
  *   },
  * });
  */
@@ -816,18 +849,58 @@ export function useCreatePeriodMutation(baseOptions?: Apollo.MutationHookOptions
 export type CreatePeriodMutationHookResult = ReturnType<typeof useCreatePeriodMutation>;
 export type CreatePeriodMutationResult = Apollo.MutationResult<CreatePeriodMutation>;
 export type CreatePeriodMutationOptions = Apollo.BaseMutationOptions<CreatePeriodMutation, CreatePeriodMutationVariables>;
+export const UpdatePeriodDocument = gql`
+    mutation UpdatePeriod($dailyLimit: String, $totalBudget: String) {
+  updatePeriod(dailyLimit: $dailyLimit, totalBudget: $totalBudget) {
+    id
+    dailyLimit
+    totalBudget
+    remainingTotal
+    status
+  }
+}
+    `;
+export type UpdatePeriodMutationFn = Apollo.MutationFunction<UpdatePeriodMutation, UpdatePeriodMutationVariables>;
+
+/**
+ * __useUpdatePeriodMutation__
+ *
+ * To run a mutation, you first call `useUpdatePeriodMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdatePeriodMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updatePeriodMutation, { data, loading, error }] = useUpdatePeriodMutation({
+ *   variables: {
+ *      dailyLimit: // value for 'dailyLimit'
+ *      totalBudget: // value for 'totalBudget'
+ *   },
+ * });
+ */
+export function useUpdatePeriodMutation(baseOptions?: Apollo.MutationHookOptions<UpdatePeriodMutation, UpdatePeriodMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdatePeriodMutation, UpdatePeriodMutationVariables>(UpdatePeriodDocument, options);
+      }
+export type UpdatePeriodMutationHookResult = ReturnType<typeof useUpdatePeriodMutation>;
+export type UpdatePeriodMutationResult = Apollo.MutationResult<UpdatePeriodMutation>;
+export type UpdatePeriodMutationOptions = Apollo.BaseMutationOptions<UpdatePeriodMutation, UpdatePeriodMutationVariables>;
 export const CreateExpenseDocument = gql`
-    mutation CreateExpense($amount: String!, $date: String!, $note: String, $subcategoryId: ID) {
+    mutation CreateExpense($amount: String!, $date: String!, $note: String, $isExtra: Boolean, $subcategoryId: ID) {
   createExpense(
     amount: $amount
     date: $date
     note: $note
+    isExtra: $isExtra
     subcategoryId: $subcategoryId
   ) {
     id
     amount
     date
     note
+    isExtra
     subcategory {
       id
       name
@@ -857,6 +930,7 @@ export type CreateExpenseMutationFn = Apollo.MutationFunction<CreateExpenseMutat
  *      amount: // value for 'amount'
  *      date: // value for 'date'
  *      note: // value for 'note'
+ *      isExtra: // value for 'isExtra'
  *      subcategoryId: // value for 'subcategoryId'
  *   },
  * });
@@ -869,18 +943,20 @@ export type CreateExpenseMutationHookResult = ReturnType<typeof useCreateExpense
 export type CreateExpenseMutationResult = Apollo.MutationResult<CreateExpenseMutation>;
 export type CreateExpenseMutationOptions = Apollo.BaseMutationOptions<CreateExpenseMutation, CreateExpenseMutationVariables>;
 export const UpdateExpenseDocument = gql`
-    mutation UpdateExpense($id: ID!, $amount: String, $date: String, $note: String, $subcategoryId: ID) {
+    mutation UpdateExpense($id: ID!, $amount: String, $date: String, $note: String, $isExtra: Boolean, $subcategoryId: ID) {
   updateExpense(
     id: $id
     amount: $amount
     date: $date
     note: $note
+    isExtra: $isExtra
     subcategoryId: $subcategoryId
   ) {
     id
     amount
     date
     note
+    isExtra
     subcategory {
       id
       name
@@ -907,6 +983,7 @@ export type UpdateExpenseMutationFn = Apollo.MutationFunction<UpdateExpenseMutat
  *      amount: // value for 'amount'
  *      date: // value for 'date'
  *      note: // value for 'note'
+ *      isExtra: // value for 'isExtra'
  *      subcategoryId: // value for 'subcategoryId'
  *   },
  * });
@@ -1438,6 +1515,8 @@ export const ActivePeriodDocument = gql`
     startDate
     endDate
     dailyLimit
+    totalBudget
+    remainingTotal
     status
     today {
       id
