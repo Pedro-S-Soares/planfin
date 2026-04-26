@@ -18,8 +18,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
           {:ok, period} ->
             case BudgetDays.get_or_create_today(period, today) do
               {:ok, budget_day} ->
-                budget_day = load_expenses(budget_day)
-                today_data = format_budget_day(budget_day)
+                today_data = format_budget_day(budget_day, period, today)
                 {:ok, format_period(period, today_data)}
 
               {:error, reason} ->
@@ -316,8 +315,8 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     }
   end
 
-  defp format_budget_day(budget_day) do
-    available = BudgetDays.available_balance(budget_day)
+  defp format_budget_day(budget_day, period, today) do
+    available = BudgetDays.compute_today_balance(period, today)
 
     %{
       id: to_string(budget_day.id),
@@ -354,10 +353,6 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       name: subcategory.name,
       category_id: to_string(subcategory.category_id)
     }
-  end
-
-  defp load_expenses(budget_day) do
-    PlanfinBackend.Repo.preload(budget_day, :expenses)
   end
 
   defp format_errors(%Ecto.Changeset{} = changeset) do

@@ -78,6 +78,7 @@ defmodule PlanfinBackend.BudgetDays do
   Formula: `daily_limit + carryover - sum(expenses)`
 
   Expects `budget_day.expenses` to be preloaded.
+  Used internally for carryover propagation when closing days.
   """
   def available_balance(%BudgetDay{} = budget_day) do
     total_spent =
@@ -89,6 +90,27 @@ defmodule PlanfinBackend.BudgetDays do
     budget_day.daily_limit
     |> Decimal.add(budget_day.carryover)
     |> Decimal.sub(total_spent)
+  end
+
+  @doc """
+  Computes the available balance for today without relying on the stored carryover.
+
+  Uses a live DB query to sum all expenses in the period up to and including `today`,
+  so retroactive edits to past days are always reflected correctly.
+
+  Formula: `period.daily_limit × days_elapsed - sum(expenses where date ≤ today)`
+  """
+  def compute_today_balance(period, today \\ Date.utc_today()) do
+    days_elapsed = Date.diff(today, period.start_date) + 1
+    total_budget = Decimal.mult(period.daily_limit, Decimal.new(days_elapsed))
+
+    total_spent =
+      Expense
+      |> where([e], e.period_id == ^period.id and e.date <= ^today)
+      |> select([e], sum(e.amount))
+      |> Repo.one()
+
+    Decimal.sub(total_budget, total_spent || Decimal.new("0"))
   end
 
   # Closes a single budget_day and propagates carryover to the next day
