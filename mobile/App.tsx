@@ -11,6 +11,8 @@ import { Text } from "react-native";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { GroupProvider, useGroup } from "./src/context/GroupContext";
 import { CurrencyProvider } from "./src/context/CurrencyContext";
+import { LoadingScreen } from "./src/components/ui/LoadingScreen";
+import { ErrorScreen } from "./src/components/ui/ErrorScreen";
 import { apolloClient } from "./src/lib/apollo";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { RegisterScreen } from "./src/screens/RegisterScreen";
@@ -122,9 +124,10 @@ function MainTabs() {
 }
 
 function AppNavigator() {
-  const { hasActivePeriod, isLoading } = usePeriod();
+  const { hasActivePeriod, isLoading, error, refetch } = usePeriod();
 
-  if (isLoading) return null;
+  if (isLoading) return <LoadingScreen />;
+  if (error) return <ErrorScreen onRetry={refetch} />;
 
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
@@ -196,9 +199,10 @@ function AppNavigator() {
 }
 
 function AuthenticatedNavigator() {
-  const { activeGroup, isLoading } = useGroup();
+  const { activeGroup, isLoading, error, refetch } = useGroup();
 
-  if (isLoading) return null;
+  if (isLoading) return <LoadingScreen />;
+  if (error) return <ErrorScreen onRetry={refetch} />;
 
   if (!activeGroup) {
     return (
@@ -218,7 +222,7 @@ function AuthenticatedNavigator() {
 function Navigation() {
   const { token, isLoading } = useAuth();
 
-  if (isLoading) return null;
+  if (isLoading) return <LoadingScreen />;
 
   if (!token) {
     return (

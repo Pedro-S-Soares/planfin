@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useMemo } from "react";
 import { useQuery, useMutation } from "@apollo/client/react";
+import { ApolloError } from "@apollo/client";
 import { apolloClient } from "../lib/apollo";
 import {
   ACTIVE_GROUP,
@@ -15,6 +16,7 @@ type GroupContextValue = {
   activeGroup: Group | null;
   groups: Group[];
   isLoading: boolean;
+  error: ApolloError | null;
   refetch: () => Promise<unknown>;
   switchGroup: (id: string) => Promise<Group | null>;
   createGroup: (name: string) => Promise<Group | null>;
@@ -112,6 +114,7 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
       activeGroup: activeQuery.data?.activeGroup ?? null,
       groups: groupsQuery.data?.myGroups ?? [],
       isLoading: activeQuery.loading || groupsQuery.loading,
+      error: activeQuery.error ?? groupsQuery.error ?? null,
       refetch,
       switchGroup,
       createGroup,
@@ -121,8 +124,10 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
     [
       activeQuery.data,
       activeQuery.loading,
+      activeQuery.error,
       groupsQuery.data,
       groupsQuery.loading,
+      groupsQuery.error,
       refetch,
       switchGroup,
       createGroup,

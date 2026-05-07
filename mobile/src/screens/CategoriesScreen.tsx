@@ -11,6 +11,7 @@ import {
   CategoriesQuery,
 } from "../graphql/__generated__/hooks";
 import { Card } from "../components/ui/Card";
+import { InlineError } from "../components/ui/InlineError";
 import { Colors, Radius, Shadow, categoryColor } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
 
@@ -25,7 +26,7 @@ export function CategoriesScreen() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newSubName, setNewSubName] = useState<Record<string, string>>({});
 
-  const { data, loading } = useCategoriesQuery({ fetchPolicy: "network-only" });
+  const { data, loading, error, refetch } = useCategoriesQuery({ fetchPolicy: "network-only" });
 
   const [createCategory] = useCreateCategoryMutation({ refetchQueries: refetchCategories });
   const [updateCategory] = useUpdateCategoryMutation({ refetchQueries: refetchCategories });
@@ -87,6 +88,17 @@ export function CategoriesScreen() {
         {header}
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+        {header}
+        <View style={{ padding: 16 }}>
+          <InlineError onRetry={refetch} />
         </View>
       </View>
     );

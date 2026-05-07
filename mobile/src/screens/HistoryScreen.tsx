@@ -18,6 +18,7 @@ import {
 } from "../graphql/expenses";
 import { Card } from "../components/ui/Card";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
+import { InlineError } from "../components/ui/InlineError";
 import { Colors } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { AppStackParamList } from "../../App";
@@ -38,7 +39,7 @@ export function HistoryScreen() {
   const { user } = useAuth();
   const { currency } = useCurrency();
 
-  const { data, loading, refetch } = useQuery<ExpenseHistoryData>(
+  const { data, loading, error, refetch } = useQuery<ExpenseHistoryData>(
     EXPENSE_HISTORY_WITH_AUTHORS,
     {
       variables: { periodId: period?.id ?? "" },
@@ -95,6 +96,17 @@ export function HistoryScreen() {
         {header}
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+        {header}
+        <View style={{ padding: 16 }}>
+          <InlineError onRetry={refetch} />
         </View>
       </View>
     );

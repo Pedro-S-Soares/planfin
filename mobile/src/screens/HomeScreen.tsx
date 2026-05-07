@@ -17,6 +17,7 @@ import {
 import { BalanceCard } from "../components/ui/BalanceCard";
 import { Card } from "../components/ui/Card";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
+import { InlineError } from "../components/ui/InlineError";
 import { Colors, Radius, Shadow } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
 import type { AppStackParamList } from "../../App";
@@ -56,7 +57,7 @@ export function HomeScreen() {
     return Math.max(0, Math.round((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
   })();
 
-  const { data, loading, refetch: refetchHistory } = useQuery<ExpenseHistoryData>(
+  const { data, loading, error, refetch: refetchHistory } = useQuery<ExpenseHistoryData>(
     EXPENSE_HISTORY_WITH_AUTHORS,
     {
       variables: { periodId: period?.id ?? "" },
@@ -175,6 +176,8 @@ export function HomeScreen() {
 
           {loading ? (
             <ActivityIndicator color={Colors.primary} style={{ marginVertical: 20 }} />
+          ) : error ? (
+            <InlineError onRetry={refetchHistory} />
           ) : todayExpenses.length === 0 ? (
             <Text style={{ textAlign: "center", color: Colors.textTer, fontSize: 14, paddingVertical: 16 }}>
               Nenhum gasto hoje.

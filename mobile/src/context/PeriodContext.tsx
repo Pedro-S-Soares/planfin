@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useMemo } from "react";
+import { ApolloError } from "@apollo/client";
 import { useActivePeriodQuery, ActivePeriodQuery } from "../graphql/__generated__/hooks";
 import { toISODate } from "../lib/date";
 
@@ -11,13 +12,14 @@ type PeriodContextValue = {
   period: Period | null;
   hasActivePeriod: boolean;
   isLoading: boolean;
+  error: ApolloError | null;
   refetch: () => void;
 };
 
 const PeriodContext = createContext<PeriodContextValue | null>(null);
 
 export function PeriodProvider({ children }: { children: React.ReactNode }) {
-  const { data, loading, refetch } = useActivePeriodQuery({
+  const { data, loading, error, refetch } = useActivePeriodQuery({
     variables: { today: toISODate(new Date()) },
     fetchPolicy: "network-only",
   });
@@ -26,8 +28,8 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
   const hasActivePeriod = period !== null && period.status === "active";
 
   const value = useMemo(
-    () => ({ period, hasActivePeriod, isLoading: loading, refetch }),
-    [period, hasActivePeriod, loading, refetch]
+    () => ({ period, hasActivePeriod, isLoading: loading, error: error ?? null, refetch }),
+    [period, hasActivePeriod, loading, error, refetch]
   );
 
   return <PeriodContext.Provider value={value}>{children}</PeriodContext.Provider>;
