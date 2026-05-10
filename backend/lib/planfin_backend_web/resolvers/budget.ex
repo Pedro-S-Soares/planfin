@@ -6,7 +6,19 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   def active_period(_parent, args, %{context: %{current_group: group}}) do
     today = parse_today(args)
 
-    case Periods.get_active_period(group.id) do
+    period_result =
+      case Map.get(args, :period_id) do
+        nil ->
+          Periods.get_active_period(group.id)
+
+        period_id ->
+          case Periods.get_period(group.id, period_id) do
+            {:ok, period} -> Periods.preload_budget_days(period)
+            {:error, _} -> Periods.get_active_period(group.id)
+          end
+      end
+
+    case period_result do
       {:ok, nil} ->
         {:ok, nil}
 
@@ -115,19 +127,18 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
           Decimal.new(tb)
       end
 
-    attrs = %{
-      start_date: start_date,
-      end_date: end_date,
-      daily_limit: daily_limit,
-      total_budget: total_budget
-    }
+    attrs =
+      %{
+        start_date: start_date,
+        end_date: end_date,
+        daily_limit: daily_limit,
+        total_budget: total_budget
+      }
+      |> maybe_put(:name, Map.get(args, :name), & &1)
 
     case Periods.create_period(group.id, attrs) do
       {:ok, period} ->
         {:ok, format_period(period, nil)}
-
-      {:error, :already_has_active_period} ->
-        {:error, "Group already has an active period"}
 
       {:error, changeset} ->
         {:error, format_errors(changeset)}
@@ -343,14 +354,17 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   defp format_period(period, today) do
     remaining_total = BudgetDays.compute_remaining_total(period)
+    available_balance = BudgetDays.compute_today_balance(period)
 
     %{
       id: to_string(period.id),
+      name: period.name,
       start_date: Date.to_iso8601(period.start_date),
       end_date: Date.to_iso8601(period.end_date),
       daily_limit: Decimal.to_string(period.daily_limit),
       total_budget: Decimal.to_string(period.total_budget),
       remaining_total: Decimal.to_string(remaining_total),
+      available_balance: Decimal.to_string(available_balance),
       status: period.status,
       today: today
     }

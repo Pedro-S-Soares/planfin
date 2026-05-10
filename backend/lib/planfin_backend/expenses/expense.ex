@@ -36,7 +36,7 @@ defmodule PlanfinBackend.Expenses.Expense do
       :budget_day_id,
       :subcategory_id
     ])
-    |> validate_required([:amount, :date, :group_id, :created_by_id, :period_id, :budget_day_id])
+    |> validate_required([:amount, :date, :group_id, :created_by_id])
     |> validate_amount_positive()
   end
 

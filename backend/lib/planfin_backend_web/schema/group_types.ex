@@ -2,6 +2,7 @@ defmodule PlanfinBackendWeb.Schema.GroupTypes do
   use Absinthe.Schema.Notation
 
   alias PlanfinBackendWeb.Resolvers.Groups
+  alias PlanfinBackendWeb.Resolvers.Budget
 
   object :group do
     field :id, :id
@@ -49,6 +50,10 @@ defmodule PlanfinBackendWeb.Schema.GroupTypes do
     field :group_invites, list_of(:group_invite) do
       arg(:group_id, non_null(:id))
       resolve(&Groups.group_invites/3)
+    end
+
+    field :group_periods, list_of(:period) do
+      resolve(&Budget.list_periods/3)
     end
   end
 

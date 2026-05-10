@@ -18,14 +18,19 @@ defmodule PlanfinBackend.Expenses do
   1. Fetch the group's active period via `Periods.get_active_period/1`.
   2. If none → `{:error, :no_active_period}`.
   3. Validate that `attrs.date` is within the period → `{:error, :date_out_of_range}`.
-  4. Find or create the budget_day for that date.
-  5. Insert the expense and return `{:ok, expense}` with subcategory and
-     created_by preloaded.
+  4. Find or create the budget_day for that date (WHERE period = active period AND date = expense.date).
+  5. Insert the expense linking it to the period and budget_day, then return
+     `{:ok, expense}` with subcategory and created_by preloaded.
+
+  `period_id` and `budget_day_id` are resolved automatically — callers do not
+  need to supply them.
   """
   def create_expense(group_id, created_by_id, attrs) do
+    date = attrs[:date] || attrs["date"]
+
     with {:ok, period} <- get_active_period_or_error(group_id),
-         :ok <- validate_date_in_range(attrs[:date] || attrs["date"], period),
-         {:ok, budget_day} <- get_or_create_budget_day(period, attrs[:date] || attrs["date"]),
+         :ok <- validate_date_in_range(date, period),
+         {:ok, budget_day} <- get_or_create_budget_day(period, date),
          {:ok, expense} <-
            insert_expense(group_id, created_by_id, period.id, budget_day.id, attrs) do
       expense = Repo.preload(expense, [:created_by, subcategory: :category])

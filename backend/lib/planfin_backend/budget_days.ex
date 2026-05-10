@@ -75,17 +75,30 @@ defmodule PlanfinBackend.BudgetDays do
   @doc """
   Calculates the available balance for a budget_day.
 
-  Formula: `daily_limit + carryover - sum(expenses)`
+  Formula: `daily_limit + carryover - sum(expenses WHERE group_id = G AND date = D)`
 
-  Expects `budget_day.expenses` to be preloaded.
+  Queries expenses by `group_id` and `date` rather than relying on a preloaded
+  `budget_day.expenses` association. The `group_id` is resolved from the period
+  that owns this budget_day, so `budget_day.period` must be preloaded (or the
+  `period` struct passed explicitly via `available_balance/2`).
+
   Used internally for carryover propagation when closing days.
   """
-  def available_balance(%BudgetDay{} = budget_day) do
-    total_spent =
-      budget_day.expenses
-      |> Enum.reduce(Decimal.new("0"), fn expense, acc ->
-        Decimal.add(acc, expense.amount)
-      end)
+  def available_balance(%BudgetDay{period: %{group_id: group_id}} = budget_day) do
+    total_spent = get_total_spent_for_day(group_id, budget_day.date)
+
+    budget_day.daily_limit
+    |> Decimal.add(budget_day.carryover)
+    |> Decimal.sub(total_spent)
+  end
+
+  @doc """
+  Calculates the available balance for a budget_day given an explicit `group_id`.
+
+  Use this overload when the `budget_day.period` association is not preloaded.
+  """
+  def available_balance(%BudgetDay{} = budget_day, group_id) do
+    total_spent = get_total_spent_for_day(group_id, budget_day.date)
 
     budget_day.daily_limit
     |> Decimal.add(budget_day.carryover)
@@ -95,19 +108,30 @@ defmodule PlanfinBackend.BudgetDays do
   @doc """
   Computes the available balance for today without relying on the stored carryover.
 
-  Uses a live DB query to sum all expenses in the period up to and including `today`,
+  Uses a live DB query to sum all expenses for the group up to and including `today`,
   so retroactive edits to past days are always reflected correctly.
 
-  Formula: `period.daily_limit × days_elapsed - sum(expenses where date ≤ today)`
+  Formula: `period.daily_limit × days_elapsed - sum(expenses where group_id = G and date ≤ today)`
+
+  Filters by `group_id + date` instead of `period_id` so that the query correctly
+  reflects the group's actual spending regardless of which period each expense was
+  originally recorded in.
   """
   def compute_today_balance(period, today \\ Date.utc_today()) do
     days_elapsed = Date.diff(today, period.start_date) + 1
     total_budget = Decimal.mult(period.daily_limit, Decimal.new(days_elapsed))
 
-    # Only regular expenses count toward the daily balance
+    # Only regular expenses count toward the daily balance.
+    # Filter by group_id and date range instead of period_id.
     total_spent =
       Expense
-      |> where([e], e.period_id == ^period.id and e.date <= ^today and e.is_extra == false)
+      |> where(
+        [e],
+        e.group_id == ^period.group_id and
+          e.date >= ^period.start_date and
+          e.date <= ^today and
+          e.is_extra == false
+      )
       |> select([e], sum(e.amount))
       |> Repo.one()
 
@@ -117,14 +141,20 @@ defmodule PlanfinBackend.BudgetDays do
   @doc """
   Computes the remaining total budget for a period.
 
-  Formula: `period.total_budget - sum(all expenses in period)`
+  Formula: `period.total_budget - sum(all expenses WHERE group_id = G AND date IN period range)`
 
   Both regular and extra expenses reduce the total budget.
+  Filters by `group_id + date range` instead of `period_id`.
   """
   def compute_remaining_total(period) do
     total_spent =
       Expense
-      |> where([e], e.period_id == ^period.id)
+      |> where(
+        [e],
+        e.group_id == ^period.group_id and
+          e.date >= ^period.start_date and
+          e.date <= ^period.end_date
+      )
       |> select([e], sum(e.amount))
       |> Repo.one()
 
@@ -135,7 +165,8 @@ defmodule PlanfinBackend.BudgetDays do
   # if the next day falls within the period and doesn't already exist.
   defp close_day(%BudgetDay{} = budget_day, period) do
     # Compute carryover: daily_limit + carryover - sum(expenses for this day)
-    total_spent = get_total_spent_for_day(budget_day.id)
+    # Uses group_id + date instead of budget_day_id to find related expenses.
+    total_spent = get_total_spent_for_day(period.group_id, budget_day.date)
 
     carryover =
       budget_day.daily_limit
@@ -170,10 +201,10 @@ defmodule PlanfinBackend.BudgetDays do
     |> Repo.update!()
   end
 
-  defp get_total_spent_for_day(budget_day_id) do
+  defp get_total_spent_for_day(group_id, date) do
     result =
       Expense
-      |> where([e], e.budget_day_id == ^budget_day_id)
+      |> where([e], e.group_id == ^group_id and e.date == ^date)
       |> select([e], sum(e.amount))
       |> Repo.one()
 

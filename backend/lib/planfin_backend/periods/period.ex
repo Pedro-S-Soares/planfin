@@ -8,6 +8,7 @@ defmodule PlanfinBackend.Periods.Period do
   @valid_statuses ~w(active closed abandoned)
 
   schema "periods" do
+    field :name, :string
     field :start_date, :date
     field :end_date, :date
     field :daily_limit, :decimal
@@ -30,7 +31,7 @@ defmodule PlanfinBackend.Periods.Period do
   """
   def changeset(period, attrs) do
     period
-    |> cast(attrs, [:start_date, :end_date, :daily_limit, :total_budget, :status, :group_id])
+    |> cast(attrs, [:name, :start_date, :end_date, :daily_limit, :total_budget, :status, :group_id])
     |> validate_required([:start_date, :end_date, :daily_limit, :total_budget, :group_id])
     |> validate_inclusion(:status, @valid_statuses)
     |> validate_end_date_after_start_date()
