@@ -4,7 +4,7 @@ import { NavigationContainer, LinkingOptions } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { enableScreens } from "react-native-screens";
 import { Text } from "react-native";
 
@@ -28,6 +28,7 @@ import { OnboardingGroupScreen } from "./src/screens/OnboardingGroupScreen";
 import { GroupsScreen } from "./src/screens/GroupsScreen";
 import { ProfileScreen } from "./src/screens/ProfileScreen";
 import { EditPeriodScreen } from "./src/screens/EditPeriodScreen";
+import { PeriodsScreen } from "./src/screens/PeriodsScreen";
 import { usePeriod } from "./src/context/PeriodContext";
 import { PeriodProvider } from "./src/context/PeriodContext";
 
@@ -47,6 +48,7 @@ export type AppStackParamList = {
   Groups: undefined;
   Profile: undefined;
   EditPeriod: undefined;
+  Periods: undefined;
   AddExpense: undefined;
   EditExpense: {
     id: string;
@@ -83,6 +85,10 @@ const linking: LinkingOptions<AuthStackParamList> = {
 };
 
 function MainTabs() {
+  const insets = useSafeAreaInsets();
+  const tabBarPaddingBottom = Math.max(insets.bottom, 8);
+  const tabBarHeight = 52 + tabBarPaddingBottom;
+
   return (
     <MainTab.Navigator
       screenOptions={{
@@ -91,9 +97,9 @@ function MainTabs() {
           backgroundColor: "#FFFFFF",
           borderTopColor: "#E4E2F0",
           borderTopWidth: 1,
-          paddingBottom: 28,
+          paddingBottom: tabBarPaddingBottom,
           paddingTop: 8,
-          height: 82,
+          height: tabBarHeight,
         },
         tabBarActiveTintColor: "#6255EA",
         tabBarInactiveTintColor: "#ADABCA",
@@ -160,6 +166,24 @@ function AppNavigator() {
               presentation: "modal",
               headerShown: true,
               title: "Editar período",
+              headerStyle: { backgroundColor: "#FFFFFF" },
+              headerTintColor: "#6255EA",
+              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
+              headerShadowVisible: false,
+            }}
+          />
+          <AppStack.Screen
+            name="Periods"
+            component={PeriodsScreen}
+            options={{ headerShown: false }}
+          />
+          <AppStack.Screen
+            name="CreatePeriod"
+            component={CreatePeriodScreen}
+            options={{
+              presentation: "modal",
+              headerShown: true,
+              title: "Novo planejamento",
               headerStyle: { backgroundColor: "#FFFFFF" },
               headerTintColor: "#6255EA",
               headerTitleStyle: { color: "#17162B", fontWeight: "700" },

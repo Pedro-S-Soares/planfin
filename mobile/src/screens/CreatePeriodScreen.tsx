@@ -7,6 +7,7 @@ import { usePeriod } from "../context/PeriodContext";
 import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
 import { Btn } from "../components/ui/Btn";
+import { FieldInput } from "../components/ui/FieldInput";
 import { toISODate } from "../lib/date";
 import { displayToAPI, formatCents } from "../lib/currency";
 import { Colors, Radius } from "../theme/tokens";
@@ -26,6 +27,7 @@ function computeMinBudget(dailyLimit: string, startDate: string, endDate: string
 }
 
 const schema = yup.object({
+  name: yup.string().default(""),
   startDate: yup.string().required("Data de início é obrigatória"),
   endDate: yup.string().required("Data de fim é obrigatória"),
   dailyLimit: yup
@@ -38,14 +40,21 @@ const schema = yup.object({
     .test("not-zero", "Informe um valor maior que zero", (v) => !!v && v !== "0,00"),
 });
 
-type FormValues = yup.InferType<typeof schema>;
+type FormValues = {
+  name: string;
+  startDate: string;
+  endDate: string;
+  dailyLimit: string;
+  totalBudget: string;
+};
 
 export function CreatePeriodScreen() {
-  const { refetch } = usePeriod();
+  const { refetch, setSelectedPeriod } = usePeriod();
 
   const { control, handleSubmit, watch, setError, formState: { errors } } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
+      name: "",
       startDate: toISODate(today),
       endDate: toISODate(in30Days),
       dailyLimit: "0,00",
@@ -65,13 +74,20 @@ export function CreatePeriodScreen() {
       parseFloat(displayToAPI(minBudget) || "0");
 
   const [createPeriod, { loading }] = useCreatePeriodMutation({
-    onCompleted: () => refetch(),
+    onCompleted: (data) => {
+      const newId = data?.createPeriod?.id;
+      if (newId) setSelectedPeriod(newId);
+      refetch();
+    },
     onError: (error) => setError("root", { message: error.message }),
   });
 
   const onSubmit = (values: FormValues) => {
+    const trimmedName = values.name.trim();
     createPeriod({
       variables: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(trimmedName ? { name: trimmedName } as any : {}),
         startDate: values.startDate,
         endDate: values.endDate,
         dailyLimit: displayToAPI(values.dailyLimit),
@@ -100,6 +116,21 @@ export function CreatePeriodScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 22 }}>
+        <Controller
+          control={control}
+          name="name"
+          render={({ field: { onChange, value } }) => (
+            <FieldInput
+              label="Nome do planejamento (opcional)"
+              value={value ?? ""}
+              onChangeText={onChange}
+              placeholder='Ex: Viagem de maio, Orçamento conservador'
+              autoCapitalize="sentences"
+              returnKeyType="next"
+            />
+          )}
+        />
+
         <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
           Data de início
         </Text>

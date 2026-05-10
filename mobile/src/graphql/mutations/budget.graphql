@@ -1,6 +1,7 @@
-mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!, $totalBudget: String) {
-  createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit, totalBudget: $totalBudget) {
+mutation CreatePeriod($name: String, $startDate: String!, $endDate: String!, $dailyLimit: String!, $totalBudget: String) {
+  createPeriod(name: $name, startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit, totalBudget: $totalBudget) {
     id
+    name
     status
     dailyLimit
     totalBudget

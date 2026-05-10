@@ -300,6 +300,13 @@ export function ProfileScreen() {
             subtitle="Ajustar limite diário e orçamento total"
             onPress={() => navigation.navigate("EditPeriod")}
           />
+          <View style={{ height: 1, backgroundColor: Colors.border, marginHorizontal: 16 }} />
+          <ProfileMenuItem
+            icon="🗂️"
+            label="Gerenciar períodos"
+            subtitle="Ver histórico e planejamentos do grupo"
+            onPress={() => navigation.navigate("Periods")}
+          />
         </Card>
 
         {/* Logout card */}
