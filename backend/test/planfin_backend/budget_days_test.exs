@@ -7,7 +7,7 @@ defmodule PlanfinBackend.BudgetDaysTest do
 
   import PlanfinBackend.AccountsFixtures
 
-  # Helper to create a period bypassing the check_no_active_period guard
+  # Helper to create a period directly via Repo (avoids going through create_period/2)
   defp insert_period(group_id, attrs \\ %{}) do
     defaults = %{
       start_date: ~D[2026-01-01],
@@ -226,8 +226,8 @@ defmodule PlanfinBackend.BudgetDaysTest do
     end
   end
 
-  describe "available_balance/1" do
-    test "calculates correctly: daily_limit + carryover - sum(expenses)" do
+  describe "available_balance/2" do
+    test "calculates correctly: daily_limit + carryover - sum(expenses by group_id + date)" do
       {user, group} = user_with_group_fixture()
       period = insert_period(group.id)
 
@@ -241,8 +241,7 @@ defmodule PlanfinBackend.BudgetDaysTest do
       insert_expense(group, user, period, bd, "30.00")
       insert_expense(group, user, period, bd, "15.00")
 
-      bd_with_expenses = Repo.preload(Repo.get!(BudgetDay, bd.id), :expenses)
-      balance = BudgetDays.available_balance(bd_with_expenses)
+      balance = BudgetDays.available_balance(Repo.get!(BudgetDay, bd.id), group.id)
 
       assert Decimal.equal?(balance, Decimal.new("75.00"))
     end
@@ -258,8 +257,7 @@ defmodule PlanfinBackend.BudgetDaysTest do
           carryover: Decimal.new("10.00")
         })
 
-      bd_with_expenses = Repo.preload(Repo.get!(BudgetDay, bd.id), :expenses)
-      balance = BudgetDays.available_balance(bd_with_expenses)
+      balance = BudgetDays.available_balance(Repo.get!(BudgetDay, bd.id), group.id)
 
       assert Decimal.equal?(balance, Decimal.new("110.00"))
     end

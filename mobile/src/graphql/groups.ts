@@ -150,3 +150,29 @@ export const REDEEM_INVITE_CODE = gql`
     }
   }
 `;
+
+export type GroupPeriod = {
+  id: string;
+  name: string | null;
+  startDate: string;
+  endDate: string;
+  dailyLimit: string;
+  totalBudget: string | null;
+  status: string;
+  availableBalance: string | null;
+};
+
+export const GROUP_PERIODS = gql`
+  query GroupPeriods {
+    groupPeriods {
+      id
+      name
+      startDate
+      endDate
+      dailyLimit
+      totalBudget
+      status
+      availableBalance
+    }
+  }
+`;

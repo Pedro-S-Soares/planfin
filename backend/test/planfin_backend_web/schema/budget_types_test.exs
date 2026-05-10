@@ -153,31 +153,6 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert period["dailyLimit"] == "100.00"
     end
 
-    test "fails if group already has an active period", %{conn: conn} do
-      {conn, _user, group} = authed_conn_with_group(conn)
-      today = Date.utc_today()
-
-      {:ok, _period} = Periods.create_period(group.id, valid_period_attrs())
-
-      query = """
-        mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!) {
-          createPeriod(startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit) {
-            id
-          }
-        }
-      """
-
-      resp =
-        post_graphql(conn, query, %{
-          startDate: Date.to_iso8601(today),
-          endDate: Date.to_iso8601(Date.add(today, 29)),
-          dailyLimit: "100.00"
-        })
-
-      assert resp["errors"] != nil
-      assert hd(resp["errors"])["message"] =~ "already has an active period"
-    end
-
     test "returns error when not authenticated", %{conn: conn} do
       today = Date.utc_today()
 

@@ -1,5 +1,5 @@
-query ActivePeriod($today: String!) {
-  activePeriod(today: $today) {
+query ActivePeriod($today: String!, $periodId: ID) {
+  activePeriod(today: $today, periodId: $periodId) {
     id
     startDate
     endDate
@@ -14,6 +14,21 @@ query ActivePeriod($today: String!) {
       carryover
       availableBalance
       closedAt
+    }
+  }
+}
+
+query GroupPeriods {
+  group {
+    groupPeriods {
+      id
+      name
+      startDate
+      endDate
+      dailyLimit
+      totalBudget
+      status
+      availableBalance
     }
   }
 }

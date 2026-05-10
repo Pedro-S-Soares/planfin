@@ -26,11 +26,13 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
 
   object :period do
     field :id, :id
+    field :name, :string
     field :start_date, :string
     field :end_date, :string
     field :daily_limit, :string
     field :total_budget, :string
     field :remaining_total, :string
+    field :available_balance, :string
     field :status, :string
     field :today, :budget_day
   end
@@ -61,6 +63,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
   object :budget_queries do
     field :active_period, :period do
       arg(:today, :string)
+      arg(:period_id, :id)
       resolve(&Budget.active_period/3)
     end
 
@@ -85,6 +88,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
 
   object :budget_mutations do
     field :create_period, :period do
+      arg(:name, :string)
       arg(:start_date, non_null(:string))
       arg(:end_date, non_null(:string))
       arg(:daily_limit, non_null(:string))

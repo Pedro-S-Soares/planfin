@@ -14,7 +14,7 @@ export function ProfileMenuItem({ icon, label, subtitle, onPress, danger }: Prop
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, gap: 12 }}
+      style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 16, gap: 12 }}
     >
       <View style={{
         width: 40,

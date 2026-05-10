@@ -107,21 +107,23 @@ defmodule PlanfinBackend.ExpensesTest do
       assert %{amount: [_ | _]} = errors_on(changeset)
     end
 
-    test "creates budget_day if it does not exist for the given date (past day in period)" do
+    test "uses retroactively-generated budget_day when creating expense for a past date" do
       {user, group, period} = setup_group_with_period()
 
+      # Since create_period now retroactively generates BudgetDays for all past
+      # days, a BudgetDay for 2026-04-10 already exists after create_period.
       past_date = ~D[2026-04-10]
 
-      refute Repo.get_by(BudgetDay, period_id: period.id, date: past_date)
+      assert %BudgetDay{} = Repo.get_by(BudgetDay, period_id: period.id, date: past_date)
 
-      assert {:ok, %Expense{}} =
+      assert {:ok, %Expense{} = expense} =
                Expenses.create_expense(
                  group.id,
                  user.id,
                  valid_expense_attrs(%{date: past_date})
                )
 
-      assert %BudgetDay{} = Repo.get_by(BudgetDay, period_id: period.id, date: past_date)
+      assert expense.date == past_date
     end
 
     test "uses existing budget_day when it already exists for the date" do
