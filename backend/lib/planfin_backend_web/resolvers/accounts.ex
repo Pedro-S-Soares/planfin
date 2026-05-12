@@ -13,6 +13,25 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
 
   def update_profile(_parent, _args, _context), do: {:error, "Not authenticated"}
 
+  def register_user(_parent, args, %{remote_ip: ip}) do
+    ip_key = :inet.ntoa(ip) |> to_string()
+
+    case PlanfinBackend.RateLimit.check({:register, ip_key}, 5, :timer.hours(1)) do
+      {:deny, _} ->
+        {:error, "Too many registration attempts. Please try again later."}
+
+      {:allow, _} ->
+        case Accounts.register_user(args) do
+          {:ok, user} ->
+            token = Accounts.generate_user_api_token(user)
+            {:ok, %{token: token, user: user}}
+
+          {:error, changeset} ->
+            {:error, format_errors(changeset)}
+        end
+    end
+  end
+
   def register_user(_parent, args, _context) do
     case Accounts.register_user(args) do
       {:ok, user} ->
@@ -42,6 +61,28 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
 
   def logout(_parent, _args, _context), do: {:error, "Not authenticated"}
 
+  def forgot_password(_parent, %{email: email}, %{remote_ip: ip}) do
+    ip_key = :inet.ntoa(ip) |> to_string()
+
+    case PlanfinBackend.RateLimit.check({:forgot_password, ip_key}, 3, :timer.minutes(10)) do
+      {:deny, _} ->
+        # Still return true to avoid enumeration, but skip the email
+        {:ok, true}
+
+      {:allow, _} ->
+        if user = Accounts.get_user_by_email(email) do
+          app_url = Application.get_env(:planfin_backend, :app_url, "http://localhost:8081")
+
+          Accounts.deliver_user_reset_password_instructions(
+            user,
+            fn token -> "#{app_url}/reset-password/#{token}" end
+          )
+        end
+
+        {:ok, true}
+    end
+  end
+
   def forgot_password(_parent, %{email: email}, _context) do
     if user = Accounts.get_user_by_email(email) do
       app_url = Application.get_env(:planfin_backend, :app_url, "http://localhost:8081")
@@ -52,7 +93,6 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
       )
     end
 
-    # Always return true to avoid email enumeration
     {:ok, true}
   end
 

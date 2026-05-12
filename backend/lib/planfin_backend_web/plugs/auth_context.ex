@@ -15,11 +15,15 @@ defmodule PlanfinBackendWeb.Plugs.AuthContext do
   end
 
   defp build_context(conn) do
+    ip = conn.remote_ip
+
+    base = %{remote_ip: ip}
+
     with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
          user when not is_nil(user) <- PlanfinBackend.Accounts.get_user_by_token(token, "api") do
-      %{current_user: user}
+      Map.put(base, :current_user, user)
     else
-      _ -> %{}
+      _ -> base
     end
   end
 end

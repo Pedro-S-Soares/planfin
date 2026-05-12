@@ -12,8 +12,7 @@ defmodule PlanfinBackend.Application do
       PlanfinBackend.Repo,
       {DNSCluster, query: Application.get_env(:planfin_backend, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: PlanfinBackend.PubSub},
-      # Start a worker by calling: PlanfinBackend.Worker.start_link(arg)
-      # {PlanfinBackend.Worker, arg},
+      PlanfinBackend.RateLimit,
       # Start to serve requests, typically the last entry
       PlanfinBackendWeb.Endpoint
     ]

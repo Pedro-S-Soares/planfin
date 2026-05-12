@@ -20,6 +20,7 @@ defmodule PlanfinBackendWeb.Router do
   pipeline :graphql do
     plug :accepts, ["json"]
     plug CORSPlug
+    plug PlanfinBackendWeb.Plugs.RateLimit
     plug PlanfinBackendWeb.Plugs.AuthContext
     plug PlanfinBackendWeb.Plugs.LoadCurrentGroup
   end
