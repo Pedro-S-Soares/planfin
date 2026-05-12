@@ -214,6 +214,19 @@ defmodule PlanfinBackend.Accounts.UserToken do
     end
   end
 
+  @doc """
+  Returns true if a login token was already issued for the user within the last `cooldown_seconds`.
+  Used to prevent email flooding when the user clicks "send magic link" repeatedly.
+  """
+  def recent_login_token_exists?(user_id, cooldown_seconds \\ 120) do
+    from(t in UserToken,
+      where: t.user_id == ^user_id,
+      where: t.context == "login",
+      where: t.inserted_at > ago(^cooldown_seconds, "second")
+    )
+    |> PlanfinBackend.Repo.exists?()
+  end
+
   defp by_token_and_context_query(token, context) do
     from UserToken, where: [token: ^token, context: ^context]
   end

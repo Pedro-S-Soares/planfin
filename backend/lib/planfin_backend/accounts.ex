@@ -274,9 +274,13 @@ defmodule PlanfinBackend.Accounts do
   """
   def deliver_login_instructions(%User{} = user, magic_link_url_fun)
       when is_function(magic_link_url_fun, 1) do
-    {encoded_token, user_token} = UserToken.build_email_token(user, "login")
-    Repo.insert!(user_token)
-    UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
+    if UserToken.recent_login_token_exists?(user.id) do
+      {:ok, :rate_limited}
+    else
+      {encoded_token, user_token} = UserToken.build_email_token(user, "login")
+      Repo.insert!(user_token)
+      UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
+    end
   end
 
   @doc """
