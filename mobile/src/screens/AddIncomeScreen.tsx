@@ -2,12 +2,10 @@ import { View, Text, TextInput, TouchableOpacity, Switch, ScrollView } from "rea
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
 import {
   useCategoriesQuery,
-  useUpdateExpenseMutation,
-  useDeleteExpenseMutation,
+  useCreateExpenseMutation,
   ActivePeriodDocument,
   CategoriesQuery,
 } from "../graphql/__generated__/hooks";
@@ -16,10 +14,10 @@ import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
 import { Btn } from "../components/ui/Btn";
 import { Chip } from "../components/ui/Chip";
-import { displayToAPI, formatCents } from "../lib/currency";
+import { toISODate } from "../lib/date";
+import { displayToAPI } from "../lib/currency";
 import { categoryColor, Colors, Radius } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
-import type { AppStackParamList } from "../../App";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -36,30 +34,23 @@ const schema = yup.object({
   subcategoryId: yup.string().optional(),
 });
 
-function apiToDisplay(apiAmount: string): string {
-  const cents = Math.round(parseFloat(apiAmount) * 100);
-  return formatCents(cents);
-}
-
-export function EditExpenseScreen() {
-  usePageTitle("Planfin - Editar gasto");
+export function AddIncomeScreen() {
+  usePageTitle("Planfin - Nova receita");
   const navigation = useNavigation();
-  const route = useRoute<NativeStackScreenProps<AppStackParamList, "EditExpense">["route"]>();
-  const { id, amount, date, note, isExtra, subcategoryId, categoryId } = route.params;
-
   const { period, refetch } = usePeriod();
-  const { data: catData } = useCategoriesQuery({ variables: { type: "expense" } });
+
+  const { data: catData } = useCategoriesQuery({ variables: { type: "income" } });
   const categories = catData?.categories ?? [];
 
   const { control, handleSubmit, watch, setError, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
-      amount: apiToDisplay(amount),
-      date,
-      isExtra: isExtra ?? false,
-      note: note ?? "",
-      categoryId: categoryId ?? "",
-      subcategoryId: subcategoryId ?? "",
+      amount: "0,00",
+      date: toISODate(new Date()),
+      isExtra: false,
+      note: "",
+      categoryId: "",
+      subcategoryId: "",
     },
   });
 
@@ -67,32 +58,24 @@ export function EditExpenseScreen() {
   const subcategories: NonNullable<Subcategory>[] =
     categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
 
-  const [updateExpense, { loading: updating }] = useUpdateExpenseMutation({
-    onCompleted: () => { refetch(); navigation.goBack(); },
-    onError: (error) => setError("root", { message: error.message }),
-    refetchQueries: [{ query: ActivePeriodDocument }, "ExpenseHistory"],
-  });
-
-  const [deleteExpense, { loading: deleting }] = useDeleteExpenseMutation({
+  const [createExpense, { loading }] = useCreateExpenseMutation({
     onCompleted: () => { refetch(); navigation.goBack(); },
     onError: (error) => setError("root", { message: error.message }),
     refetchQueries: [{ query: ActivePeriodDocument }, "ExpenseHistory"],
   });
 
   const onSubmit = (values: yup.InferType<typeof schema>) => {
-    updateExpense({
+    createExpense({
       variables: {
-        id,
         amount: displayToAPI(values.amount),
         date: values.date,
         isExtra: values.isExtra ?? false,
         note: values.note || null,
         subcategoryId: values.subcategoryId || null,
+        type: "income",
       },
     });
   };
-
-  const isLoading = updating || deleting;
 
   return (
     <ScrollView
@@ -195,7 +178,7 @@ export function EditExpenseScreen() {
           >
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={{ fontSize: 14, fontWeight: "700", color: value ? Colors.primaryText : Colors.text }}>
-                Gasto extra
+                Receita extra
               </Text>
               <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
                 Não conta no limite diário, só no orçamento total
@@ -233,7 +216,7 @@ export function EditExpenseScreen() {
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
-              placeholder="Ex: almoço com amigos"
+              placeholder="Ex: salário, freelance"
               placeholderTextColor={Colors.textTer}
             />
           </View>
@@ -246,14 +229,7 @@ export function EditExpenseScreen() {
         </Text>
       )}
 
-      <Btn label="Salvar alterações" onPress={handleSubmit(onSubmit)} loading={isLoading} />
-      <View style={{ height: 12 }} />
-      <Btn
-        label="Excluir gasto"
-        variant="danger"
-        onPress={() => deleteExpense({ variables: { id } })}
-        loading={isLoading}
-      />
+      <Btn label="Registrar receita" onPress={handleSubmit(onSubmit)} loading={loading} />
     </ScrollView>
   );
 }

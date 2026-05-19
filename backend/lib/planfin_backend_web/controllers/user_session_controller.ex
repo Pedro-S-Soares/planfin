@@ -2,6 +2,7 @@ defmodule PlanfinBackendWeb.UserSessionController do
   use PlanfinBackendWeb, :controller
 
   alias PlanfinBackend.Accounts
+  alias PlanfinBackend.Accounts.BetaTesters
   alias PlanfinBackendWeb.UserAuth
 
   def new(conn, _params) do
@@ -50,11 +51,13 @@ defmodule PlanfinBackendWeb.UserSessionController do
 
   # magic link request
   def create(conn, %{"user" => %{"email" => email}}) do
-    if user = Accounts.get_user_by_email(email) do
-      Accounts.deliver_login_instructions(
-        user,
-        &url(~p"/users/log-in/#{&1}")
-      )
+    if BetaTesters.allowed?(email) do
+      if user = Accounts.get_user_by_email(email) do
+        Accounts.deliver_login_instructions(
+          user,
+          &url(~p"/users/log-in/#{&1}")
+        )
+      end
     end
 
     info =

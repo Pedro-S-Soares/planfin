@@ -109,13 +109,24 @@ defmodule PlanfinBackend.Periods do
   end
 
   defp get_total_spent_for_day(group_id, date) do
-    result =
+    base_query =
       Expense
       |> where([e], e.group_id == ^group_id and e.date == ^date and e.is_extra == false)
+
+    total_expenses =
+      base_query
+      |> where([e], e.type == "expense")
       |> select([e], sum(e.amount))
       |> Repo.one()
 
-    result || Decimal.new("0")
+    total_income =
+      base_query
+      |> where([e], e.type == "income")
+      |> select([e], sum(e.amount))
+      |> Repo.one()
+
+    (total_expenses || Decimal.new("0"))
+    |> Decimal.sub(total_income || Decimal.new("0"))
   end
 
   # Returns the earlier of two dates.
@@ -207,9 +218,7 @@ defmodule PlanfinBackend.Periods do
   end
 
   defp get_total_spent(%Period{} = period) do
-    alias PlanfinBackend.Expenses.Expense
-
-    result =
+    base_query =
       Expense
       |> where(
         [e],
@@ -217,10 +226,21 @@ defmodule PlanfinBackend.Periods do
           e.date >= ^period.start_date and
           e.date <= ^period.end_date
       )
+
+    total_expenses =
+      base_query
+      |> where([e], e.type == "expense")
       |> select([e], sum(e.amount))
       |> Repo.one()
 
-    result || Decimal.new("0")
+    total_income =
+      base_query
+      |> where([e], e.type == "income")
+      |> select([e], sum(e.amount))
+      |> Repo.one()
+
+    (total_expenses || Decimal.new("0"))
+    |> Decimal.sub(total_income || Decimal.new("0"))
   end
 
   @doc """

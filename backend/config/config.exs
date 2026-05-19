@@ -46,7 +46,15 @@ config :planfin_backend, PlanfinBackend.Mailer, adapter: Swoosh.Adapters.Local
 # Defaults for dev/test; overridden in runtime.exs for prod.
 config :planfin_backend,
   mail_from: "Planfin <no-reply@localhost>",
-  app_url: "http://localhost:8081"
+  app_url: "http://localhost:8081",
+  beta_tester_emails: [
+    "pedro.soareszl99@gmail.com",
+    "pedro.soares@infleet.com.br",
+    "anl98@hotmail.com",
+    "italo.flor@icloud.com",
+    "bia.braganasci2004@gmail.com",
+    "gsoaresg@gmail.com"
+  ]
 
 # Configure Elixir's Logger
 config :logger, :default_formatter,

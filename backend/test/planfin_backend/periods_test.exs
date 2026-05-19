@@ -257,6 +257,7 @@ defmodule PlanfinBackend.PeriodsTest do
 
       # Use future dates so exactly one BudgetDay is created
       today = Date.utc_today()
+
       attrs =
         valid_period_attrs(%{
           start_date: Date.add(today, 1),

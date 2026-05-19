@@ -2,6 +2,7 @@ defmodule PlanfinBackendWeb.UserRegistrationController do
   use PlanfinBackendWeb, :controller
 
   alias PlanfinBackend.Accounts
+  alias PlanfinBackend.Accounts.BetaTesters
   alias PlanfinBackend.Accounts.User
 
   def new(conn, _params) do
@@ -12,11 +13,13 @@ defmodule PlanfinBackendWeb.UserRegistrationController do
   def create(conn, %{"user" => user_params}) do
     case Accounts.register_user(user_params) do
       {:ok, user} ->
-        {:ok, _} =
-          Accounts.deliver_login_instructions(
-            user,
-            &url(~p"/users/log-in/#{&1}")
-          )
+        if BetaTesters.allowed?(user.email) do
+          {:ok, _} =
+            Accounts.deliver_login_instructions(
+              user,
+              &url(~p"/users/log-in/#{&1}")
+            )
+        end
 
         conn
         |> put_flash(

@@ -121,9 +121,9 @@ defmodule PlanfinBackend.BudgetDays do
     days_elapsed = Date.diff(today, period.start_date) + 1
     total_budget = Decimal.mult(period.daily_limit, Decimal.new(days_elapsed))
 
-    # Only regular expenses count toward the daily balance.
+    # Only regular (non-extra) entries count toward the daily balance.
     # Filter by group_id and date range instead of period_id.
-    total_spent =
+    base_query =
       Expense
       |> where(
         [e],
@@ -132,10 +132,22 @@ defmodule PlanfinBackend.BudgetDays do
           e.date <= ^today and
           e.is_extra == false
       )
+
+    total_expenses =
+      base_query
+      |> where([e], e.type == "expense")
       |> select([e], sum(e.amount))
       |> Repo.one()
 
-    Decimal.sub(total_budget, total_spent || Decimal.new("0"))
+    total_income =
+      base_query
+      |> where([e], e.type == "income")
+      |> select([e], sum(e.amount))
+      |> Repo.one()
+
+    total_budget
+    |> Decimal.sub(total_expenses || Decimal.new("0"))
+    |> Decimal.add(total_income || Decimal.new("0"))
   end
 
   @doc """
@@ -147,7 +159,8 @@ defmodule PlanfinBackend.BudgetDays do
   Filters by `group_id + date range` instead of `period_id`.
   """
   def compute_remaining_total(period) do
-    total_spent =
+    # Both regular and extra entries affect the total budget.
+    base_query =
       Expense
       |> where(
         [e],
@@ -155,10 +168,22 @@ defmodule PlanfinBackend.BudgetDays do
           e.date >= ^period.start_date and
           e.date <= ^period.end_date
       )
+
+    total_expenses =
+      base_query
+      |> where([e], e.type == "expense")
       |> select([e], sum(e.amount))
       |> Repo.one()
 
-    Decimal.sub(period.total_budget, total_spent || Decimal.new("0"))
+    total_income =
+      base_query
+      |> where([e], e.type == "income")
+      |> select([e], sum(e.amount))
+      |> Repo.one()
+
+    period.total_budget
+    |> Decimal.sub(total_expenses || Decimal.new("0"))
+    |> Decimal.add(total_income || Decimal.new("0"))
   end
 
   # Closes a single budget_day and propagates carryover to the next day
@@ -202,12 +227,23 @@ defmodule PlanfinBackend.BudgetDays do
   end
 
   defp get_total_spent_for_day(group_id, date) do
-    result =
+    base_query =
       Expense
-      |> where([e], e.group_id == ^group_id and e.date == ^date)
+      |> where([e], e.group_id == ^group_id and e.date == ^date and e.is_extra == false)
+
+    total_expenses =
+      base_query
+      |> where([e], e.type == "expense")
       |> select([e], sum(e.amount))
       |> Repo.one()
 
-    result || Decimal.new("0")
+    total_income =
+      base_query
+      |> where([e], e.type == "income")
+      |> select([e], sum(e.amount))
+      |> Repo.one()
+
+    (total_expenses || Decimal.new("0"))
+    |> Decimal.sub(total_income || Decimal.new("0"))
   end
 end

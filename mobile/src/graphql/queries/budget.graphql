@@ -54,10 +54,11 @@ query ExpenseHistory($periodId: ID!) {
   }
 }
 
-query Categories {
-  categories {
+query Categories($type: String) {
+  categories(type: $type) {
     id
     name
+    type
     subcategories {
       id
       name

@@ -22,6 +22,8 @@ import { CreatePeriodScreen } from "./src/screens/CreatePeriodScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { AddExpenseScreen } from "./src/screens/AddExpenseScreen";
 import { EditExpenseScreen } from "./src/screens/EditExpenseScreen";
+import { AddIncomeScreen } from "./src/screens/AddIncomeScreen";
+import { EditIncomeScreen } from "./src/screens/EditIncomeScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
 import { OnboardingGroupScreen } from "./src/screens/OnboardingGroupScreen";
@@ -51,6 +53,16 @@ export type AppStackParamList = {
   Periods: undefined;
   AddExpense: undefined;
   EditExpense: {
+    id: string;
+    amount: string;
+    date: string;
+    note?: string;
+    isExtra?: boolean;
+    subcategoryId?: string;
+    categoryId?: string;
+  };
+  AddIncome: undefined;
+  EditIncome: {
     id: string;
     amount: string;
     date: string;
@@ -210,6 +222,32 @@ function AppNavigator() {
               presentation: "modal",
               headerShown: true,
               title: "Editar gasto",
+              headerStyle: { backgroundColor: "#FFFFFF" },
+              headerTintColor: "#6255EA",
+              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
+              headerShadowVisible: false,
+            }}
+          />
+          <AppStack.Screen
+            name="AddIncome"
+            component={AddIncomeScreen}
+            options={{
+              presentation: "modal",
+              headerShown: true,
+              title: "Nova receita",
+              headerStyle: { backgroundColor: "#FFFFFF" },
+              headerTintColor: "#6255EA",
+              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
+              headerShadowVisible: false,
+            }}
+          />
+          <AppStack.Screen
+            name="EditIncome"
+            component={EditIncomeScreen}
+            options={{
+              presentation: "modal",
+              headerShown: true,
+              title: "Editar receita",
               headerStyle: { backgroundColor: "#FFFFFF" },
               headerTintColor: "#6255EA",
               headerTitleStyle: { color: "#17162B", fontWeight: "700" },
