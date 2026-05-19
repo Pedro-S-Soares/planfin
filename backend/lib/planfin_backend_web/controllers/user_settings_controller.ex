@@ -2,6 +2,7 @@ defmodule PlanfinBackendWeb.UserSettingsController do
   use PlanfinBackendWeb, :controller
 
   alias PlanfinBackend.Accounts
+  alias PlanfinBackend.Accounts.BetaTesters
   alias PlanfinBackendWeb.UserAuth
 
   import PlanfinBackendWeb.UserAuth, only: [require_sudo_mode: 2]
@@ -19,11 +20,15 @@ defmodule PlanfinBackendWeb.UserSettingsController do
 
     case Accounts.change_user_email(user, user_params) do
       %{valid?: true} = changeset ->
-        Accounts.deliver_user_update_email_instructions(
-          Ecto.Changeset.apply_action!(changeset, :insert),
-          user.email,
-          &url(~p"/users/settings/confirm-email/#{&1}")
-        )
+        applied = Ecto.Changeset.apply_action!(changeset, :insert)
+
+        if BetaTesters.allowed?(applied.email) do
+          Accounts.deliver_user_update_email_instructions(
+            applied,
+            user.email,
+            &url(~p"/users/settings/confirm-email/#{&1}")
+          )
+        end
 
         conn
         |> put_flash(

@@ -26,6 +26,10 @@ config :planfin_backend, PlanfinBackendWeb.Endpoint,
 # In test we don't send emails
 config :planfin_backend, PlanfinBackend.Mailer, adapter: Swoosh.Adapters.Test
 
+# Disable beta-tester allowlist in tests so existing email-delivery tests pass.
+# See PlanfinBackend.Accounts.BetaTesters.
+config :planfin_backend, beta_tester_emails: :all
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

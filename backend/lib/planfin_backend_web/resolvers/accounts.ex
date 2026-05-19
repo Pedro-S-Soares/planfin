@@ -1,14 +1,6 @@
 defmodule PlanfinBackendWeb.Resolvers.Accounts do
   alias PlanfinBackend.Accounts
-
-  @beta_tester_emails [
-    "pedro.soareszl99@gmail.com",
-    "pedro.soares@infleet.com.br",
-    "anl98@hotmail.com",
-    "italo.flor@icloud.com",
-    "bia.braganasci2004@gmail.com",
-    "gsoaresg@gmail.com"
-  ]
+  alias PlanfinBackend.Accounts.BetaTesters
 
   def me(_parent, _args, %{context: %{current_user: user}}), do: {:ok, user}
   def me(_parent, _args, _context), do: {:error, "Not authenticated"}
@@ -79,21 +71,18 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
         {:ok, true}
 
       {:allow, _} ->
-        if user = Accounts.get_user_by_email(email) do
-          app_url = Application.get_env(:planfin_backend, :app_url, "http://localhost:8081")
-
-          Accounts.deliver_user_reset_password_instructions(
-            user,
-            fn token -> "#{app_url}/reset-password/#{token}" end
-          )
-        end
-
+        maybe_deliver_reset_password(email)
         {:ok, true}
     end
   end
 
   def forgot_password(_parent, %{email: email}, _context) do
-    if email in @beta_tester_emails do
+    maybe_deliver_reset_password(email)
+    {:ok, true}
+  end
+
+  defp maybe_deliver_reset_password(email) do
+    if BetaTesters.allowed?(email) do
       if user = Accounts.get_user_by_email(email) do
         app_url = Application.get_env(:planfin_backend, :app_url, "http://localhost:8081")
 
@@ -103,8 +92,6 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
         )
       end
     end
-
-    {:ok, true}
   end
 
   def reset_password(
