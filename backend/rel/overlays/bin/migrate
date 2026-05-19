@@ -2,4 +2,5 @@
 set -eu
 
 cd -P -- "$(dirname -- "$0")"
-exec ./planfin_backend eval PlanfinBackend.Release.migrate
+./planfin_backend eval PlanfinBackend.Release.migrate
+exec ./planfin_backend eval PlanfinBackend.Release.seed
