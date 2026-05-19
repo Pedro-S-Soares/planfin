@@ -84,13 +84,16 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   def period_summary(_parent, _args, context), do: access_error(context)
 
-  def list_categories(_parent, _args, %{context: %{current_group: group}}) do
+  def list_categories(_parent, args, %{context: %{current_group: group}}) do
+    type = Map.get(args, :type)
+
     categories =
-      Categories.list_categories(group.id)
+      Categories.list_categories(group.id, type)
       |> Enum.map(fn category ->
         %{
           id: to_string(category.id),
           name: category.name,
+          type: category.type,
           subcategories: Enum.map(category.subcategories, &format_subcategory/1)
         }
       end)
@@ -173,7 +176,8 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       date: Date.from_iso8601!(args.date),
       note: Map.get(args, :note),
       is_extra: Map.get(args, :is_extra, false),
-      subcategory_id: Map.get(args, :subcategory_id)
+      subcategory_id: Map.get(args, :subcategory_id),
+      type: Map.get(args, :type, "expense")
     }
 
     case Expenses.create_expense(group.id, user.id, attrs) do
@@ -201,6 +205,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       |> maybe_put(:note, args[:note], & &1)
       |> maybe_put(:is_extra, args[:is_extra], & &1)
       |> maybe_put(:subcategory_id, args[:subcategory_id], & &1)
+      |> maybe_put(:type, args[:type], & &1)
 
     case Expenses.update_expense(group.id, id, attrs) do
       {:ok, expense} ->
@@ -228,13 +233,19 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   def delete_expense(_parent, _args, context), do: access_error(context)
 
-  def create_category(_parent, %{name: name}, %{context: %{current_group: group}}) do
-    case Categories.create_category(group.id, %{name: name}) do
+  def create_category(_parent, args, %{context: %{current_group: group}}) do
+    attrs = %{
+      name: args.name,
+      type: Map.get(args, :type, "expense")
+    }
+
+    case Categories.create_category(group.id, attrs) do
       {:ok, category} ->
         {:ok,
          %{
            id: to_string(category.id),
            name: category.name,
+           type: category.type,
            subcategories: []
          }}
 
@@ -245,11 +256,16 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   def create_category(_parent, _args, context), do: access_error(context)
 
-  def update_category(_parent, %{id: id, name: name}, %{context: %{current_group: group}}) do
+  def update_category(_parent, %{id: id} = args, %{context: %{current_group: group}}) do
     try do
       category = Categories.get_category!(group.id, id)
 
-      case Categories.update_category(category, %{name: name}) do
+      attrs =
+        %{}
+        |> maybe_put(:name, args[:name], & &1)
+        |> maybe_put(:type, args[:type], & &1)
+
+      case Categories.update_category(category, attrs) do
         {:ok, updated} ->
           updated = PlanfinBackend.Repo.preload(updated, :subcategories)
 
@@ -257,6 +273,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
            %{
              id: to_string(updated.id),
              name: updated.name,
+             type: updated.type,
              subcategories: Enum.map(updated.subcategories, &format_subcategory/1)
            }}
 

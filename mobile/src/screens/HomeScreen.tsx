@@ -337,21 +337,30 @@ export function HomeScreen() {
         </Card>
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity
-        onPress={() => navigation.navigate("AddExpense")}
-        activeOpacity={0.85}
-        style={styles.fab}
-      >
-        <LinearGradient
-          colors={[Colors.gradStart, Colors.gradEnd]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.fabGradient}
+      {/* FAB row */}
+      <View style={styles.fabRow}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate("AddIncome")}
+          activeOpacity={0.85}
+          style={styles.fabIncome}
         >
-          <Text style={styles.fabIcon}>+</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+          <Text style={styles.fabLabel}>+ Receita</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate("AddExpense")}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={[Colors.gradStart, Colors.gradEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.fabGradient}
+          >
+            <Text style={styles.fabIcon}>+</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -480,11 +489,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingVertical: 16,
   },
-  // FAB
-  fab: {
+  // FAB row
+  fabRow: {
     position: "absolute",
     bottom: 24,
     right: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  fabIncome: {
+    backgroundColor: Colors.success,
+    borderRadius: 26,
+    paddingHorizontal: 18,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.success,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  fabLabel: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.2,
   },
   fabGradient: {
     width: 52,

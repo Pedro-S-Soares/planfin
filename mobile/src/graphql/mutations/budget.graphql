@@ -19,8 +19,8 @@ mutation UpdatePeriod($dailyLimit: String, $totalBudget: String) {
   }
 }
 
-mutation CreateExpense($amount: String!, $date: String!, $note: String, $isExtra: Boolean, $subcategoryId: ID) {
-  createExpense(amount: $amount, date: $date, note: $note, isExtra: $isExtra, subcategoryId: $subcategoryId) {
+mutation CreateExpense($amount: String!, $date: String!, $note: String, $isExtra: Boolean, $subcategoryId: ID, $type: String) {
+  createExpense(amount: $amount, date: $date, note: $note, isExtra: $isExtra, subcategoryId: $subcategoryId, type: $type) {
     id
     amount
     date
@@ -37,8 +37,8 @@ mutation CreateExpense($amount: String!, $date: String!, $note: String, $isExtra
   }
 }
 
-mutation UpdateExpense($id: ID!, $amount: String, $date: String, $note: String, $isExtra: Boolean, $subcategoryId: ID) {
-  updateExpense(id: $id, amount: $amount, date: $date, note: $note, isExtra: $isExtra, subcategoryId: $subcategoryId) {
+mutation UpdateExpense($id: ID!, $amount: String, $date: String, $note: String, $isExtra: Boolean, $subcategoryId: ID, $type: String) {
+  updateExpense(id: $id, amount: $amount, date: $date, note: $note, isExtra: $isExtra, subcategoryId: $subcategoryId, type: $type) {
     id
     amount
     date
@@ -55,10 +55,11 @@ mutation DeleteExpense($id: ID!) {
   deleteExpense(id: $id)
 }
 
-mutation CreateCategory($name: String!) {
-  createCategory(name: $name) {
+mutation CreateCategory($name: String!, $type: String) {
+  createCategory(name: $name, type: $type) {
     id
     name
+    type
     subcategories {
       id
       name
@@ -66,10 +67,11 @@ mutation CreateCategory($name: String!) {
   }
 }
 
-mutation UpdateCategory($id: ID!, $name: String!) {
-  updateCategory(id: $id, name: $name) {
+mutation UpdateCategory($id: ID!, $name: String!, $type: String) {
+  updateCategory(id: $id, name: $name, type: $type) {
     id
     name
+    type
   }
 }
 

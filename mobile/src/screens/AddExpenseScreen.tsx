@@ -39,7 +39,7 @@ export function AddExpenseScreen() {
   const navigation = useNavigation();
   const { period, refetch } = usePeriod();
 
-  const { data: catData } = useCategoriesQuery();
+  const { data: catData } = useCategoriesQuery({ variables: { type: "expense" } });
   const categories = catData?.categories ?? [];
 
   const { control, handleSubmit, watch, setError, formState: { errors } } = useForm({

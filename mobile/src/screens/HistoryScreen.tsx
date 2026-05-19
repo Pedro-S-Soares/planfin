@@ -145,14 +145,21 @@ export function HistoryScreen() {
                 <ExpenseRow
                   key={item.id}
                   item={item}
-                  onPress={() => navigation.navigate("EditExpense", {
-                    id: item.id,
-                    amount: item.amount,
-                    date: item.date ?? day.date,
-                    note: item.note ?? undefined,
-                    subcategoryId: item.subcategory?.id ?? undefined,
-                    categoryId: undefined,
-                  })}
+                  onPress={() => {
+                    const params = {
+                      id: item.id,
+                      amount: item.amount,
+                      date: item.date ?? day.date,
+                      note: item.note ?? undefined,
+                      subcategoryId: item.subcategory?.id ?? undefined,
+                      categoryId: undefined,
+                    };
+                    if (item.type === "income") {
+                      navigation.navigate("EditIncome", params);
+                    } else {
+                      navigation.navigate("EditExpense", params);
+                    }
+                  }}
                   onDelete={(id) => deleteExpense({ variables: { id } })}
                   authorLabel={authorLabel(item.createdBy, user?.id)}
                 />

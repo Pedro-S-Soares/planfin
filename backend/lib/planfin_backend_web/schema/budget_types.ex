@@ -6,6 +6,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
   object :category do
     field :id, :id
     field :name, :string
+    field :type, :string
     field :subcategories, list_of(:subcategory)
   end
 
@@ -43,6 +44,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :date, :string
     field :note, :string
     field :is_extra, :boolean
+    field :type, :string
     field :subcategory, :subcategory
     field :created_by, :user
   end
@@ -78,6 +80,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     end
 
     field :categories, list_of(:category) do
+      arg(:type, :string)
       resolve(&Budget.list_categories/3)
     end
 
@@ -108,6 +111,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:note, :string)
       arg(:is_extra, :boolean)
       arg(:subcategory_id, :id)
+      arg(:type, :string)
       resolve(&Budget.create_expense/3)
     end
 
@@ -118,6 +122,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:note, :string)
       arg(:is_extra, :boolean)
       arg(:subcategory_id, :id)
+      arg(:type, :string)
       resolve(&Budget.update_expense/3)
     end
 
@@ -128,12 +133,14 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
 
     field :create_category, :category do
       arg(:name, non_null(:string))
+      arg(:type, :string)
       resolve(&Budget.create_category/3)
     end
 
     field :update_category, :category do
       arg(:id, non_null(:id))
       arg(:name, non_null(:string))
+      arg(:type, :string)
       resolve(&Budget.update_category/3)
     end
 

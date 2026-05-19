@@ -19,12 +19,22 @@ defmodule PlanfinBackend.Categories do
 
   @doc """
   Lists all categories for a given group, with subcategories preloaded.
+  Optionally filters by type ("expense" or "income"). When type is nil, all categories are returned.
   """
-  def list_categories(group_id) do
-    Category
-    |> where([c], c.group_id == ^group_id)
-    |> preload(:subcategories)
-    |> Repo.all()
+  def list_categories(group_id, type \\ nil) do
+    query =
+      Category
+      |> where([c], c.group_id == ^group_id)
+      |> preload(:subcategories)
+
+    query =
+      if type do
+        where(query, [c], c.type == ^type)
+      else
+        query
+      end
+
+    Repo.all(query)
   end
 
   @doc """
