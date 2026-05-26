@@ -151,6 +151,7 @@ export function HistoryScreen() {
                       amount: item.amount,
                       date: item.date ?? day.date,
                       note: item.note ?? undefined,
+                      isExtra: item.isExtra ?? undefined,
                       subcategoryId: item.subcategory?.id ?? undefined,
                       categoryId: undefined,
                     };
