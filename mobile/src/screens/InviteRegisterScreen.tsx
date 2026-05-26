@@ -12,14 +12,21 @@ import type { AuthStackParamList } from "../../App";
 
 const schema = yup.object({
   email: yup.string().email("Email inválido").required("Email é obrigatório"),
-  password: yup.string().min(8, "A senha deve ter pelo menos 8 caracteres").required("Senha é obrigatória"),
-  passwordConfirmation: yup.string().oneOf([yup.ref("password")], "As senhas não coincidem").required("Confirmação é obrigatória"),
+  password: yup
+    .string()
+    .min(12, "A senha deve ter pelo menos 12 caracteres")
+    .required("Senha é obrigatória"),
+  passwordConfirmation: yup
+    .string()
+    .oneOf([yup.ref("password")], "As senhas não coincidem")
+    .required("Confirmação é obrigatória"),
 });
 
 type FormValues = yup.InferType<typeof schema>;
-type Props = NativeStackScreenProps<AuthStackParamList, "Register">;
+type Props = NativeStackScreenProps<AuthStackParamList, "InviteRegister">;
 
-export function RegisterScreen({ navigation }: Props) {
+export function InviteRegisterScreen({ navigation, route }: Props) {
+  const { token } = route.params;
   const { signIn } = useAuth();
 
   const { control, handleSubmit, setError, formState: { errors } } = useForm<FormValues>({
@@ -28,20 +35,27 @@ export function RegisterScreen({ navigation }: Props) {
 
   const [registerUser, { loading }] = useRegisterUserMutation({
     onCompleted: async (data) => {
-      const token = data.registerUser?.token;
+      const apiToken = data.registerUser?.token;
       const user = data.registerUser?.user;
-      if (token && user?.id && user?.email) {
-        await signIn(token, { id: user.id, email: user.email });
+      if (apiToken && user?.id && user?.email) {
+        await signIn(apiToken, { id: user.id, email: user.email, isAdmin: user.isAdmin });
       }
     },
     onError: (error) => setError("root", { message: error.message }),
   });
 
-  const onSubmit = (values: FormValues) => registerUser({ variables: values });
+  const onSubmit = (values: FormValues) =>
+    registerUser({
+      variables: {
+        email: values.email,
+        password: values.password,
+        passwordConfirmation: values.passwordConfirmation,
+        inviteToken: token,
+      },
+    });
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.surface }}>
-      {/* Header */}
       <View style={{
         backgroundColor: Colors.bg,
         paddingTop: 62,
@@ -51,7 +65,7 @@ export function RegisterScreen({ navigation }: Props) {
         borderBottomRightRadius: 24,
       }}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={() => navigation.navigate("Login")}
           style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 16 }}
         >
           <Text style={{ color: Colors.primary, fontSize: 18 }}>‹</Text>
@@ -61,7 +75,7 @@ export function RegisterScreen({ navigation }: Props) {
           Criar conta
         </Text>
         <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 3 }}>
-          Comece a planejar seus gastos
+          Você foi convidado para o Planfin
         </Text>
       </View>
 
@@ -90,12 +104,12 @@ export function RegisterScreen({ navigation }: Props) {
           render={({ field: { onChange, onBlur, value } }) => (
             <FieldInput
               label="Senha"
-              placeholder="Mínimo 8 caracteres"
+              placeholder="Mínimo 12 caracteres"
               value={value}
               onChange={onChange}
               onBlur={onBlur}
               error={errors.password?.message}
-              hint="Pelo menos 8 caracteres"
+              hint="Pelo menos 12 caracteres"
               secureTextEntry
               autoComplete="new-password"
             />

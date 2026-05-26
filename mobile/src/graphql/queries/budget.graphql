@@ -19,17 +19,15 @@ query ActivePeriod($today: String!, $periodId: ID) {
 }
 
 query GroupPeriods {
-  group {
-    groupPeriods {
-      id
-      name
-      startDate
-      endDate
-      dailyLimit
-      totalBudget
-      status
-      availableBalance
-    }
+  groupPeriods {
+    id
+    name
+    startDate
+    endDate
+    dailyLimit
+    totalBudget
+    status
+    availableBalance
   }
 }
 

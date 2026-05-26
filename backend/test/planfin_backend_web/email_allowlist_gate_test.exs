@@ -8,6 +8,7 @@ defmodule PlanfinBackendWeb.EmailAllowlistGateTest do
   use PlanfinBackendWeb.ConnCase, async: false
 
   alias PlanfinBackend.Accounts
+  alias PlanfinBackend.Accounts.AllowedUser
   alias PlanfinBackend.Repo
   import PlanfinBackend.AccountsFixtures
 
@@ -16,8 +17,11 @@ defmodule PlanfinBackendWeb.EmailAllowlistGateTest do
 
   setup do
     original = Application.get_env(:planfin_backend, :beta_tester_emails)
-    Application.put_env(:planfin_backend, :beta_tester_emails, [@allowed])
+    # Use DB gate so tests exercise real allowlist logic
+    Application.put_env(:planfin_backend, :beta_tester_emails, [])
     on_exit(fn -> Application.put_env(:planfin_backend, :beta_tester_emails, original) end)
+
+    Repo.insert!(%AllowedUser{email: @allowed})
     :ok
   end
 
@@ -65,8 +69,7 @@ defmodule PlanfinBackendWeb.EmailAllowlistGateTest do
     end
 
     test "delivers confirmation when new email is allowlisted", %{conn: conn, user: user} do
-      # Add a second allowed address so the change target is also on the list
-      Application.put_env(:planfin_backend, :beta_tester_emails, [@allowed, "new@example.com"])
+      Repo.insert!(%AllowedUser{email: "new@example.com"})
 
       put(conn, ~p"/users/settings", %{
         "action" => "update_email",

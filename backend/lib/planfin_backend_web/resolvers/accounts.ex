@@ -1,6 +1,6 @@
 defmodule PlanfinBackendWeb.Resolvers.Accounts do
   alias PlanfinBackend.Accounts
-  alias PlanfinBackend.Accounts.BetaTesters
+  alias PlanfinBackend.Accounts.{BetaTesters, UserInvites}
 
   def me(_parent, _args, %{context: %{current_user: user}}), do: {:ok, user}
   def me(_parent, _args, _context), do: {:error, "Not authenticated"}
@@ -14,7 +14,7 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
 
   def update_profile(_parent, _args, _context), do: {:error, "Not authenticated"}
 
-  def register_user(_parent, args, %{remote_ip: ip}) do
+  def register_user(_parent, %{invite_token: token} = args, %{remote_ip: ip}) do
     ip_key = :inet.ntoa(ip) |> to_string()
 
     case PlanfinBackend.RateLimit.check({:register, ip_key}, 5, :timer.hours(1)) do
@@ -22,25 +22,38 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
         {:error, "Too many registration attempts. Please try again later."}
 
       {:allow, _} ->
-        case Accounts.register_user(args) do
-          {:ok, user} ->
-            token = Accounts.generate_user_api_token(user)
-            {:ok, %{token: token, user: user}}
-
-          {:error, changeset} ->
-            {:error, format_errors(changeset)}
-        end
+        redeem_invite(token, args)
     end
   end
 
-  def register_user(_parent, args, _context) do
-    case Accounts.register_user(args) do
-      {:ok, user} ->
-        token = Accounts.generate_user_api_token(user)
-        {:ok, %{token: token, user: user}}
+  def register_user(_parent, %{invite_token: token} = args, _context) do
+    redeem_invite(token, args)
+  end
 
-      {:error, changeset} ->
+  defp redeem_invite(token, %{
+         email: email,
+         password: password,
+         password_confirmation: confirmation
+       }) do
+    case UserInvites.redeem(token, email, %{
+           password: password,
+           password_confirmation: confirmation
+         }) do
+      {:ok, user} ->
+        api_token = Accounts.generate_user_api_token(user)
+        {:ok, %{token: api_token, user: user}}
+
+      {:error, :invalid_token} ->
+        {:error, "Convite inválido ou já utilizado."}
+
+      {:error, :expired} ->
+        {:error, "Este convite expirou."}
+
+      {:error, changeset} when is_struct(changeset, Ecto.Changeset) ->
         {:error, format_errors(changeset)}
+
+      {:error, _} ->
+        {:error, "Não foi possível completar o cadastro."}
     end
   end
 
@@ -67,7 +80,6 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
 
     case PlanfinBackend.RateLimit.check({:forgot_password, ip_key}, 3, :timer.minutes(10)) do
       {:deny, _} ->
-        # Still return true to avoid enumeration, but skip the email
         {:ok, true}
 
       {:allow, _} ->
@@ -110,6 +122,41 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
       _ -> {:error, "Invalid or expired token"}
     end
   end
+
+  def create_invite(_parent, _args, %{context: %{current_user: user}}) do
+    case UserInvites.generate(user) do
+      {:ok, invite} -> {:ok, invite}
+      {:error, :forbidden} -> {:error, "Acesso negado."}
+      {:error, changeset} -> {:error, format_errors(changeset)}
+    end
+  end
+
+  def create_invite(_parent, _args, _context), do: {:error, "Not authenticated"}
+
+  def revoke_invite(_parent, %{id: id}, %{context: %{current_user: user}}) do
+    case UserInvites.get(id) do
+      nil ->
+        {:error, "Convite não encontrado."}
+
+      invite ->
+        case UserInvites.revoke(user, invite) do
+          {:ok, _} -> {:ok, true}
+          {:error, :forbidden} -> {:error, "Acesso negado."}
+          {:error, :already_used} -> {:error, "Este convite já foi utilizado."}
+        end
+    end
+  end
+
+  def revoke_invite(_parent, _args, _context), do: {:error, "Not authenticated"}
+
+  def list_invites(_parent, _args, %{context: %{current_user: user}}) do
+    case UserInvites.list_all(user) do
+      {:ok, invites} -> {:ok, invites}
+      {:error, :forbidden} -> {:error, "Acesso negado."}
+    end
+  end
+
+  def list_invites(_parent, _args, _context), do: {:error, "Not authenticated"}
 
   defp format_errors(%Ecto.Changeset{} = changeset) do
     changeset
