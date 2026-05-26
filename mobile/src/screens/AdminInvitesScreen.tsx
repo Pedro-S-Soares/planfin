@@ -4,10 +4,11 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
-  Clipboard,
+  Platform,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import { confirm, alertWeb } from "../lib/alert";
 import { useNavigation } from "@react-navigation/native";
 import {
   useListInvitesQuery,
@@ -59,28 +60,29 @@ export function AdminInvitesScreen() {
         refetch();
       }
     },
-    onError: (err) => Alert.alert("Erro", err.message),
+    onError: (err) => alertWeb("Erro", err.message),
   });
 
   const [revokeInvite] = useRevokeInviteMutation({
     onCompleted: () => refetch(),
-    onError: (err) => Alert.alert("Erro", err.message),
+    onError: (err) => alertWeb("Erro", err.message),
   });
 
-  const handleCopy = (url: string) => {
-    Clipboard.setString(url);
-    Alert.alert("Copiado!", "Link de convite copiado para a área de transferência.");
+  const handleCopy = async (url: string) => {
+    if (Platform.OS === "web") {
+      await navigator.clipboard.writeText(url).catch(() => {});
+      alertWeb("Copiado!", "Link de convite copiado para a área de transferência.");
+    } else {
+      await Clipboard.setStringAsync(url);
+      alertWeb("Copiado!", "Link de convite copiado para a área de transferência.");
+    }
   };
 
   const handleRevoke = (id: string) => {
-    Alert.alert("Revogar convite", "Tem certeza? O link deixará de funcionar.", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Revogar",
-        style: "destructive",
-        onPress: () => revokeInvite({ variables: { id } }),
-      },
-    ]);
+    confirm(
+      { title: "Revogar convite", message: "Tem certeza? O link deixará de funcionar.", confirmLabel: "Revogar", destructive: true },
+      () => revokeInvite({ variables: { id } })
+    );
   };
 
   const invites = data?.listInvites ?? [];

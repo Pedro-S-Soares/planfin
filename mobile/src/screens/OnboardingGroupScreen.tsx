@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
+import { confirm } from "../lib/alert";
 import { LinearGradient } from "expo-linear-gradient";
 import { useGroup } from "../context/GroupContext";
 import { useAuth } from "../context/AuthContext";
@@ -48,10 +49,10 @@ export function OnboardingGroupScreen() {
   };
 
   const handleSignOut = () => {
-    Alert.alert("Sair", "Tem certeza que deseja sair?", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Sair", style: "destructive", onPress: () => signOut() },
-    ]);
+    confirm(
+      { title: "Sair", message: "Tem certeza que deseja sair?", confirmLabel: "Sair", destructive: true },
+      () => signOut()
+    );
   };
 
   return (

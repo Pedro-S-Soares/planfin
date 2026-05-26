@@ -4,10 +4,10 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
 } from "react-native";
+import { confirm, alertWeb } from "../lib/alert";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -52,7 +52,7 @@ export function ProfileScreen() {
       }
     },
     onError: (err) => {
-      Alert.alert("Erro", err.message);
+      alertWeb("Erro", err.message);
     },
   });
 
@@ -68,10 +68,10 @@ export function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert("Sair", "Tem certeza que deseja sair da conta?", [
-      { text: "Cancelar", style: "cancel" },
-      { text: "Sair", style: "destructive", onPress: () => logout() },
-    ]);
+    confirm(
+      { title: "Sair", message: "Tem certeza que deseja sair da conta?", confirmLabel: "Sair", destructive: true },
+      () => logout()
+    );
   };
 
   return (

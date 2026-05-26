@@ -4,12 +4,12 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Modal,
   TextInput,
   Share,
 } from "react-native";
+import { confirm, alertWeb } from "../lib/alert";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { useGroup } from "../context/GroupContext";
 import { useAuth } from "../context/AuthContext";
@@ -42,27 +42,24 @@ export function GroupsScreen() {
 
   const handleLeave = (group: Group) => {
     const isOwner = user && group.ownerId === Number(user.id);
-    Alert.alert(
-      isOwner ? "Excluir grupo" : "Sair do grupo",
-      isOwner
-        ? `Tem certeza que deseja excluir "${group.name}"? Todos os gastos serão perdidos.`
-        : `Sair do grupo "${group.name}"?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: isOwner ? "Excluir" : "Sair",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const ok = await leaveGroup(group.id);
-              if (!ok) Alert.alert("Não foi possível sair", "Dono do grupo precisa transferir ou excluir.");
-              else await refetch();
-            } catch (err: unknown) {
-              Alert.alert("Erro", err instanceof Error ? err.message : "Erro desconhecido");
-            }
-          },
-        },
-      ],
+    confirm(
+      {
+        title: isOwner ? "Excluir grupo" : "Sair do grupo",
+        message: isOwner
+          ? `Tem certeza que deseja excluir "${group.name}"? Todos os gastos serão perdidos.`
+          : `Sair do grupo "${group.name}"?`,
+        confirmLabel: isOwner ? "Excluir" : "Sair",
+        destructive: true,
+      },
+      async () => {
+        try {
+          const ok = await leaveGroup(group.id);
+          if (!ok) alertWeb("Não foi possível sair", "Dono do grupo precisa transferir ou excluir.");
+          else await refetch();
+        } catch (err: unknown) {
+          alertWeb("Erro", err instanceof Error ? err.message : "Erro desconhecido");
+        }
+      }
     );
   };
 
@@ -266,10 +263,10 @@ function GroupDetailModal({ group, canDelete, onClose, onLeave }: {
                     <TouchableOpacity onPress={() => handleShare(item.code)}>
                       <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: "600" }}>Compartilhar</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => Alert.alert("Revogar", `Revogar "${item.code}"?`, [
-                      { text: "Cancelar", style: "cancel" },
-                      { text: "Revogar", style: "destructive", onPress: () => handleRevoke(item.id) },
-                    ])}>
+                    <TouchableOpacity onPress={() => confirm(
+                      { title: "Revogar", message: `Revogar "${item.code}"?`, confirmLabel: "Revogar", destructive: true },
+                      () => handleRevoke(item.id)
+                    )}>
                       <Text style={{ color: Colors.danger, fontSize: 12, fontWeight: "600" }}>Revogar</Text>
                     </TouchableOpacity>
                   </View>
