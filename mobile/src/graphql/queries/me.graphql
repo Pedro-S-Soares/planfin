@@ -3,5 +3,18 @@ query Me {
     id
     email
     name
+    isAdmin
+  }
+}
+
+query ListInvites {
+  listInvites {
+    id
+    token
+    usedByEmail
+    usedAt
+    expiresAt
+    revokedAt
+    insertedAt
   }
 }

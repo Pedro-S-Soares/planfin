@@ -50,6 +50,7 @@ export type Expense = {
   isExtra?: Maybe<Scalars['Boolean']['output']>;
   note?: Maybe<Scalars['String']['output']>;
   subcategory?: Maybe<Subcategory>;
+  type?: Maybe<Scalars['String']['output']>;
 };
 
 export type ExpenseDay = {
@@ -88,9 +89,11 @@ export type GroupMember = {
 
 export type Period = {
   __typename?: 'Period';
+  availableBalance?: Maybe<Scalars['String']['output']>;
   dailyLimit?: Maybe<Scalars['String']['output']>;
   endDate?: Maybe<Scalars['String']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
   remainingTotal?: Maybe<Scalars['String']['output']>;
   startDate?: Maybe<Scalars['String']['output']>;
   status?: Maybe<Scalars['String']['output']>;
@@ -117,6 +120,7 @@ export type RootMutationType = {
   createCategory?: Maybe<Category>;
   createExpense?: Maybe<Expense>;
   createGroup?: Maybe<Group>;
+  createInvite?: Maybe<UserInvite>;
   createPeriod?: Maybe<Period>;
   createSubcategory?: Maybe<Subcategory>;
   deleteCategory?: Maybe<Scalars['Boolean']['output']>;
@@ -133,6 +137,7 @@ export type RootMutationType = {
   removeMember?: Maybe<Scalars['Boolean']['output']>;
   renameGroup?: Maybe<Group>;
   resetPassword?: Maybe<Scalars['Boolean']['output']>;
+  revokeInvite?: Maybe<Scalars['Boolean']['output']>;
   revokeInviteCode?: Maybe<Scalars['Boolean']['output']>;
   switchActiveGroup?: Maybe<Group>;
   updateCategory?: Maybe<Category>;
@@ -155,6 +160,7 @@ export type RootMutationTypeCreateExpenseArgs = {
   isExtra?: InputMaybe<Scalars['Boolean']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+  type?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -166,6 +172,7 @@ export type RootMutationTypeCreateGroupArgs = {
 export type RootMutationTypeCreatePeriodArgs = {
   dailyLimit: Scalars['String']['input'];
   endDate: Scalars['String']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
   startDate: Scalars['String']['input'];
   totalBudget?: InputMaybe<Scalars['String']['input']>;
 };
@@ -227,6 +234,7 @@ export type RootMutationTypeRedeemInviteCodeArgs = {
 
 export type RootMutationTypeRegisterUserArgs = {
   email: Scalars['String']['input'];
+  inviteToken: Scalars['String']['input'];
   password: Scalars['String']['input'];
   passwordConfirmation: Scalars['String']['input'];
 };
@@ -248,6 +256,11 @@ export type RootMutationTypeResetPasswordArgs = {
   password: Scalars['String']['input'];
   passwordConfirmation: Scalars['String']['input'];
   token: Scalars['String']['input'];
+};
+
+
+export type RootMutationTypeRevokeInviteArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -275,6 +288,7 @@ export type RootMutationTypeUpdateExpenseArgs = {
   isExtra?: InputMaybe<Scalars['Boolean']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+  type?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -302,6 +316,8 @@ export type RootQueryType = {
   expenseHistory?: Maybe<Array<Maybe<ExpenseDay>>>;
   groupInvites?: Maybe<Array<Maybe<GroupInvite>>>;
   groupMembers?: Maybe<Array<Maybe<GroupMember>>>;
+  groupPeriods?: Maybe<Array<Maybe<Period>>>;
+  listInvites?: Maybe<Array<Maybe<UserInvite>>>;
   me?: Maybe<User>;
   myGroups?: Maybe<Array<Maybe<Group>>>;
   periodSummary?: Maybe<PeriodSummary>;
@@ -310,7 +326,13 @@ export type RootQueryType = {
 
 
 export type RootQueryTypeActivePeriodArgs = {
+  periodId?: InputMaybe<Scalars['ID']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type RootQueryTypeCategoriesArgs = {
+  type?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -344,7 +366,20 @@ export type User = {
   __typename?: 'User';
   email?: Maybe<Scalars['String']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
+  isAdmin?: Maybe<Scalars['Boolean']['output']>;
   name?: Maybe<Scalars['String']['output']>;
+};
+
+export type UserInvite = {
+  __typename?: 'UserInvite';
+  expiresAt?: Maybe<Scalars['String']['output']>;
+  id?: Maybe<Scalars['ID']['output']>;
+  insertedAt?: Maybe<Scalars['String']['output']>;
+  invitedBy?: Maybe<User>;
+  revokedAt?: Maybe<Scalars['String']['output']>;
+  token?: Maybe<Scalars['String']['output']>;
+  usedAt?: Maybe<Scalars['String']['output']>;
+  usedByEmail?: Maybe<Scalars['String']['output']>;
 };
 
 export type LoginMutationVariables = Exact<{
@@ -353,16 +388,29 @@ export type LoginMutationVariables = Exact<{
 }>;
 
 
-export type LoginMutation = { __typename?: 'RootMutationType', login?: { __typename?: 'AuthPayload', token?: string | null, user?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null };
+export type LoginMutation = { __typename?: 'RootMutationType', login?: { __typename?: 'AuthPayload', token?: string | null, user?: { __typename?: 'User', id?: string | null, email?: string | null, isAdmin?: boolean | null } | null } | null };
 
 export type RegisterUserMutationVariables = Exact<{
   email: Scalars['String']['input'];
   password: Scalars['String']['input'];
   passwordConfirmation: Scalars['String']['input'];
+  inviteToken: Scalars['String']['input'];
 }>;
 
 
-export type RegisterUserMutation = { __typename?: 'RootMutationType', registerUser?: { __typename?: 'AuthPayload', token?: string | null, user?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null };
+export type RegisterUserMutation = { __typename?: 'RootMutationType', registerUser?: { __typename?: 'AuthPayload', token?: string | null, user?: { __typename?: 'User', id?: string | null, email?: string | null, isAdmin?: boolean | null } | null } | null };
+
+export type CreateInviteMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type CreateInviteMutation = { __typename?: 'RootMutationType', createInvite?: { __typename?: 'UserInvite', id?: string | null, token?: string | null, usedByEmail?: string | null, usedAt?: string | null, expiresAt?: string | null, revokedAt?: string | null, insertedAt?: string | null } | null };
+
+export type RevokeInviteMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type RevokeInviteMutation = { __typename?: 'RootMutationType', revokeInvite?: boolean | null };
 
 export type LogoutMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -393,6 +441,7 @@ export type UpdateProfileMutationVariables = Exact<{
 export type UpdateProfileMutation = { __typename?: 'RootMutationType', updateProfile?: { __typename?: 'User', id?: string | null, email?: string | null, name?: string | null } | null };
 
 export type CreatePeriodMutationVariables = Exact<{
+  name?: InputMaybe<Scalars['String']['input']>;
   startDate: Scalars['String']['input'];
   endDate: Scalars['String']['input'];
   dailyLimit: Scalars['String']['input'];
@@ -400,7 +449,7 @@ export type CreatePeriodMutationVariables = Exact<{
 }>;
 
 
-export type CreatePeriodMutation = { __typename?: 'RootMutationType', createPeriod?: { __typename?: 'Period', id?: string | null, status?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null } | null };
+export type CreatePeriodMutation = { __typename?: 'RootMutationType', createPeriod?: { __typename?: 'Period', id?: string | null, name?: string | null, status?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null } | null };
 
 export type UpdatePeriodMutationVariables = Exact<{
   dailyLimit?: InputMaybe<Scalars['String']['input']>;
@@ -550,10 +599,16 @@ export type RedeemInviteCodeMutation = { __typename?: 'RootMutationType', redeem
 
 export type ActivePeriodQueryVariables = Exact<{
   today: Scalars['String']['input'];
+  periodId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 
 export type ActivePeriodQuery = { __typename?: 'RootQueryType', activePeriod?: { __typename?: 'Period', id?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null, status?: string | null, today?: { __typename?: 'BudgetDay', id?: string | null, date?: string | null, dailyLimit?: string | null, carryover?: string | null, availableBalance?: string | null, closedAt?: string | null } | null } | null };
+
+export type GroupPeriodsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GroupPeriodsQuery = { __typename?: 'RootQueryType', groupPeriods?: Array<{ __typename?: 'Period', id?: string | null, name?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null, totalBudget?: string | null, status?: string | null, availableBalance?: string | null } | null> | null };
 
 export type ExpenseHistoryQueryVariables = Exact<{
   periodId: Scalars['ID']['input'];
@@ -596,7 +651,12 @@ export type GroupInvitesQuery = { __typename?: 'RootQueryType', groupInvites?: A
 export type MeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MeQuery = { __typename?: 'RootQueryType', me?: { __typename?: 'User', id?: string | null, email?: string | null, name?: string | null } | null };
+export type MeQuery = { __typename?: 'RootQueryType', me?: { __typename?: 'User', id?: string | null, email?: string | null, name?: string | null, isAdmin?: boolean | null } | null };
+
+export type ListInvitesQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type ListInvitesQuery = { __typename?: 'RootQueryType', listInvites?: Array<{ __typename?: 'UserInvite', id?: string | null, token?: string | null, usedByEmail?: string | null, usedAt?: string | null, expiresAt?: string | null, revokedAt?: string | null, insertedAt?: string | null } | null> | null };
 
 
 export const LoginDocument = gql`
@@ -606,6 +666,7 @@ export const LoginDocument = gql`
     user {
       id
       email
+      isAdmin
     }
   }
 }
@@ -638,16 +699,18 @@ export type LoginMutationHookResult = ReturnType<typeof useLoginMutation>;
 export type LoginMutationResult = Apollo.MutationResult<LoginMutation>;
 export type LoginMutationOptions = Apollo.BaseMutationOptions<LoginMutation, LoginMutationVariables>;
 export const RegisterUserDocument = gql`
-    mutation RegisterUser($email: String!, $password: String!, $passwordConfirmation: String!) {
+    mutation RegisterUser($email: String!, $password: String!, $passwordConfirmation: String!, $inviteToken: String!) {
   registerUser(
     email: $email
     password: $password
     passwordConfirmation: $passwordConfirmation
+    inviteToken: $inviteToken
   ) {
     token
     user {
       id
       email
+      isAdmin
     }
   }
 }
@@ -670,6 +733,7 @@ export type RegisterUserMutationFn = Apollo.MutationFunction<RegisterUserMutatio
  *      email: // value for 'email'
  *      password: // value for 'password'
  *      passwordConfirmation: // value for 'passwordConfirmation'
+ *      inviteToken: // value for 'inviteToken'
  *   },
  * });
  */
@@ -680,6 +744,75 @@ export function useRegisterUserMutation(baseOptions?: Apollo.MutationHookOptions
 export type RegisterUserMutationHookResult = ReturnType<typeof useRegisterUserMutation>;
 export type RegisterUserMutationResult = Apollo.MutationResult<RegisterUserMutation>;
 export type RegisterUserMutationOptions = Apollo.BaseMutationOptions<RegisterUserMutation, RegisterUserMutationVariables>;
+export const CreateInviteDocument = gql`
+    mutation CreateInvite {
+  createInvite {
+    id
+    token
+    usedByEmail
+    usedAt
+    expiresAt
+    revokedAt
+    insertedAt
+  }
+}
+    `;
+export type CreateInviteMutationFn = Apollo.MutationFunction<CreateInviteMutation, CreateInviteMutationVariables>;
+
+/**
+ * __useCreateInviteMutation__
+ *
+ * To run a mutation, you first call `useCreateInviteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateInviteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createInviteMutation, { data, loading, error }] = useCreateInviteMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useCreateInviteMutation(baseOptions?: Apollo.MutationHookOptions<CreateInviteMutation, CreateInviteMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateInviteMutation, CreateInviteMutationVariables>(CreateInviteDocument, options);
+      }
+export type CreateInviteMutationHookResult = ReturnType<typeof useCreateInviteMutation>;
+export type CreateInviteMutationResult = Apollo.MutationResult<CreateInviteMutation>;
+export type CreateInviteMutationOptions = Apollo.BaseMutationOptions<CreateInviteMutation, CreateInviteMutationVariables>;
+export const RevokeInviteDocument = gql`
+    mutation RevokeInvite($id: ID!) {
+  revokeInvite(id: $id)
+}
+    `;
+export type RevokeInviteMutationFn = Apollo.MutationFunction<RevokeInviteMutation, RevokeInviteMutationVariables>;
+
+/**
+ * __useRevokeInviteMutation__
+ *
+ * To run a mutation, you first call `useRevokeInviteMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRevokeInviteMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [revokeInviteMutation, { data, loading, error }] = useRevokeInviteMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useRevokeInviteMutation(baseOptions?: Apollo.MutationHookOptions<RevokeInviteMutation, RevokeInviteMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RevokeInviteMutation, RevokeInviteMutationVariables>(RevokeInviteDocument, options);
+      }
+export type RevokeInviteMutationHookResult = ReturnType<typeof useRevokeInviteMutation>;
+export type RevokeInviteMutationResult = Apollo.MutationResult<RevokeInviteMutation>;
+export type RevokeInviteMutationOptions = Apollo.BaseMutationOptions<RevokeInviteMutation, RevokeInviteMutationVariables>;
 export const LogoutDocument = gql`
     mutation Logout {
   logout
@@ -814,14 +947,16 @@ export type UpdateProfileMutationHookResult = ReturnType<typeof useUpdateProfile
 export type UpdateProfileMutationResult = Apollo.MutationResult<UpdateProfileMutation>;
 export type UpdateProfileMutationOptions = Apollo.BaseMutationOptions<UpdateProfileMutation, UpdateProfileMutationVariables>;
 export const CreatePeriodDocument = gql`
-    mutation CreatePeriod($startDate: String!, $endDate: String!, $dailyLimit: String!, $totalBudget: String) {
+    mutation CreatePeriod($name: String, $startDate: String!, $endDate: String!, $dailyLimit: String!, $totalBudget: String) {
   createPeriod(
+    name: $name
     startDate: $startDate
     endDate: $endDate
     dailyLimit: $dailyLimit
     totalBudget: $totalBudget
   ) {
     id
+    name
     status
     dailyLimit
     totalBudget
@@ -844,6 +979,7 @@ export type CreatePeriodMutationFn = Apollo.MutationFunction<CreatePeriodMutatio
  * @example
  * const [createPeriodMutation, { data, loading, error }] = useCreatePeriodMutation({
  *   variables: {
+ *      name: // value for 'name'
  *      startDate: // value for 'startDate'
  *      endDate: // value for 'endDate'
  *      dailyLimit: // value for 'dailyLimit'
@@ -1068,6 +1204,7 @@ export type CreateCategoryMutationFn = Apollo.MutationFunction<CreateCategoryMut
  * const [createCategoryMutation, { data, loading, error }] = useCreateCategoryMutation({
  *   variables: {
  *      name: // value for 'name'
+ *      type: // value for 'type'
  *   },
  * });
  */
@@ -1104,6 +1241,7 @@ export type UpdateCategoryMutationFn = Apollo.MutationFunction<UpdateCategoryMut
  *   variables: {
  *      id: // value for 'id'
  *      name: // value for 'name'
+ *      type: // value for 'type'
  *   },
  * });
  */
@@ -1524,8 +1662,8 @@ export type RedeemInviteCodeMutationHookResult = ReturnType<typeof useRedeemInvi
 export type RedeemInviteCodeMutationResult = Apollo.MutationResult<RedeemInviteCodeMutation>;
 export type RedeemInviteCodeMutationOptions = Apollo.BaseMutationOptions<RedeemInviteCodeMutation, RedeemInviteCodeMutationVariables>;
 export const ActivePeriodDocument = gql`
-    query ActivePeriod($today: String!) {
-  activePeriod(today: $today) {
+    query ActivePeriod($today: String!, $periodId: ID) {
+  activePeriod(today: $today, periodId: $periodId) {
     id
     startDate
     endDate
@@ -1558,6 +1696,7 @@ export const ActivePeriodDocument = gql`
  * const { data, loading, error } = useActivePeriodQuery({
  *   variables: {
  *      today: // value for 'today'
+ *      periodId: // value for 'periodId'
  *   },
  * });
  */
@@ -1580,6 +1719,55 @@ export type ActivePeriodQueryHookResult = ReturnType<typeof useActivePeriodQuery
 export type ActivePeriodLazyQueryHookResult = ReturnType<typeof useActivePeriodLazyQuery>;
 export type ActivePeriodSuspenseQueryHookResult = ReturnType<typeof useActivePeriodSuspenseQuery>;
 export type ActivePeriodQueryResult = Apollo.QueryResult<ActivePeriodQuery, ActivePeriodQueryVariables>;
+export const GroupPeriodsDocument = gql`
+    query GroupPeriods {
+  groupPeriods {
+    id
+    name
+    startDate
+    endDate
+    dailyLimit
+    totalBudget
+    status
+    availableBalance
+  }
+}
+    `;
+
+/**
+ * __useGroupPeriodsQuery__
+ *
+ * To run a query within a React component, call `useGroupPeriodsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGroupPeriodsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGroupPeriodsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGroupPeriodsQuery(baseOptions?: Apollo.QueryHookOptions<GroupPeriodsQuery, GroupPeriodsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GroupPeriodsQuery, GroupPeriodsQueryVariables>(GroupPeriodsDocument, options);
+      }
+export function useGroupPeriodsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GroupPeriodsQuery, GroupPeriodsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GroupPeriodsQuery, GroupPeriodsQueryVariables>(GroupPeriodsDocument, options);
+        }
+// @ts-ignore
+export function useGroupPeriodsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GroupPeriodsQuery, GroupPeriodsQueryVariables>): Apollo.UseSuspenseQueryResult<GroupPeriodsQuery, GroupPeriodsQueryVariables>;
+export function useGroupPeriodsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GroupPeriodsQuery, GroupPeriodsQueryVariables>): Apollo.UseSuspenseQueryResult<GroupPeriodsQuery | undefined, GroupPeriodsQueryVariables>;
+export function useGroupPeriodsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GroupPeriodsQuery, GroupPeriodsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GroupPeriodsQuery, GroupPeriodsQueryVariables>(GroupPeriodsDocument, options);
+        }
+export type GroupPeriodsQueryHookResult = ReturnType<typeof useGroupPeriodsQuery>;
+export type GroupPeriodsLazyQueryHookResult = ReturnType<typeof useGroupPeriodsLazyQuery>;
+export type GroupPeriodsSuspenseQueryHookResult = ReturnType<typeof useGroupPeriodsSuspenseQuery>;
+export type GroupPeriodsQueryResult = Apollo.QueryResult<GroupPeriodsQuery, GroupPeriodsQueryVariables>;
 export const ExpenseHistoryDocument = gql`
     query ExpenseHistory($periodId: ID!) {
   expenseHistory(periodId: $periodId) {
@@ -1664,6 +1852,7 @@ export const CategoriesDocument = gql`
  * @example
  * const { data, loading, error } = useCategoriesQuery({
  *   variables: {
+ *      type: // value for 'type'
  *   },
  * });
  */
@@ -1875,6 +2064,7 @@ export const MeDocument = gql`
     id
     email
     name
+    isAdmin
   }
 }
     `;
@@ -1913,3 +2103,51 @@ export type MeQueryHookResult = ReturnType<typeof useMeQuery>;
 export type MeLazyQueryHookResult = ReturnType<typeof useMeLazyQuery>;
 export type MeSuspenseQueryHookResult = ReturnType<typeof useMeSuspenseQuery>;
 export type MeQueryResult = Apollo.QueryResult<MeQuery, MeQueryVariables>;
+export const ListInvitesDocument = gql`
+    query ListInvites {
+  listInvites {
+    id
+    token
+    usedByEmail
+    usedAt
+    expiresAt
+    revokedAt
+    insertedAt
+  }
+}
+    `;
+
+/**
+ * __useListInvitesQuery__
+ *
+ * To run a query within a React component, call `useListInvitesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useListInvitesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useListInvitesQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useListInvitesQuery(baseOptions?: Apollo.QueryHookOptions<ListInvitesQuery, ListInvitesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ListInvitesQuery, ListInvitesQueryVariables>(ListInvitesDocument, options);
+      }
+export function useListInvitesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ListInvitesQuery, ListInvitesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ListInvitesQuery, ListInvitesQueryVariables>(ListInvitesDocument, options);
+        }
+// @ts-ignore
+export function useListInvitesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<ListInvitesQuery, ListInvitesQueryVariables>): Apollo.UseSuspenseQueryResult<ListInvitesQuery, ListInvitesQueryVariables>;
+export function useListInvitesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ListInvitesQuery, ListInvitesQueryVariables>): Apollo.UseSuspenseQueryResult<ListInvitesQuery | undefined, ListInvitesQueryVariables>;
+export function useListInvitesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ListInvitesQuery, ListInvitesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ListInvitesQuery, ListInvitesQueryVariables>(ListInvitesDocument, options);
+        }
+export type ListInvitesQueryHookResult = ReturnType<typeof useListInvitesQuery>;
+export type ListInvitesLazyQueryHookResult = ReturnType<typeof useListInvitesLazyQuery>;
+export type ListInvitesSuspenseQueryHookResult = ReturnType<typeof useListInvitesSuspenseQuery>;
+export type ListInvitesQueryResult = Apollo.QueryResult<ListInvitesQuery, ListInvitesQueryVariables>;

@@ -1,13 +1,16 @@
 defmodule PlanfinBackend.Accounts.BetaTesters do
   @moduledoc """
-  Allowlist de emails autorizados a receber transactional emails durante o beta fechado.
+  Gate that checks whether an email is allowed to receive transactional emails
+  and to register in the app during the closed beta.
 
-  Bloqueia envio de magic links, confirmações e reset password para endereços não
-  autorizados — defesa contra spam ao Resend usando o app como vetor (ver CX-28/CX-29).
-
-  A lista vem do config `:planfin_backend, :beta_tester_emails`. Use `:all` em
-  ambientes de teste/dev pra desabilitar o gate.
+  Allowed emails are stored in the `allowed_users` table. The config
+  `:planfin_backend, :beta_tester_emails` still accepts `:all` to bypass
+  the gate in dev/test environments.
   """
+
+  import Ecto.Query, warn: false
+  alias PlanfinBackend.Repo
+  alias PlanfinBackend.Accounts.AllowedUser
 
   @spec allowed?(String.t() | nil) :: boolean()
   def allowed?(nil), do: false
@@ -15,7 +18,12 @@ defmodule PlanfinBackend.Accounts.BetaTesters do
   def allowed?(email) when is_binary(email) do
     case Application.get_env(:planfin_backend, :beta_tester_emails, []) do
       :all -> true
-      list when is_list(list) -> String.downcase(email) in list
+      _ -> db_allowed?(email)
     end
+  end
+
+  defp db_allowed?(email) do
+    normalized = String.downcase(email)
+    Repo.exists?(from(u in AllowedUser, where: u.email == ^normalized))
   end
 end

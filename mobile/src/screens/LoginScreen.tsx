@@ -31,7 +31,7 @@ export function LoginScreen({ navigation }: Props) {
       const token = data.login?.token;
       const user = data.login?.user;
       if (token && user?.id && user?.email) {
-        await signIn(token, { id: user.id, email: user.email });
+        await signIn(token, { id: user.id, email: user.email, isAdmin: user.isAdmin });
       }
     },
     onError: (error) => setError("root", { message: error.message }),
@@ -116,11 +116,8 @@ export function LoginScreen({ navigation }: Props) {
           </Text>
         </TouchableOpacity>
 
-        <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: Colors.border, flexDirection: "row", justifyContent: "center", gap: 4 }}>
-          <Text style={{ color: Colors.textSec, fontSize: 14 }}>Não tem conta?</Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-            <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "700" }}>Criar conta</Text>
-          </TouchableOpacity>
+        <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: Colors.border, alignItems: "center" }}>
+          <Text style={{ color: Colors.textSec, fontSize: 13 }}>Acesso somente por convite.</Text>
         </View>
       </ScrollView>
     </View>

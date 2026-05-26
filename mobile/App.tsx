@@ -15,7 +15,8 @@ import { LoadingScreen } from "./src/components/ui/LoadingScreen";
 import { ErrorScreen } from "./src/components/ui/ErrorScreen";
 import { apolloClient } from "./src/lib/apollo";
 import { LoginScreen } from "./src/screens/LoginScreen";
-import { RegisterScreen } from "./src/screens/RegisterScreen";
+import { InviteRegisterScreen } from "./src/screens/InviteRegisterScreen";
+import { AdminInvitesScreen } from "./src/screens/AdminInvitesScreen";
 import { ForgotPasswordScreen } from "./src/screens/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./src/screens/ResetPasswordScreen";
 import { CreatePeriodScreen } from "./src/screens/CreatePeriodScreen";
@@ -38,7 +39,7 @@ enableScreens();
 
 export type AuthStackParamList = {
   Login: undefined;
-  Register: undefined;
+  InviteRegister: { token: string };
   ForgotPassword: undefined;
   ResetPassword: { token: string };
 };
@@ -49,6 +50,7 @@ export type AppStackParamList = {
   MainTabs: undefined;
   Groups: undefined;
   Profile: undefined;
+  AdminInvites: undefined;
   EditPeriod: undefined;
   Periods: undefined;
   AddExpense: undefined;
@@ -86,12 +88,14 @@ const MainTab = createBottomTabNavigator<MainTabParamList>();
 const linking: LinkingOptions<AuthStackParamList> = {
   prefixes: [
     "planfin://",
+    "https://planfin.app.br",
     "https://mobile-steel-nine.vercel.app",
     "https://mobile-pedro-s-soares-projects.vercel.app",
   ],
   config: {
     screens: {
       ResetPassword: "reset-password/:token",
+      InviteRegister: "invite/:token",
     },
   },
 };
@@ -157,6 +161,11 @@ function AppNavigator() {
           <AppStack.Screen
             name="Profile"
             component={ProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <AppStack.Screen
+            name="AdminInvites"
+            component={AdminInvitesScreen}
             options={{ headerShown: false }}
           />
           <AppStack.Screen
@@ -290,7 +299,7 @@ function Navigation() {
     return (
       <AuthStack.Navigator screenOptions={{ headerShown: false }}>
         <AuthStack.Screen name="Login" component={LoginScreen} />
-        <AuthStack.Screen name="Register" component={RegisterScreen} />
+        <AuthStack.Screen name="InviteRegister" component={InviteRegisterScreen} />
         <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <AuthStack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       </AuthStack.Navigator>

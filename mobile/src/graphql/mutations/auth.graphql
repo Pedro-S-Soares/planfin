@@ -4,18 +4,36 @@ mutation Login($email: String!, $password: String!) {
     user {
       id
       email
+      isAdmin
     }
   }
 }
 
-mutation RegisterUser($email: String!, $password: String!, $passwordConfirmation: String!) {
-  registerUser(email: $email, password: $password, passwordConfirmation: $passwordConfirmation) {
+mutation RegisterUser($email: String!, $password: String!, $passwordConfirmation: String!, $inviteToken: String!) {
+  registerUser(email: $email, password: $password, passwordConfirmation: $passwordConfirmation, inviteToken: $inviteToken) {
     token
     user {
       id
       email
+      isAdmin
     }
   }
+}
+
+mutation CreateInvite {
+  createInvite {
+    id
+    token
+    usedByEmail
+    usedAt
+    expiresAt
+    revokedAt
+    insertedAt
+  }
+}
+
+mutation RevokeInvite($id: ID!) {
+  revokeInvite(id: $id)
 }
 
 mutation Logout {

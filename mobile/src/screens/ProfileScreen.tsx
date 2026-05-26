@@ -292,6 +292,18 @@ export function ProfileScreen() {
         </Card>
         */}
 
+        {/* Admin: invite management */}
+        {user?.isAdmin && (
+          <Card padding={0} style={{ overflow: "hidden" }}>
+            <ProfileMenuItem
+              icon="🔗"
+              label="Convites"
+              subtitle="Gerar links para novos usuários"
+              onPress={() => navigation.navigate("AdminInvites")}
+            />
+          </Card>
+        )}
+
         {/* Period settings */}
         <Card padding={0} style={{ overflow: "hidden" }}>
           <ProfileMenuItem

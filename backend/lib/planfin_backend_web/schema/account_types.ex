@@ -7,6 +7,7 @@ defmodule PlanfinBackendWeb.Schema.AccountTypes do
     field :id, :id
     field :email, :string
     field :name, :string
+    field :is_admin, :boolean
   end
 
   object :auth_payload do
@@ -14,9 +15,24 @@ defmodule PlanfinBackendWeb.Schema.AccountTypes do
     field :user, :user
   end
 
+  object :user_invite do
+    field :id, :id
+    field :token, :string
+    field :used_by_email, :string
+    field :used_at, :string
+    field :expires_at, :string
+    field :revoked_at, :string
+    field :inserted_at, :string
+    field :invited_by, :user
+  end
+
   object :account_queries do
     field :me, :user do
       resolve(&Accounts.me/3)
+    end
+
+    field :list_invites, list_of(:user_invite) do
+      resolve(&Accounts.list_invites/3)
     end
   end
 
@@ -25,6 +41,7 @@ defmodule PlanfinBackendWeb.Schema.AccountTypes do
       arg(:email, non_null(:string))
       arg(:password, non_null(:string))
       arg(:password_confirmation, non_null(:string))
+      arg(:invite_token, non_null(:string))
       resolve(&Accounts.register_user/3)
     end
 
@@ -53,6 +70,15 @@ defmodule PlanfinBackendWeb.Schema.AccountTypes do
     field :update_profile, :user do
       arg(:name, :string)
       resolve(&Accounts.update_profile/3)
+    end
+
+    field :create_invite, :user_invite do
+      resolve(&Accounts.create_invite/3)
+    end
+
+    field :revoke_invite, :boolean do
+      arg(:id, non_null(:id))
+      resolve(&Accounts.revoke_invite/3)
     end
   end
 end
