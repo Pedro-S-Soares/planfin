@@ -162,10 +162,13 @@ defmodule PlanfinBackendWeb.Resolvers.Accounts do
     changeset
     |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
       Enum.reduce(opts, msg, fn {key, val}, acc ->
-        String.replace(acc, "%{#{key}}", to_string(val))
+        String.replace(acc, "%{#{key}}", safe_to_string(val))
       end)
     end)
     |> Enum.map(fn {field, errors} -> "#{field}: #{Enum.join(errors, ", ")}" end)
     |> Enum.join("; ")
   end
+
+  defp safe_to_string(val) when is_list(val), do: inspect(val)
+  defp safe_to_string(val), do: to_string(val)
 end
