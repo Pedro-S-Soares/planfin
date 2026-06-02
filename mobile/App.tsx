@@ -6,7 +6,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { enableScreens } from "react-native-screens";
-import { Text } from "react-native";
+import { Text, Platform } from "react-native";
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { GroupProvider, useGroup } from "./src/context/GroupContext";
@@ -102,8 +102,15 @@ const linking: LinkingOptions<AuthStackParamList> = {
 
 function MainTabs() {
   const insets = useSafeAreaInsets();
-  const tabBarPaddingBottom = Math.max(insets.bottom, 8);
-  const tabBarHeight = 52 + tabBarPaddingBottom;
+  // On web: env(safe-area-inset-bottom) may return 0 in some Android browsers even with
+  // viewport-fit=cover. Use 24px minimum so labels always clear the gesture navigation bar.
+  // On native: 8px minimum is enough since insets.bottom is reliably detected.
+  const minBottomPad = Platform.OS === "web" ? 24 : 8;
+  const tabBarPaddingBottom = Math.max(insets.bottom, minBottomPad);
+  // Base height of 64 ensures buttons have 41px of usable space for icon+label
+  // after accounting for both the outer tabBarStyle padding (8+paddingBottom)
+  // and the BottomTabBar internal button padding (7.5+7.5).
+  const tabBarHeight = 64 + tabBarPaddingBottom;
 
   return (
     <MainTab.Navigator
