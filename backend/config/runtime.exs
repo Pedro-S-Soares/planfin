@@ -33,8 +33,12 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
+  # Postgres interno do Fly: rede privada IPv6, sem TLS -> DATABASE_SSL ausente.
+  # Provedor externo (Neon): IPv4 + TLS obrigatorio -> DATABASE_SSL=true e ECTO_IPV6 fora.
+  # Em postgrex >= 0.18, `ssl: true` ja verifica o certificado do servidor
+  # (verify_peer com as CAs do sistema), entao nao precisa de ssl_opts manual.
   config :planfin_backend, PlanfinBackend.Repo,
-    # ssl: true,
+    ssl: System.get_env("DATABASE_SSL") in ~w(true 1),
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     # For machines with several cores, consider starting multiple pools of `pool_size`
