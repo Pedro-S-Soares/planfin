@@ -9,7 +9,9 @@ primary_region = "gru"
 [env]
   PHX_SERVER = "true"
   PHX_HOST = "planfin-api.fly.dev"
-  ECTO_IPV6 = "true"
+  # Banco externo (Neon, sa-east-1): IPv4 + TLS obrigatorio.
+  # ECTO_IPV6 removido de proposito — era exigido pela rede privada do Fly Postgres.
+  DATABASE_SSL = "true"
   PORT = "8080"
 
 [http_service]
