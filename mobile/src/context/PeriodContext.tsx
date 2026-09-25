@@ -11,6 +11,7 @@ import { gql, useQuery, ApolloError } from "@apollo/client";
 import { ActivePeriodQuery } from "../graphql/__generated__/hooks";
 import { toISODate } from "../lib/date";
 import { storage } from "../lib/storage";
+import { GROUP_PERIODS } from "../graphql/groups";
 import { useGroup } from "./GroupContext";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ const ACTIVE_PERIOD_QUERY = gql`
         dailyLimit
         carryover
         availableBalance
+        spent
         closedAt
       }
     }
@@ -74,27 +76,8 @@ const ACTIVE_PERIOD_QUERY = gql`
 
 type ActivePeriodData = ActivePeriodQuery;
 
-const GROUP_PERIODS_QUERY = gql`
-  query GroupPeriods {
-    group {
-      groupPeriods {
-        id
-        name
-        startDate
-        endDate
-        dailyLimit
-        totalBudget
-        status
-        availableBalance
-      }
-    }
-  }
-`;
-
 type GroupPeriodsData = {
-  group?: {
-    groupPeriods?: GroupPeriod[] | null;
-  } | null;
+  groupPeriods?: GroupPeriod[] | null;
 };
 
 // ─── Storage key helper ───────────────────────────────────────────────────────
@@ -136,13 +119,13 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
   }, [groupId]);
 
   // ── Fetch all group periods ───────────────────────────────────────────────
-  const periodsQuery = useQuery<GroupPeriodsData>(GROUP_PERIODS_QUERY, {
+  const periodsQuery = useQuery<GroupPeriodsData>(GROUP_PERIODS, {
     fetchPolicy: "network-only",
     skip: !groupId,
   });
 
   const periods: GroupPeriod[] = useMemo(
-    () => (periodsQuery.data?.group?.groupPeriods ?? []) as GroupPeriod[],
+    () => periodsQuery.data?.groupPeriods ?? [],
     [periodsQuery.data],
   );
 

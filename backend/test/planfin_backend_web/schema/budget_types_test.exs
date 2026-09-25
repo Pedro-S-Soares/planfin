@@ -89,6 +89,49 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert period_data["today"]["availableBalance"] != nil
     end
 
+    test "today.spent ignores expenses logged retroactively on already closed days", %{
+      conn: conn
+    } do
+      {conn, _user, group} = authed_conn_with_group(conn)
+
+      {:ok, _period} =
+        Periods.create_period(group.id, %{
+          start_date: ~D[2026-06-01],
+          end_date: ~D[2026-06-30],
+          daily_limit: Decimal.new("100.00"),
+          total_budget: Decimal.new("3000.00")
+        })
+
+      active_query = """
+        query($today: String!) {
+          activePeriod(today: $today) {
+            today { spent availableBalance }
+          }
+        }
+      """
+
+      create_mutation = """
+        mutation($amount: String!, $date: String!, $isExtra: Boolean) {
+          createExpense(amount: $amount, date: $date, isExtra: $isExtra) { id }
+        }
+      """
+
+      # Opening the app on 06-03 closes 06-01 and 06-02
+      post_graphql(conn, active_query, %{today: "2026-06-03"})
+
+      # A forgotten expense from yesterday, then today's regular and extra expenses
+      post_graphql(conn, create_mutation, %{amount: "80.00", date: "2026-06-02"})
+      post_graphql(conn, create_mutation, %{amount: "10.00", date: "2026-06-03"})
+      post_graphql(conn, create_mutation, %{amount: "50.00", date: "2026-06-03", isExtra: true})
+
+      resp = post_graphql(conn, active_query, %{today: "2026-06-03"})
+      assert resp["errors"] == nil
+      today = resp["data"]["activePeriod"]["today"]
+
+      assert Decimal.equal?(Decimal.new(today["spent"]), Decimal.new("10"))
+      assert Decimal.equal?(Decimal.new(today["availableBalance"]), Decimal.new("210"))
+    end
+
     test "returns 'Not authenticated' error when not authenticated", %{conn: conn} do
       query = """
         query {
