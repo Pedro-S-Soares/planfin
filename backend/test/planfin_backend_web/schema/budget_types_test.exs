@@ -481,6 +481,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
 
     test "returns the group's expenses in the range with author", %{conn: conn} do
       {conn, user, group} = authed_conn_with_group(conn)
+      user |> Ecto.Changeset.change(name: "Pedro") |> PlanfinBackend.Repo.update!()
       today = Date.utc_today()
       {:ok, _period} = Periods.create_period(group.id, valid_period_attrs())
 
@@ -497,6 +498,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert [expense] = resp["data"]["expensesInRange"]
       assert expense["type"] == "expense"
       assert expense["createdBy"]["id"] == to_string(user.id)
+      assert expense["createdBy"]["name"] == "Pedro"
       assert Decimal.equal?(Decimal.new(expense["amount"]), Decimal.new("12.50"))
     end
 

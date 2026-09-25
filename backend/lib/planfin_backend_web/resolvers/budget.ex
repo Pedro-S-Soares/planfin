@@ -452,8 +452,8 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     }
   end
 
-  defp format_created_by(%{created_by: %{id: id, email: email}}) do
-    %{id: to_string(id), email: email}
+  defp format_created_by(%{created_by: %{id: id, email: email} = user}) do
+    %{id: to_string(id), email: email, name: Map.get(user, :name)}
   end
 
   defp format_created_by(_), do: nil
