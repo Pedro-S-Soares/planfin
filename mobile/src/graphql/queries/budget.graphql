@@ -13,6 +13,7 @@ query ActivePeriod($today: String!, $periodId: ID) {
       dailyLimit
       carryover
       availableBalance
+      spent
       closedAt
     }
   }

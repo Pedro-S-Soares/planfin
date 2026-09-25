@@ -22,6 +22,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :daily_limit, :string
     field :carryover, :string
     field :available_balance, :string
+    field :spent, :string
     field :closed_at, :string
   end
 

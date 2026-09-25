@@ -389,6 +389,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   defp format_budget_day(budget_day, period, today) do
     available = BudgetDays.compute_today_balance(period, today)
+    spent = BudgetDays.get_total_spent_for_day(period.group_id, budget_day.date)
 
     %{
       id: to_string(budget_day.id),
@@ -396,6 +397,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       daily_limit: Decimal.to_string(budget_day.daily_limit),
       carryover: Decimal.to_string(budget_day.carryover),
       available_balance: Decimal.to_string(available),
+      spent: Decimal.to_string(spent),
       closed_at:
         if(budget_day.closed_at, do: DateTime.to_iso8601(budget_day.closed_at), else: nil)
     }
