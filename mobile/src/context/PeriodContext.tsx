@@ -60,6 +60,9 @@ const ACTIVE_PERIOD_QUERY = gql`
       dailyLimit
       totalBudget
       remainingTotal
+      extraBudget
+      extraSpent
+      extraRemaining
       status
       today {
         id

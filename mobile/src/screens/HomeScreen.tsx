@@ -25,7 +25,9 @@ import {
   type ExpenseDayWithAuthors,
   type ExpenseWithAuthor,
 } from "../graphql/expenses";
-import { BalanceCard } from "../components/ui/BalanceCard";
+import { BalanceViewToggle, type BalanceView } from "../components/ui/BalanceViewToggle";
+import { DailyBalanceCard } from "../components/ui/DailyBalanceCard";
+import { TotalBalanceCard } from "../components/ui/TotalBalanceCard";
 import { Card } from "../components/ui/Card";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { InlineError } from "../components/ui/InlineError";
@@ -196,9 +198,9 @@ export function HomeScreen() {
   const { signOut, user } = useAuth();
   const { activeGroup } = useGroup();
   const navigation = useNavigation<Navigation>();
+  const [balanceView, setBalanceView] = useState<BalanceView>("daily");
 
   const balance = period?.today?.availableBalance ?? "0.00";
-  const isPositive = parseFloat(balance) >= 0;
 
   const todaySpent = Math.max(0, parseFloat(period?.today?.spent ?? "0")).toFixed(2);
 
@@ -275,13 +277,21 @@ export function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Balance card */}
-        <BalanceCard
-          available={balance}
-          spent={todaySpent}
-          dailyLimit={period?.dailyLimit ?? "0.00"}
-          isPositive={isPositive}
-          remainingTotal={period?.remainingTotal ?? undefined}
-        />
+        <BalanceViewToggle value={balanceView} onChange={setBalanceView} />
+        {balanceView === "daily" ? (
+          <DailyBalanceCard
+            available={balance}
+            spent={todaySpent}
+            dailyLimit={period?.dailyLimit ?? "0.00"}
+            extraBudget={period?.extraBudget ?? "0.00"}
+            extraSpent={period?.extraSpent ?? "0.00"}
+          />
+        ) : (
+          <TotalBalanceCard
+            remainingTotal={period?.remainingTotal ?? "0.00"}
+            extraRemaining={period?.extraRemaining ?? "0.00"}
+          />
+        )}
 
         {/* Period info strip */}
         {period && (

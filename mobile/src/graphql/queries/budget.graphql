@@ -6,6 +6,9 @@ query ActivePeriod($today: String!, $periodId: ID) {
     dailyLimit
     totalBudget
     remainingTotal
+    extraBudget
+    extraSpent
+    extraRemaining
     status
     today {
       id

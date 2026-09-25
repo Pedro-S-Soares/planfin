@@ -35,6 +35,9 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :total_budget, :string
     field :remaining_total, :string
     field :available_balance, :string
+    field :extra_budget, :string
+    field :extra_spent, :string
+    field :extra_remaining, :string
     field :status, :string
     field :today, :budget_day
   end
