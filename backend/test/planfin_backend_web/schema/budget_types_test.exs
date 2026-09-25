@@ -462,6 +462,60 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
     end
   end
 
+  # ---- expensesInRange ----
+
+  describe "expensesInRange" do
+    @range_query """
+      query ExpensesInRange($from: String!, $to: String!) {
+        expensesInRange(from: $from, to: $to) {
+          id
+          amount
+          date
+          type
+          isExtra
+          createdBy { id name }
+          subcategory { id name categoryId }
+        }
+      }
+    """
+
+    test "returns the group's expenses in the range with author", %{conn: conn} do
+      {conn, user, group} = authed_conn_with_group(conn)
+      today = Date.utc_today()
+      {:ok, _period} = Periods.create_period(group.id, valid_period_attrs())
+
+      {:ok, _} =
+        Expenses.create_expense(group.id, user.id, %{amount: Decimal.new("12.50"), date: today})
+
+      resp =
+        post_graphql(conn, @range_query, %{
+          from: Date.to_iso8601(Date.add(today, -10)),
+          to: Date.to_iso8601(today)
+        })
+
+      assert resp["errors"] == nil
+      assert [expense] = resp["data"]["expensesInRange"]
+      assert expense["type"] == "expense"
+      assert expense["createdBy"]["id"] == to_string(user.id)
+      assert Decimal.equal?(Decimal.new(expense["amount"]), Decimal.new("12.50"))
+    end
+
+    test "returns an error for an invalid range", %{conn: conn} do
+      {conn, _user, _group} = authed_conn_with_group(conn)
+
+      resp = post_graphql(conn, @range_query, %{from: "2026-05-01", to: "2026-04-01"})
+      assert hd(resp["errors"])["message"] == "Invalid date range"
+
+      resp = post_graphql(conn, @range_query, %{from: "nope", to: "2026-04-01"})
+      assert hd(resp["errors"])["message"] == "Invalid date"
+    end
+
+    test "returns error when not authenticated", %{conn: conn} do
+      resp = post_graphql(conn, @range_query, %{from: "2026-04-01", to: "2026-04-30"})
+      assert hd(resp["errors"])["message"] == "Not authenticated"
+    end
+  end
+
   # ---- categories ----
 
   describe "categories" do
