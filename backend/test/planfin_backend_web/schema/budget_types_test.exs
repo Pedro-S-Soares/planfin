@@ -397,6 +397,56 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert length(day["expenses"]) == 2
     end
 
+    test "returns subcategory.category with icon for each expense", %{conn: conn} do
+      {conn, user, group} = authed_conn_with_group(conn)
+      today = Date.utc_today()
+
+      {:ok, period} = Periods.create_period(group.id, valid_period_attrs())
+
+      {:ok, category} =
+        Categories.create_category(group.id, %{name: "Pets", icon: "paw"})
+
+      {:ok, sub} = Categories.create_subcategory(category, %{name: "Ração"})
+
+      {:ok, _expense} =
+        Expenses.create_expense(group.id, user.id, %{
+          amount: Decimal.new("15.00"),
+          date: today,
+          subcategory_id: sub.id
+        })
+
+      query = """
+        query ExpenseHistory($periodId: ID!) {
+          expenseHistory(periodId: $periodId) {
+            expenses {
+              subcategory {
+                id
+                category {
+                  id
+                  name
+                  icon
+                }
+              }
+            }
+          }
+        }
+      """
+
+      resp = post_graphql(conn, query, %{periodId: period.id})
+      assert resp["errors"] == nil
+
+      [%{"expenses" => [%{"subcategory" => subcategory}]}] =
+        resp["data"]["expenseHistory"]
+
+      assert subcategory["id"] == sub.id
+
+      assert subcategory["category"] == %{
+               "id" => category.id,
+               "name" => "Pets",
+               "icon" => "paw"
+             }
+    end
+
     test "returns error when not authenticated", %{conn: conn} do
       query = """
         query ExpenseHistory($periodId: ID!) {
@@ -439,6 +489,26 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert cat["name"] != nil
     end
 
+    test "returns the icon of each category", %{conn: conn} do
+      {conn, _user, _group} = authed_conn_with_group(conn)
+
+      query = """
+        query {
+          categories {
+            name
+            icon
+          }
+        }
+      """
+
+      resp = post_graphql(conn, query)
+      assert resp["errors"] == nil
+
+      icons = Map.new(resp["data"]["categories"], &{&1["name"], &1["icon"]})
+      assert icons["Alimentação"] == "food"
+      assert icons["Outros"] == "dots-horizontal"
+    end
+
     test "returns error when not authenticated", %{conn: conn} do
       query = """
         query {
@@ -479,6 +549,39 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert category["subcategories"] == []
     end
 
+    test "creates a category with an icon", %{conn: conn} do
+      {conn, _user, _group} = authed_conn_with_group(conn)
+
+      query = """
+        mutation CreateCategory($name: String!, $icon: String) {
+          createCategory(name: $name, icon: $icon) {
+            name
+            icon
+          }
+        }
+      """
+
+      resp = post_graphql(conn, query, %{name: "Pets", icon: "paw"})
+      assert resp["errors"] == nil
+      assert resp["data"]["createCategory"] == %{"name" => "Pets", "icon" => "paw"}
+    end
+
+    test "rejects an icon with invalid format", %{conn: conn} do
+      {conn, _user, _group} = authed_conn_with_group(conn)
+
+      query = """
+        mutation CreateCategory($name: String!, $icon: String) {
+          createCategory(name: $name, icon: $icon) {
+            id
+          }
+        }
+      """
+
+      resp = post_graphql(conn, query, %{name: "Pets", icon: "Not Valid"})
+      assert [%{"message" => message}] = resp["errors"]
+      assert message =~ "icon"
+    end
+
     test "returns error when not authenticated", %{conn: conn} do
       query = """
         mutation CreateCategory($name: String!) {
@@ -491,6 +594,36 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       resp = post_graphql(conn, query, %{name: "Test"})
       assert resp["errors"] != nil
       assert hd(resp["errors"])["message"] == "Not authenticated"
+    end
+  end
+
+  describe "updateCategory" do
+    @update_query """
+      mutation UpdateCategory($id: ID!, $name: String!, $icon: String) {
+        updateCategory(id: $id, name: $name, icon: $icon) {
+          name
+          icon
+        }
+      }
+    """
+
+    test "sets, keeps and clears the icon", %{conn: conn} do
+      {conn, _user, group} = authed_conn_with_group(conn)
+      {:ok, category} = Categories.create_category(group.id, %{name: "Pets"})
+
+      resp = post_graphql(conn, @update_query, %{id: category.id, name: "Pets", icon: "paw"})
+      assert resp["errors"] == nil
+      assert resp["data"]["updateCategory"]["icon"] == "paw"
+
+      # Omitting the icon arg keeps the current icon.
+      resp = post_graphql(conn, @update_query, %{id: category.id, name: "Bichos"})
+      assert resp["errors"] == nil
+      assert resp["data"]["updateCategory"] == %{"name" => "Bichos", "icon" => "paw"}
+
+      # Explicit null clears it.
+      resp = post_graphql(conn, @update_query, %{id: category.id, name: "Bichos", icon: nil})
+      assert resp["errors"] == nil
+      assert resp["data"]["updateCategory"]["icon"] == nil
     end
   end
 

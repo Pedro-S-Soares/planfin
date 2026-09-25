@@ -55,11 +55,12 @@ mutation DeleteExpense($id: ID!) {
   deleteExpense(id: $id)
 }
 
-mutation CreateCategory($name: String!, $type: String) {
-  createCategory(name: $name, type: $type) {
+mutation CreateCategory($name: String!, $type: String, $icon: String) {
+  createCategory(name: $name, type: $type, icon: $icon) {
     id
     name
     type
+    icon
     subcategories {
       id
       name
@@ -67,11 +68,12 @@ mutation CreateCategory($name: String!, $type: String) {
   }
 }
 
-mutation UpdateCategory($id: ID!, $name: String!, $type: String) {
-  updateCategory(id: $id, name: $name, type: $type) {
+mutation UpdateCategory($id: ID!, $name: String!, $type: String, $icon: String) {
+  updateCategory(id: $id, name: $name, type: $type, icon: $icon) {
     id
     name
     type
+    icon
   }
 }
 

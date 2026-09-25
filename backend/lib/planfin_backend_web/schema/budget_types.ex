@@ -7,13 +7,21 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :id, :id
     field :name, :string
     field :type, :string
+    field :icon, :string
     field :subcategories, list_of(:subcategory)
+  end
+
+  object :subcategory_category do
+    field :id, :id
+    field :name, :string
+    field :icon, :string
   end
 
   object :subcategory do
     field :id, :id
     field :name, :string
     field :category_id, :id
+    field :category, :subcategory_category
   end
 
   object :budget_day do
@@ -138,6 +146,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :create_category, :category do
       arg(:name, non_null(:string))
       arg(:type, :string)
+      arg(:icon, :string)
       resolve(&Budget.create_category/3)
     end
 
@@ -145,6 +154,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:id, non_null(:id))
       arg(:name, non_null(:string))
       arg(:type, :string)
+      arg(:icon, :string)
       resolve(&Budget.update_category/3)
     end
 

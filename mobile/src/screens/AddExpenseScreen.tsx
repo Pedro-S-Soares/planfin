@@ -124,6 +124,7 @@ export function AddExpenseScreen() {
                 label={cat.name ?? ""}
                 selected={value === cat.id}
                 dot={categoryColor(cat.name ?? "").dot}
+                icon={cat.icon}
                 onPress={() => onChange(value === cat.id ? "" : cat.id)}
               />
             ))}

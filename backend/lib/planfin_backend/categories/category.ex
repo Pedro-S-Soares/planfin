@@ -8,6 +8,7 @@ defmodule PlanfinBackend.Categories.Category do
   schema "categories" do
     field :name, :string
     field :type, :string, default: "expense"
+    field :icon, :string
     belongs_to :group, PlanfinBackend.Groups.Group
     has_many :subcategories, PlanfinBackend.Categories.Subcategory
 
@@ -19,9 +20,11 @@ defmodule PlanfinBackend.Categories.Category do
   """
   def changeset(category, attrs) do
     category
-    |> cast(attrs, [:name, :type, :group_id])
+    |> cast(attrs, [:name, :type, :group_id, :icon])
     |> validate_required([:name, :group_id])
     |> validate_length(:name, min: 1)
     |> validate_inclusion(:type, ["expense", "income"])
+    |> validate_length(:icon, max: 64)
+    |> validate_format(:icon, ~r/^[a-z0-9-]+$/)
   end
 end
