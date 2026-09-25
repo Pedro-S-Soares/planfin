@@ -226,7 +226,13 @@ defmodule PlanfinBackend.BudgetDays do
     |> Repo.update!()
   end
 
-  defp get_total_spent_for_day(group_id, date) do
+  @doc """
+  Net regular spending of the group on `date`: regular expenses minus regular income.
+
+  Extra entries are excluded, matching the daily balance. Always computed live, so
+  it stays correct when entries are logged or edited after the day was closed.
+  """
+  def get_total_spent_for_day(group_id, date) do
     base_query =
       Expense
       |> where([e], e.group_id == ^group_id and e.date == ^date and e.is_extra == false)

@@ -200,13 +200,7 @@ export function HomeScreen() {
   const balance = period?.today?.availableBalance ?? "0.00";
   const isPositive = parseFloat(balance) >= 0;
 
-  const todaySpent = (() => {
-    const limit = parseFloat(period?.today?.dailyLimit ?? period?.dailyLimit ?? "0");
-    const carryover = parseFloat(period?.today?.carryover ?? "0");
-    const avail = parseFloat(balance);
-    const spent = limit + carryover - avail;
-    return Math.max(0, spent).toFixed(2);
-  })();
+  const todaySpent = Math.max(0, parseFloat(period?.today?.spent ?? "0")).toFixed(2);
 
   const daysLeft = (() => {
     if (!period?.endDate) return null;
