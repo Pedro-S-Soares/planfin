@@ -372,6 +372,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   defp format_period(period, today) do
     remaining_total = BudgetDays.compute_remaining_total(period)
     available_balance = BudgetDays.compute_today_balance(period)
+    extra = BudgetDays.compute_extra(period)
 
     %{
       id: to_string(period.id),
@@ -382,6 +383,9 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       total_budget: Decimal.to_string(period.total_budget),
       remaining_total: Decimal.to_string(remaining_total),
       available_balance: Decimal.to_string(available_balance),
+      extra_budget: Decimal.to_string(extra.budget),
+      extra_spent: Decimal.to_string(extra.spent),
+      extra_remaining: Decimal.to_string(extra.remaining),
       status: period.status,
       today: today
     }

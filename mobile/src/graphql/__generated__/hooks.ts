@@ -93,6 +93,9 @@ export type Period = {
   availableBalance?: Maybe<Scalars['String']['output']>;
   dailyLimit?: Maybe<Scalars['String']['output']>;
   endDate?: Maybe<Scalars['String']['output']>;
+  extraBudget?: Maybe<Scalars['String']['output']>;
+  extraRemaining?: Maybe<Scalars['String']['output']>;
+  extraSpent?: Maybe<Scalars['String']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
   name?: Maybe<Scalars['String']['output']>;
   remainingTotal?: Maybe<Scalars['String']['output']>;
@@ -604,7 +607,7 @@ export type ActivePeriodQueryVariables = Exact<{
 }>;
 
 
-export type ActivePeriodQuery = { __typename?: 'RootQueryType', activePeriod?: { __typename?: 'Period', id?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null, status?: string | null, today?: { __typename?: 'BudgetDay', id?: string | null, date?: string | null, dailyLimit?: string | null, carryover?: string | null, availableBalance?: string | null, spent?: string | null, closedAt?: string | null } | null } | null };
+export type ActivePeriodQuery = { __typename?: 'RootQueryType', activePeriod?: { __typename?: 'Period', id?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null, extraBudget?: string | null, extraSpent?: string | null, extraRemaining?: string | null, status?: string | null, today?: { __typename?: 'BudgetDay', id?: string | null, date?: string | null, dailyLimit?: string | null, carryover?: string | null, availableBalance?: string | null, spent?: string | null, closedAt?: string | null } | null } | null };
 
 export type GroupPeriodsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1671,6 +1674,9 @@ export const ActivePeriodDocument = gql`
     dailyLimit
     totalBudget
     remainingTotal
+    extraBudget
+    extraSpent
+    extraRemaining
     status
     today {
       id

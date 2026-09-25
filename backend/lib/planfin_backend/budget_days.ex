@@ -186,6 +186,47 @@ defmodule PlanfinBackend.BudgetDays do
     |> Decimal.add(total_income || Decimal.new("0"))
   end
 
+  @doc """
+  Computes the extra budget of a period and how much of it was consumed.
+
+  The extra budget is the part of `total_budget` beyond `daily_limit × period days`.
+  Extra expenses consume it and extra income gives it back; regular entries never touch it.
+
+  Returns `%{budget: Decimal, spent: Decimal, remaining: Decimal}`.
+  """
+  def compute_extra(period) do
+    days = Date.diff(period.end_date, period.start_date) + 1
+    budget = Decimal.sub(period.total_budget, Decimal.mult(period.daily_limit, Decimal.new(days)))
+
+    base_query =
+      Expense
+      |> where(
+        [e],
+        e.group_id == ^period.group_id and
+          e.date >= ^period.start_date and
+          e.date <= ^period.end_date and
+          e.is_extra == true
+      )
+
+    total_expenses =
+      base_query
+      |> where([e], e.type == "expense")
+      |> select([e], sum(e.amount))
+      |> Repo.one()
+
+    total_income =
+      base_query
+      |> where([e], e.type == "income")
+      |> select([e], sum(e.amount))
+      |> Repo.one()
+
+    spent =
+      (total_expenses || Decimal.new("0"))
+      |> Decimal.sub(total_income || Decimal.new("0"))
+
+    %{budget: budget, spent: spent, remaining: Decimal.sub(budget, spent)}
+  end
+
   # Closes a single budget_day and propagates carryover to the next day
   # if the next day falls within the period and doesn't already exist.
   defp close_day(%BudgetDay{} = budget_day, period) do

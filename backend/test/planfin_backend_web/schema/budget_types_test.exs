@@ -132,6 +132,41 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert Decimal.equal?(Decimal.new(today["availableBalance"]), Decimal.new("210"))
     end
 
+    test "exposes extra budget fields", %{conn: conn} do
+      {conn, user, group} = authed_conn_with_group(conn)
+
+      {:ok, _period} =
+        Periods.create_period(
+          group.id,
+          valid_period_attrs(%{total_budget: Decimal.new("3500.00")})
+        )
+
+      {:ok, _} =
+        Expenses.create_expense(group.id, user.id, %{
+          amount: Decimal.new("120.00"),
+          date: Date.utc_today(),
+          is_extra: true,
+          type: "expense"
+        })
+
+      query = """
+        query {
+          activePeriod {
+            extraBudget
+            extraSpent
+            extraRemaining
+          }
+        }
+      """
+
+      resp = post_graphql(conn, query)
+      assert resp["errors"] == nil
+      period_data = resp["data"]["activePeriod"]
+      assert Decimal.equal?(Decimal.new(period_data["extraBudget"]), Decimal.new("500"))
+      assert Decimal.equal?(Decimal.new(period_data["extraSpent"]), Decimal.new("120"))
+      assert Decimal.equal?(Decimal.new(period_data["extraRemaining"]), Decimal.new("380"))
+    end
+
     test "returns 'Not authenticated' error when not authenticated", %{conn: conn} do
       query = """
         query {
