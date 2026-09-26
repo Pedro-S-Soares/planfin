@@ -34,11 +34,40 @@ if config_env() == :prod do
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
   # Postgres interno do Fly: rede privada IPv6, sem TLS -> DATABASE_SSL ausente.
-  # Provedor externo (Neon): IPv4 + TLS obrigatorio -> DATABASE_SSL=true e ECTO_IPV6 fora.
-  # Em postgrex >= 0.18, `ssl: true` ja verifica o certificado do servidor
-  # (verify_peer com as CAs do sistema), entao nao precisa de ssl_opts manual.
+  # Provedor externo (Neon/Supabase): IPv4 + TLS obrigatorio -> DATABASE_SSL=true e
+  # ECTO_IPV6 fora.
+  #
+  # Em postgrex >= 0.18, `ssl: true` ja faz verify_peer com as CAs do sistema, o que
+  # basta para o Neon (CA publica). O pooler do Supabase apresenta cadeia emitida pela
+  # "Supabase Root 2021 CA", que e privada, e o handshake morre com unknown_ca. Nesse
+  # caso DATABASE_CACERTFILE nomeia o arquivo em priv/cert e a verificacao continua
+  # real -- nunca verify_none, que abriria espaco para MITM.
+  ssl_opts =
+    case {System.get_env("DATABASE_SSL") in ~w(true 1), System.get_env("DATABASE_CACERTFILE")} do
+      {false, _} ->
+        false
+
+      {true, nil} ->
+        true
+
+      {true, filename} ->
+        path = Path.join([to_string(:code.priv_dir(:planfin_backend)), "cert", filename])
+
+        File.exists?(path) ||
+          raise "DATABASE_CACERTFILE=#{filename} nao encontrado no release (#{path})"
+
+        [
+          cacertfile: path,
+          verify: :verify_peer,
+          depth: 3,
+          customize_hostname_check: [
+            match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+          ]
+        ]
+    end
+
   config :planfin_backend, PlanfinBackend.Repo,
-    ssl: System.get_env("DATABASE_SSL") in ~w(true 1),
+    ssl: ssl_opts,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     # For machines with several cores, consider starting multiple pools of `pool_size`
