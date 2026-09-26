@@ -9,23 +9,24 @@ defmodule PlanfinBackend.Categories do
   alias PlanfinBackend.Categories.{Category, Subcategory}
 
   @default_categories [
-    {"Alimentação", ["Restaurante", "Mercado", "Lanche"]},
-    {"Transporte", ["Combustível", "Transporte público", "Aplicativo"]},
-    {"Lazer", ["Cinema", "Viagem", "Assinatura"]},
-    {"Saúde", ["Farmácia", "Consulta", "Academia"]},
-    {"Contas da Casa", ["Luz", "Água", "Internet", "Aluguel"]},
-    {"Outros", []}
+    {"Alimentação", "food", ["Restaurante", "Mercado", "Lanche"]},
+    {"Transporte", "car", ["Combustível", "Transporte público", "Aplicativo"]},
+    {"Lazer", "gamepad-variant", ["Cinema", "Viagem", "Assinatura"]},
+    {"Saúde", "heart-pulse", ["Farmácia", "Consulta", "Academia"]},
+    {"Contas da Casa", "home", ["Luz", "Água", "Internet", "Aluguel"]},
+    {"Outros", "dots-horizontal", []}
   ]
 
   @doc """
-  Lists all categories for a given group, with subcategories preloaded.
+  Lists all categories for a given group, ordered by name, with subcategories preloaded (also ordered by name).
   Optionally filters by type ("expense" or "income"). When type is nil, all categories are returned.
   """
   def list_categories(group_id, type \\ nil) do
     query =
       Category
       |> where([c], c.group_id == ^group_id)
-      |> preload(:subcategories)
+      |> order_by([c], asc: c.name, asc: c.id)
+      |> preload(subcategories: ^from(s in Subcategory, order_by: [asc: s.name, asc: s.id]))
 
     query =
       if type do
@@ -114,8 +115,8 @@ defmodule PlanfinBackend.Categories do
   """
   def seed_default_categories(group_id) do
     results =
-      Enum.map(@default_categories, fn {cat_name, sub_names} ->
-        {:ok, category} = create_category(group_id, %{name: cat_name})
+      Enum.map(@default_categories, fn {cat_name, icon, sub_names} ->
+        {:ok, category} = create_category(group_id, %{name: cat_name, icon: icon})
 
         subcategories =
           Enum.map(sub_names, fn sub_name ->

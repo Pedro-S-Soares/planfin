@@ -35,6 +35,25 @@ defmodule PlanfinBackend.CategoriesTest do
       assert extra != nil
       assert Enum.any?(extra.subcategories, &(&1.id == sub.id))
     end
+
+    test "keeps a stable alphabetical order after an update" do
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "Zebra"})
+      {:ok, _} = Categories.create_subcategory(cat, %{name: "Beta"})
+      {:ok, _} = Categories.create_subcategory(cat, %{name: "Alfa"})
+
+      before = Enum.map(Categories.list_categories(group.id), & &1.name)
+
+      [first | _] = Categories.list_categories(group.id)
+      {:ok, _} = Categories.update_category(first, %{icon: "cat"})
+
+      result = Categories.list_categories(group.id)
+      zebra = Enum.find(result, &(&1.name == "Zebra"))
+
+      assert Enum.map(result, & &1.name) == before
+      assert before == Enum.sort(before)
+      assert Enum.map(zebra.subcategories, & &1.name) == ["Alfa", "Beta"]
+    end
   end
 
   describe "create_category/2" do
@@ -57,6 +76,44 @@ defmodule PlanfinBackend.CategoriesTest do
 
       assert {:error, changeset} = Categories.create_category(group.id, %{})
       assert %{name: ["can't be blank"]} = errors_on(changeset)
+    end
+
+    test "creates a category with a valid icon" do
+      {_user, group} = user_with_group_fixture()
+
+      assert {:ok, %Category{icon: "silverware-fork-knife"}} =
+               Categories.create_category(group.id, %{
+                 name: "Restaurantes",
+                 icon: "silverware-fork-knife"
+               })
+    end
+
+    test "creates a category without icon" do
+      {_user, group} = user_with_group_fixture()
+
+      assert {:ok, %Category{icon: nil}} =
+               Categories.create_category(group.id, %{name: "Sem ícone"})
+    end
+
+    test "returns error changeset when icon has invalid format" do
+      {_user, group} = user_with_group_fixture()
+
+      for icon <- ["Food", "food icon", "food_icon", "<script>"] do
+        assert {:error, changeset} =
+                 Categories.create_category(group.id, %{name: "X", icon: icon})
+
+        assert %{icon: ["has invalid format"]} = errors_on(changeset)
+      end
+    end
+
+    test "returns error changeset when icon is longer than 64 chars" do
+      {_user, group} = user_with_group_fixture()
+      icon = String.duplicate("a", 65)
+
+      assert {:error, changeset} =
+               Categories.create_category(group.id, %{name: "X", icon: icon})
+
+      assert %{icon: [_ | _]} = errors_on(changeset)
     end
   end
 
@@ -95,6 +152,16 @@ defmodule PlanfinBackend.CategoriesTest do
 
       assert {:error, changeset} = Categories.update_category(cat, %{name: ""})
       assert %{name: [_ | _]} = errors_on(changeset)
+    end
+
+    test "updates and clears the icon" do
+      {_user, group} = user_with_group_fixture()
+      {:ok, cat} = Categories.create_category(group.id, %{name: "Lazer", icon: "gamepad-variant"})
+
+      assert {:ok, %Category{icon: "movie"} = updated} =
+               Categories.update_category(cat, %{icon: "movie"})
+
+      assert {:ok, %Category{icon: nil}} = Categories.update_category(updated, %{icon: nil})
     end
   end
 
@@ -208,6 +275,24 @@ defmodule PlanfinBackend.CategoriesTest do
 
       outros = Enum.find(seeded, &(&1.name == "Outros"))
       assert outros.subcategories == []
+    end
+
+    test "seeds default categories with their icons" do
+      {_user, group} = user_with_group_fixture()
+
+      icons =
+        group.id
+        |> Categories.list_categories()
+        |> Map.new(&{&1.name, &1.icon})
+
+      assert icons == %{
+               "Alimentação" => "food",
+               "Transporte" => "car",
+               "Lazer" => "gamepad-variant",
+               "Saúde" => "heart-pulse",
+               "Contas da Casa" => "home",
+               "Outros" => "dots-horizontal"
+             }
     end
 
     test "register_user no longer seeds categories (seed now lives on Groups.create_group)" do

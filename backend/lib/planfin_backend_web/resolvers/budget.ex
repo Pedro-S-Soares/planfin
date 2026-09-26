@@ -94,6 +94,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
           id: to_string(category.id),
           name: category.name,
           type: category.type,
+          icon: category.icon,
           subcategories: Enum.map(category.subcategories, &format_subcategory/1)
         }
       end)
@@ -236,7 +237,8 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   def create_category(_parent, args, %{context: %{current_group: group}}) do
     attrs = %{
       name: args.name,
-      type: Map.get(args, :type, "expense")
+      type: Map.get(args, :type, "expense"),
+      icon: Map.get(args, :icon)
     }
 
     case Categories.create_category(group.id, attrs) do
@@ -246,6 +248,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
            id: to_string(category.id),
            name: category.name,
            type: category.type,
+           icon: category.icon,
            subcategories: []
          }}
 
@@ -264,6 +267,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
         %{}
         |> maybe_put(:name, args[:name], & &1)
         |> maybe_put(:type, args[:type], & &1)
+        |> put_if_present(:icon, args)
 
       case Categories.update_category(category, attrs) do
         {:ok, updated} ->
@@ -274,6 +278,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
              id: to_string(updated.id),
              name: updated.name,
              type: updated.type,
+             icon: updated.icon,
              subcategories: Enum.map(updated.subcategories, &format_subcategory/1)
            }}
 
@@ -363,6 +368,15 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   defp maybe_put(map, _key, nil, _transform), do: map
   defp maybe_put(map, key, value, transform), do: Map.put(map, key, transform.(value))
 
+  # Unlike maybe_put/4, distinguishes an absent arg from an explicit null,
+  # so clients can clear a field by sending null.
+  defp put_if_present(map, key, args) do
+    case Map.fetch(args, key) do
+      {:ok, value} -> Map.put(map, key, value)
+      :error -> map
+    end
+  end
+
   defp parse_today(%{today: date_str}) when is_binary(date_str) do
     Date.from_iso8601!(date_str)
   end
@@ -430,9 +444,16 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     %{
       id: to_string(subcategory.id),
       name: subcategory.name,
-      category_id: to_string(subcategory.category_id)
+      category_id: to_string(subcategory.category_id),
+      category: format_subcategory_category(subcategory.category)
     }
   end
+
+  defp format_subcategory_category(%Categories.Category{} = category) do
+    %{id: to_string(category.id), name: category.name, icon: category.icon}
+  end
+
+  defp format_subcategory_category(_not_loaded), do: nil
 
   defp format_errors(%Ecto.Changeset{} = changeset) do
     changeset

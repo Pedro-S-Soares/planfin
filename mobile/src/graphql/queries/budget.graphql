@@ -47,6 +47,11 @@ query ExpenseHistory($periodId: ID!) {
       subcategory {
         id
         name
+        category {
+          id
+          name
+          icon
+        }
       }
       createdBy {
         id
@@ -61,6 +66,7 @@ query Categories($type: String) {
     id
     name
     type
+    icon
     subcategories {
       id
       name

@@ -11,6 +11,9 @@ import {
   CategoriesQuery,
 } from "../graphql/__generated__/hooks";
 import { Card } from "../components/ui/Card";
+import { CategoryIcon } from "../components/ui/CategoryIcon";
+import { IconPicker } from "../components/ui/IconPicker";
+import { IconPickerButton } from "../components/ui/IconPickerButton";
 import { InlineError } from "../components/ui/InlineError";
 import { Colors, Radius, Shadow, categoryColor } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -99,12 +102,16 @@ export function CategoriesScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryType, setNewCategoryType] = useState<CategoryType>("expense");
+  const [newCategoryIcon, setNewCategoryIcon] = useState<string | null>(null);
   const [newSubName, setNewSubName] = useState<Record<string, string>>({});
+  const [isNewIconPickerOpen, setIsNewIconPickerOpen] = useState(false);
 
   // Edit modal state
   const [editingCat, setEditingCat] = useState<NonNullable<Category> | null>(null);
   const [editName, setEditName] = useState("");
   const [editType, setEditType] = useState<CategoryType>("expense");
+  const [editIcon, setEditIcon] = useState<string | null>(null);
+  const [isEditIconPickerOpen, setIsEditIconPickerOpen] = useState(false);
 
   const { data, loading, error, refetch } = useCategoriesQuery({ fetchPolicy: "network-only" });
 
@@ -117,20 +124,22 @@ export function CategoriesScreen() {
   const handleAddCategory = () => {
     const name = newCategoryName.trim();
     if (!name) return;
-    createCategory({ variables: { name, type: newCategoryType } });
+    createCategory({ variables: { name, type: newCategoryType, icon: newCategoryIcon } });
     setNewCategoryName("");
+    setNewCategoryIcon(null);
   };
 
   const openEditModal = (cat: NonNullable<Category>) => {
     setEditingCat(cat);
     setEditName(cat.name ?? "");
     setEditType((cat.type as CategoryType) ?? "expense");
+    setEditIcon(cat.icon ?? null);
   };
 
   const handleSaveEdit = () => {
     if (!editingCat || !editName.trim()) return;
     updateCategory({
-      variables: { id: editingCat.id ?? "", name: editName.trim(), type: editType },
+      variables: { id: editingCat.id ?? "", name: editName.trim(), type: editType, icon: editIcon },
     });
     setEditingCat(null);
   };
@@ -202,6 +211,11 @@ export function CategoriesScreen() {
         ListHeaderComponent={
           <Card padding={12} style={{ marginBottom: 4, gap: 10 }}>
             <View style={{ flexDirection: "row", gap: 8 }}>
+              <IconPickerButton
+                icon={newCategoryIcon}
+                name={newCategoryName}
+                onPress={() => setIsNewIconPickerOpen(true)}
+              />
               <TextInput
                 style={{
                   flex: 1,
@@ -257,7 +271,7 @@ export function CategoriesScreen() {
                   justifyContent: "center",
                   flexShrink: 0,
                 }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 999, backgroundColor: cc.dot }} />
+                  <CategoryIcon icon={cat.icon} name={cat.name ?? ""} size={20} />
                 </View>
                 <View style={{ flex: 1, gap: 3 }}>
                   <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>
@@ -356,23 +370,32 @@ export function CategoriesScreen() {
             <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.text }}>
               Editar categoria
             </Text>
-            <TextInput
-              style={{
-                height: 44,
-                borderWidth: 1.5,
-                borderColor: Colors.border,
-                borderRadius: Radius.sm,
-                paddingHorizontal: 12,
-                fontSize: 15,
-                color: Colors.text,
-                backgroundColor: Colors.surface,
-              }}
-              placeholder="Nome da categoria"
-              placeholderTextColor={Colors.textTer}
-              value={editName}
-              onChangeText={setEditName}
-              autoFocus
-            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <IconPickerButton
+                icon={editIcon}
+                name={editName}
+                size={44}
+                onPress={() => setIsEditIconPickerOpen(true)}
+              />
+              <TextInput
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderWidth: 1.5,
+                  borderColor: Colors.border,
+                  borderRadius: Radius.sm,
+                  paddingHorizontal: 12,
+                  fontSize: 15,
+                  color: Colors.text,
+                  backgroundColor: Colors.surface,
+                }}
+                placeholder="Nome da categoria"
+                placeholderTextColor={Colors.textTer}
+                value={editName}
+                onChangeText={setEditName}
+                autoFocus
+              />
+            </View>
             <TypeToggle value={editType} onChange={setEditType} />
             <View style={{ flexDirection: "row", gap: 10 }}>
               <TouchableOpacity
@@ -406,7 +429,21 @@ export function CategoriesScreen() {
             </View>
           </View>
         </View>
+        {/* Nested inside the edit Modal: iOS cannot present two sibling Modals at once. */}
+        <IconPicker
+          visible={isEditIconPickerOpen}
+          value={editIcon}
+          onSelect={setEditIcon}
+          onClose={() => setIsEditIconPickerOpen(false)}
+        />
       </Modal>
+
+      <IconPicker
+        visible={isNewIconPickerOpen}
+        value={newCategoryIcon}
+        onSelect={setNewCategoryIcon}
+        onClose={() => setIsNewIconPickerOpen(false)}
+      />
     </View>
   );
 }

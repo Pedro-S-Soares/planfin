@@ -1,13 +1,17 @@
 import { Text, TouchableOpacity, View } from "react-native";
 import { Colors, Radius } from "../../theme/tokens";
 import { categoryColor } from "../../theme/tokens";
+import { CategoryIcon } from "./CategoryIcon";
 import { useCurrency } from "../../context/CurrencyContext";
 
 interface ExpenseItem {
   id: string;
   amount: string;
   type?: string | null;
-  subcategory?: { name: string } | null;
+  subcategory?: {
+    name: string;
+    category?: { name?: string | null; icon?: string | null } | null;
+  } | null;
   note?: string | null;
   createdBy?: { id: string; email: string } | null;
 }
@@ -21,7 +25,8 @@ interface ExpenseRowProps {
 
 export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowProps) {
   const { currency } = useCurrency();
-  const cc = categoryColor(item.subcategory?.name ?? "");
+  const colorKey = item.subcategory?.category?.name ?? item.subcategory?.name ?? "";
+  const cc = categoryColor(colorKey);
   const isIncome = item.type === "income";
 
   return (
@@ -46,7 +51,12 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
         justifyContent: "center",
         flexShrink: 0,
       }}>
-        <View style={{ width: 8, height: 8, borderRadius: 999, backgroundColor: isIncome ? Colors.success : cc.dot }} />
+        <CategoryIcon
+          icon={item.subcategory?.category?.icon}
+          name={colorKey}
+          size={18}
+          color={isIncome ? Colors.success : cc.dot}
+        />
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>

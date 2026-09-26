@@ -36,6 +36,7 @@ export type BudgetDay = {
 
 export type Category = {
   __typename?: 'Category';
+  icon?: Maybe<Scalars['String']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
   name?: Maybe<Scalars['String']['output']>;
   subcategories?: Maybe<Array<Maybe<Subcategory>>>;
@@ -153,6 +154,7 @@ export type RootMutationType = {
 
 
 export type RootMutationTypeCreateCategoryArgs = {
+  icon?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   type?: InputMaybe<Scalars['String']['input']>;
 };
@@ -279,6 +281,7 @@ export type RootMutationTypeSwitchActiveGroupArgs = {
 
 
 export type RootMutationTypeUpdateCategoryArgs = {
+  icon?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
   name: Scalars['String']['input'];
   type?: InputMaybe<Scalars['String']['input']>;
@@ -361,7 +364,15 @@ export type RootQueryTypePeriodSummaryArgs = {
 
 export type Subcategory = {
   __typename?: 'Subcategory';
+  category?: Maybe<SubcategoryCategory>;
   categoryId?: Maybe<Scalars['ID']['output']>;
+  id?: Maybe<Scalars['ID']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
+};
+
+export type SubcategoryCategory = {
+  __typename?: 'SubcategoryCategory';
+  icon?: Maybe<Scalars['String']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
   name?: Maybe<Scalars['String']['output']>;
 };
@@ -498,19 +509,21 @@ export type DeleteExpenseMutation = { __typename?: 'RootMutationType', deleteExp
 export type CreateCategoryMutationVariables = Exact<{
   name: Scalars['String']['input'];
   type?: InputMaybe<Scalars['String']['input']>;
+  icon?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type CreateCategoryMutation = { __typename?: 'RootMutationType', createCategory?: { __typename?: 'Category', id?: string | null, name?: string | null, type?: string | null, subcategories?: Array<{ __typename?: 'Subcategory', id?: string | null, name?: string | null } | null> | null } | null };
+export type CreateCategoryMutation = { __typename?: 'RootMutationType', createCategory?: { __typename?: 'Category', id?: string | null, name?: string | null, type?: string | null, icon?: string | null, subcategories?: Array<{ __typename?: 'Subcategory', id?: string | null, name?: string | null } | null> | null } | null };
 
 export type UpdateCategoryMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   name: Scalars['String']['input'];
   type?: InputMaybe<Scalars['String']['input']>;
+  icon?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type UpdateCategoryMutation = { __typename?: 'RootMutationType', updateCategory?: { __typename?: 'Category', id?: string | null, name?: string | null, type?: string | null } | null };
+export type UpdateCategoryMutation = { __typename?: 'RootMutationType', updateCategory?: { __typename?: 'Category', id?: string | null, name?: string | null, type?: string | null, icon?: string | null } | null };
 
 export type DeleteCategoryMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -619,14 +632,14 @@ export type ExpenseHistoryQueryVariables = Exact<{
 }>;
 
 
-export type ExpenseHistoryQuery = { __typename?: 'RootQueryType', expenseHistory?: Array<{ __typename?: 'ExpenseDay', date?: string | null, total?: string | null, expenses?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null> | null } | null> | null };
+export type ExpenseHistoryQuery = { __typename?: 'RootQueryType', expenseHistory?: Array<{ __typename?: 'ExpenseDay', date?: string | null, total?: string | null, expenses?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, category?: { __typename?: 'SubcategoryCategory', id?: string | null, name?: string | null, icon?: string | null } | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null> | null } | null> | null };
 
 export type CategoriesQueryVariables = Exact<{
   type?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type CategoriesQuery = { __typename?: 'RootQueryType', categories?: Array<{ __typename?: 'Category', id?: string | null, name?: string | null, type?: string | null, subcategories?: Array<{ __typename?: 'Subcategory', id?: string | null, name?: string | null } | null> | null } | null> | null };
+export type CategoriesQuery = { __typename?: 'RootQueryType', categories?: Array<{ __typename?: 'Category', id?: string | null, name?: string | null, type?: string | null, icon?: string | null, subcategories?: Array<{ __typename?: 'Subcategory', id?: string | null, name?: string | null } | null> | null } | null> | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1180,11 +1193,12 @@ export type DeleteExpenseMutationHookResult = ReturnType<typeof useDeleteExpense
 export type DeleteExpenseMutationResult = Apollo.MutationResult<DeleteExpenseMutation>;
 export type DeleteExpenseMutationOptions = Apollo.BaseMutationOptions<DeleteExpenseMutation, DeleteExpenseMutationVariables>;
 export const CreateCategoryDocument = gql`
-    mutation CreateCategory($name: String!, $type: String) {
-  createCategory(name: $name, type: $type) {
+    mutation CreateCategory($name: String!, $type: String, $icon: String) {
+  createCategory(name: $name, type: $type, icon: $icon) {
     id
     name
     type
+    icon
     subcategories {
       id
       name
@@ -1209,6 +1223,7 @@ export type CreateCategoryMutationFn = Apollo.MutationFunction<CreateCategoryMut
  *   variables: {
  *      name: // value for 'name'
  *      type: // value for 'type'
+ *      icon: // value for 'icon'
  *   },
  * });
  */
@@ -1220,11 +1235,12 @@ export type CreateCategoryMutationHookResult = ReturnType<typeof useCreateCatego
 export type CreateCategoryMutationResult = Apollo.MutationResult<CreateCategoryMutation>;
 export type CreateCategoryMutationOptions = Apollo.BaseMutationOptions<CreateCategoryMutation, CreateCategoryMutationVariables>;
 export const UpdateCategoryDocument = gql`
-    mutation UpdateCategory($id: ID!, $name: String!, $type: String) {
-  updateCategory(id: $id, name: $name, type: $type) {
+    mutation UpdateCategory($id: ID!, $name: String!, $type: String, $icon: String) {
+  updateCategory(id: $id, name: $name, type: $type, icon: $icon) {
     id
     name
     type
+    icon
   }
 }
     `;
@@ -1246,6 +1262,7 @@ export type UpdateCategoryMutationFn = Apollo.MutationFunction<UpdateCategoryMut
  *      id: // value for 'id'
  *      name: // value for 'name'
  *      type: // value for 'type'
+ *      icon: // value for 'icon'
  *   },
  * });
  */
@@ -1789,6 +1806,11 @@ export const ExpenseHistoryDocument = gql`
       subcategory {
         id
         name
+        category {
+          id
+          name
+          icon
+        }
       }
       createdBy {
         id
@@ -1840,6 +1862,7 @@ export const CategoriesDocument = gql`
     id
     name
     type
+    icon
     subcategories {
       id
       name
