@@ -1,0 +1,26 @@
+query DashboardData($from: String!, $to: String!) {
+  expensesInRange(from: $from, to: $to) {
+    id
+    amount
+    date
+    isExtra
+    createdBy {
+      id
+      name
+      email
+    }
+    subcategory {
+      id
+      name
+      categoryId
+    }
+  }
+  categories(type: "expense") {
+    id
+    name
+    subcategories {
+      id
+      name
+    }
+  }
+}

@@ -34,6 +34,9 @@ import { EditPeriodScreen } from "./src/screens/EditPeriodScreen";
 import { PeriodsScreen } from "./src/screens/PeriodsScreen";
 import { usePeriod } from "./src/context/PeriodContext";
 import { PeriodProvider } from "./src/context/PeriodContext";
+import { DashboardScreen } from "./src/modules/dashboard/DashboardScreen";
+import { CategoryDetailScreen } from "./src/modules/dashboard/CategoryDetailScreen";
+import type { RangeKey } from "./src/modules/dashboard/types";
 
 enableScreens();
 
@@ -64,6 +67,7 @@ export type AppStackParamList = {
     categoryId?: string;
   };
   AddIncome: undefined;
+  CategoryDetail: { categoryId: string; range: RangeKey };
   EditIncome: {
     id: string;
     amount: string;
@@ -78,6 +82,7 @@ export type AppStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   History: undefined;
+  Dashboard: undefined;
   Categories: undefined;
 };
 
@@ -144,6 +149,11 @@ function MainTabs() {
         options={{ tabBarLabel: "Histórico", tabBarIcon: () => <Text>📋</Text> }}
       />
       <MainTab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{ tabBarLabel: "Dashboard", tabBarIcon: () => <Text>📊</Text> }}
+      />
+      <MainTab.Screen
         name="Categories"
         component={CategoriesScreen}
         options={{ tabBarLabel: "Categorias", tabBarIcon: () => <Text>🏷️</Text> }}
@@ -199,6 +209,11 @@ function AppNavigator() {
               headerTitleStyle: { color: "#17162B", fontWeight: "700" },
               headerShadowVisible: false,
             }}
+          />
+          <AppStack.Screen
+            name="CategoryDetail"
+            component={CategoryDetailScreen}
+            options={{ headerShown: false }}
           />
           <AppStack.Screen
             name="Periods"

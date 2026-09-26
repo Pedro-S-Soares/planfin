@@ -64,6 +64,23 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   def expense_history(_parent, _args, context), do: access_error(context)
 
+  def expenses_in_range(_parent, %{from: from, to: to} = args, %{
+        context: %{current_group: group}
+      }) do
+    type = Map.get(args, :type) || "expense"
+
+    with {:ok, from} <- Date.from_iso8601(from),
+         {:ok, to} <- Date.from_iso8601(to),
+         {:ok, expenses} <- Expenses.list_expenses_in_range(group.id, from, to, type) do
+      {:ok, Enum.map(expenses, &format_expense/1)}
+    else
+      {:error, :invalid_range} -> {:error, "Invalid date range"}
+      {:error, _} -> {:error, "Invalid date"}
+    end
+  end
+
+  def expenses_in_range(_parent, _args, context), do: access_error(context)
+
   def period_summary(_parent, %{period_id: period_id}, %{context: %{current_group: group}}) do
     case Periods.get_period(group.id, period_id) do
       {:ok, period} ->
@@ -428,14 +445,15 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       date: Date.to_iso8601(expense.date),
       note: expense.note,
       is_extra: expense.is_extra,
+      type: expense.type,
       subcategory:
         if(expense.subcategory, do: format_subcategory(expense.subcategory), else: nil),
       created_by: format_created_by(expense)
     }
   end
 
-  defp format_created_by(%{created_by: %{id: id, email: email}}) do
-    %{id: to_string(id), email: email}
+  defp format_created_by(%{created_by: %{id: id, email: email} = user}) do
+    %{id: to_string(id), email: email, name: Map.get(user, :name)}
   end
 
   defp format_created_by(_), do: nil

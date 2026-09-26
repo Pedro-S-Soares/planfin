@@ -125,6 +125,34 @@ defmodule PlanfinBackend.Expenses do
     end)
   end
 
+  @max_range_days 400
+
+  @doc """
+  Lists the group's expenses of `type` dated between `from` and `to`
+  (inclusive), regardless of period, ordered oldest first. Preloads
+  created_by and subcategory. Used by the analytics dashboard.
+
+  Returns `{:error, :invalid_range}` when `from` is after `to` or the range
+  spans more than #{@max_range_days} days.
+  """
+  def list_expenses_in_range(group_id, %Date{} = from, %Date{} = to, type \\ "expense") do
+    days = Date.diff(to, from)
+
+    if days < 0 or days > @max_range_days do
+      {:error, :invalid_range}
+    else
+      expenses =
+        Expense
+        |> where([e], e.group_id == ^group_id and e.type == ^type)
+        |> where([e], e.date >= ^from and e.date <= ^to)
+        |> order_by([e], asc: e.date, asc: e.inserted_at)
+        |> preload([:created_by, :subcategory])
+        |> Repo.all()
+
+      {:ok, expenses}
+    end
+  end
+
   @doc """
   Gets a single expense for the group. Raises `Ecto.NoResultsError` if not
   found or does not belong to the group.

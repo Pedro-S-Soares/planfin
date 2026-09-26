@@ -321,6 +321,8 @@ export type RootQueryType = {
   activePeriod?: Maybe<Period>;
   categories?: Maybe<Array<Maybe<Category>>>;
   expenseHistory?: Maybe<Array<Maybe<ExpenseDay>>>;
+  /** Expenses dated within [from, to] (ISO dates, inclusive, max 400 days), across periods */
+  expensesInRange?: Maybe<Array<Maybe<Expense>>>;
   groupInvites?: Maybe<Array<Maybe<GroupInvite>>>;
   groupMembers?: Maybe<Array<Maybe<GroupMember>>>;
   groupPeriods?: Maybe<Array<Maybe<Period>>>;
@@ -345,6 +347,13 @@ export type RootQueryTypeCategoriesArgs = {
 
 export type RootQueryTypeExpenseHistoryArgs = {
   periodId: Scalars['ID']['input'];
+};
+
+
+export type RootQueryTypeExpensesInRangeArgs = {
+  from: Scalars['String']['input'];
+  to: Scalars['String']['input'];
+  type?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -640,6 +649,14 @@ export type CategoriesQueryVariables = Exact<{
 
 
 export type CategoriesQuery = { __typename?: 'RootQueryType', categories?: Array<{ __typename?: 'Category', id?: string | null, name?: string | null, type?: string | null, icon?: string | null, subcategories?: Array<{ __typename?: 'Subcategory', id?: string | null, name?: string | null } | null> | null } | null> | null };
+
+export type DashboardDataQueryVariables = Exact<{
+  from: Scalars['String']['input'];
+  to: Scalars['String']['input'];
+}>;
+
+
+export type DashboardDataQuery = { __typename?: 'RootQueryType', expensesInRange?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, isExtra?: boolean | null, createdBy?: { __typename?: 'User', id?: string | null, name?: string | null, email?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null> | null, categories?: Array<{ __typename?: 'Category', id?: string | null, name?: string | null, subcategories?: Array<{ __typename?: 'Subcategory', id?: string | null, name?: string | null } | null> | null } | null> | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1906,6 +1923,71 @@ export type CategoriesQueryHookResult = ReturnType<typeof useCategoriesQuery>;
 export type CategoriesLazyQueryHookResult = ReturnType<typeof useCategoriesLazyQuery>;
 export type CategoriesSuspenseQueryHookResult = ReturnType<typeof useCategoriesSuspenseQuery>;
 export type CategoriesQueryResult = Apollo.QueryResult<CategoriesQuery, CategoriesQueryVariables>;
+export const DashboardDataDocument = gql`
+    query DashboardData($from: String!, $to: String!) {
+  expensesInRange(from: $from, to: $to) {
+    id
+    amount
+    date
+    isExtra
+    createdBy {
+      id
+      name
+      email
+    }
+    subcategory {
+      id
+      name
+      categoryId
+    }
+  }
+  categories(type: "expense") {
+    id
+    name
+    subcategories {
+      id
+      name
+    }
+  }
+}
+    `;
+
+/**
+ * __useDashboardDataQuery__
+ *
+ * To run a query within a React component, call `useDashboardDataQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardDataQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardDataQuery({
+ *   variables: {
+ *      from: // value for 'from'
+ *      to: // value for 'to'
+ *   },
+ * });
+ */
+export function useDashboardDataQuery(baseOptions: Apollo.QueryHookOptions<DashboardDataQuery, DashboardDataQueryVariables> & ({ variables: DashboardDataQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardDataQuery, DashboardDataQueryVariables>(DashboardDataDocument, options);
+      }
+export function useDashboardDataLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardDataQuery, DashboardDataQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardDataQuery, DashboardDataQueryVariables>(DashboardDataDocument, options);
+        }
+// @ts-ignore
+export function useDashboardDataSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<DashboardDataQuery, DashboardDataQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardDataQuery, DashboardDataQueryVariables>;
+export function useDashboardDataSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardDataQuery, DashboardDataQueryVariables>): Apollo.UseSuspenseQueryResult<DashboardDataQuery | undefined, DashboardDataQueryVariables>;
+export function useDashboardDataSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<DashboardDataQuery, DashboardDataQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<DashboardDataQuery, DashboardDataQueryVariables>(DashboardDataDocument, options);
+        }
+export type DashboardDataQueryHookResult = ReturnType<typeof useDashboardDataQuery>;
+export type DashboardDataLazyQueryHookResult = ReturnType<typeof useDashboardDataLazyQuery>;
+export type DashboardDataSuspenseQueryHookResult = ReturnType<typeof useDashboardDataSuspenseQuery>;
+export type DashboardDataQueryResult = Apollo.QueryResult<DashboardDataQuery, DashboardDataQueryVariables>;
 export const MyGroupsDocument = gql`
     query MyGroups {
   myGroups {

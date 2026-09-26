@@ -86,6 +86,14 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       resolve(&Budget.expense_history/3)
     end
 
+    @desc "Expenses dated within [from, to] (ISO dates, inclusive, max 400 days), across periods"
+    field :expenses_in_range, list_of(:expense) do
+      arg(:from, non_null(:string))
+      arg(:to, non_null(:string))
+      arg(:type, :string)
+      resolve(&Budget.expenses_in_range/3)
+    end
+
     field :period_summary, :period_summary do
       arg(:period_id, non_null(:id))
       resolve(&Budget.period_summary/3)

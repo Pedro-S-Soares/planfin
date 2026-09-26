@@ -366,4 +366,65 @@ defmodule PlanfinBackend.ExpensesTest do
       end
     end
   end
+
+  defp insert_expense!(group, user, date, amount, type \\ "expense") do
+    %Expense{}
+    |> Expense.changeset(%{
+      group_id: group.id,
+      created_by_id: user.id,
+      date: date,
+      amount: Decimal.new(amount),
+      type: type
+    })
+    |> Repo.insert!()
+  end
+
+  describe "list_expenses_in_range/4" do
+    test "returns expenses across periods within the inclusive range, oldest first" do
+      {user, group} = user_with_group_fixture()
+      insert_expense!(group, user, ~D[2026-02-28], "5.00")
+      march = insert_expense!(group, user, ~D[2026-03-01], "10.00")
+      may = insert_expense!(group, user, ~D[2026-05-31], "20.00")
+      insert_expense!(group, user, ~D[2026-06-01], "30.00")
+
+      assert {:ok, expenses} =
+               Expenses.list_expenses_in_range(group.id, ~D[2026-03-01], ~D[2026-05-31])
+
+      assert Enum.map(expenses, & &1.id) == [march.id, may.id]
+      assert %PlanfinBackend.Accounts.User{} = hd(expenses).created_by
+    end
+
+    test "filters by type and scopes to the group" do
+      {user, group} = user_with_group_fixture()
+      {other_user, other_group} = user_with_group_fixture()
+      expense = insert_expense!(group, user, ~D[2026-03-10], "10.00")
+      insert_expense!(group, user, ~D[2026-03-10], "999.00", "income")
+      insert_expense!(other_group, other_user, ~D[2026-03-10], "10.00")
+
+      assert {:ok, [only]} =
+               Expenses.list_expenses_in_range(group.id, ~D[2026-03-01], ~D[2026-03-31])
+
+      assert only.id == expense.id
+
+      assert {:ok, [income]} =
+               Expenses.list_expenses_in_range(
+                 group.id,
+                 ~D[2026-03-01],
+                 ~D[2026-03-31],
+                 "income"
+               )
+
+      assert income.type == "income"
+    end
+
+    test "rejects inverted or too long ranges" do
+      {_user, group} = user_with_group_fixture()
+
+      assert {:error, :invalid_range} =
+               Expenses.list_expenses_in_range(group.id, ~D[2026-03-02], ~D[2026-03-01])
+
+      assert {:error, :invalid_range} =
+               Expenses.list_expenses_in_range(group.id, ~D[2025-01-01], ~D[2026-03-01])
+    end
+  end
 end
