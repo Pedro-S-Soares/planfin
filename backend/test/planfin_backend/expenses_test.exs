@@ -290,12 +290,53 @@ defmodule PlanfinBackend.ExpensesTest do
 
       [first, second] = grouped
       assert first.date == ~D[2026-04-10]
-      assert Decimal.equal?(first.total, Decimal.new("20.00"))
+      assert Decimal.equal?(first.total, Decimal.new("-20.00"))
       assert length(first.expenses) == 1
 
       assert second.date == ~D[2026-04-05]
-      assert Decimal.equal?(second.total, Decimal.new("25.00"))
+      assert Decimal.equal?(second.total, Decimal.new("-25.00"))
       assert length(second.expenses) == 2
+    end
+
+    test "day total is income minus expenses, not the sum of absolute amounts" do
+      {user, group, period} = setup_group_with_period()
+
+      {:ok, _} =
+        Expenses.create_expense(
+          group.id,
+          user.id,
+          valid_expense_attrs(%{date: ~D[2026-04-05], amount: Decimal.new("30.00")})
+        )
+
+      {:ok, _} =
+        Expenses.create_expense(
+          group.id,
+          user.id,
+          valid_expense_attrs(%{
+            date: ~D[2026-04-05],
+            amount: Decimal.new("10.00"),
+            type: "income"
+          })
+        )
+
+      {:ok, _} =
+        Expenses.create_expense(
+          group.id,
+          user.id,
+          valid_expense_attrs(%{
+            date: ~D[2026-04-06],
+            amount: Decimal.new("50.00"),
+            type: "income"
+          })
+        )
+
+      [income_day, mixed_day] = Expenses.list_expenses_by_period(group.id, period.id)
+
+      assert income_day.date == ~D[2026-04-06]
+      assert Decimal.equal?(income_day.total, Decimal.new("50.00"))
+
+      assert mixed_day.date == ~D[2026-04-05]
+      assert Decimal.equal?(mixed_day.total, Decimal.new("-20.00"))
     end
 
     test "does not return expenses from another group's period" do

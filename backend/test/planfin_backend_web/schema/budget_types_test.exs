@@ -393,7 +393,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert length(history) == 1
       day = hd(history)
       assert day["date"] == Date.to_iso8601(today)
-      assert Decimal.equal?(Decimal.new(day["total"]), Decimal.new("30.00"))
+      assert Decimal.equal?(Decimal.new(day["total"]), Decimal.new("-30.00"))
       assert length(day["expenses"]) == 2
     end
 

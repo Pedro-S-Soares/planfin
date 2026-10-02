@@ -102,7 +102,8 @@ defmodule PlanfinBackend.Expenses do
   Lists expenses for the given period belonging to the group, grouped by date.
 
   Returns a list of maps `%{date: ~D[...], expenses: [...], total: Decimal}`,
-  ordered by date descending.
+  ordered by date descending. `total` is the day's net result (income minus
+  expenses), so a day with only spending has a negative total.
   """
   def list_expenses_by_period(group_id, period_id) do
     expenses =
@@ -118,7 +119,10 @@ defmodule PlanfinBackend.Expenses do
     |> Enum.map(fn {date, day_expenses} ->
       total =
         Enum.reduce(day_expenses, Decimal.new("0"), fn e, acc ->
-          Decimal.add(acc, e.amount)
+          case e.type do
+            "income" -> Decimal.add(acc, e.amount)
+            _ -> Decimal.sub(acc, e.amount)
+          end
         end)
 
       %{date: date, expenses: day_expenses, total: total}

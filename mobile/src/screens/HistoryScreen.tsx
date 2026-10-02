@@ -26,6 +26,19 @@ import type { AppStackParamList } from "../../App";
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 type ExpenseHistoryData = { expenseHistory: ExpenseDayWithAuthors[] };
 
+/** Day total is net (income − expenses); keep the sign visible so a spending day reads as negative. */
+function formatSignedAmount(total: string | null | undefined, symbol: string) {
+  const value = parseFloat(total ?? "0");
+  const safe = Number.isFinite(value) ? value : 0;
+  const sign = safe < 0 ? "-" : safe > 0 ? "+" : "";
+  return `${sign}${symbol} ${Math.abs(safe).toFixed(2).replace(".", ",")}`;
+}
+
+function dayTotalColor(total: string | null | undefined) {
+  const value = parseFloat(total ?? "0");
+  return value > 0 ? Colors.success : Colors.textSec;
+}
+
 function authorLabel(author: ExpenseWithAuthor["createdBy"], currentUserId?: string) {
   if (!author) return null;
   if (currentUserId && author.id === currentUserId) return "Você";
@@ -136,8 +149,8 @@ export function HistoryScreen() {
               <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.text }}>
                 {formatDateBR(day.date)}
               </Text>
-              <Text style={{ fontSize: 12, color: Colors.textSec, fontWeight: "600" }}>
-                Total: {currency.symbol} {parseFloat(day.total ?? "0").toFixed(2).replace(".", ",")}
+              <Text style={{ fontSize: 12, color: dayTotalColor(day.total), fontWeight: "600" }}>
+                Total: {formatSignedAmount(day.total, currency.symbol)}
               </Text>
             </View>
             <Card padding={12}>
