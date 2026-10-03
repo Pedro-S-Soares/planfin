@@ -2,7 +2,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   require Ecto.Query
 
   alias PlanfinBackend.{Expenses, Finance}
-  alias PlanfinBackend.Finance.{Bills, Calendar, Invoices, Panel, Projection, Salary}
+  alias PlanfinBackend.Finance.{Allowance, Bills, Calendar, Invoices, Panel, Projection, Salary}
   alias PlanfinBackendWeb.Resolvers.Budget
 
   # ---- Queries ----
@@ -87,6 +87,39 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   end
 
   def salary_projection(_parent, _args, context), do: access_error(context)
+
+  def allowance_plan(_parent, args, %{context: %{current_group: group}}) do
+    {:ok, group.id |> Allowance.build(today(args)) |> format_allowance()}
+  end
+
+  def allowance_plan(_parent, _args, context), do: access_error(context)
+
+  def reserve_status(_parent, args, %{context: %{current_group: group}}) do
+    status = Allowance.reserve_status(group.id, today(args))
+    {:ok, %{goal: decimal_string(status.goal), total: Decimal.to_string(status.total)}}
+  end
+
+  def reserve_status(_parent, _args, context), do: access_error(context)
+
+  def distribute_allowance(_parent, args, %{context: %{current_group: group, current_user: user}}) do
+    amount_result =
+      case args[:amount] do
+        nil -> {:ok, nil}
+        value -> parse_decimal(value)
+      end
+
+    with {:ok, amount} <- amount_result do
+      case Allowance.distribute(group.id, user.id, today(args), amount) do
+        {:ok, plan} -> {:ok, format_allowance(plan)}
+        {:error, :not_available} -> {:error, "Allowance is not available now"}
+        {:error, :invalid_amount} -> {:error, "Amount exceeds what is left over"}
+        {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+        {:error, reason} -> {:error, inspect(reason)}
+      end
+    end
+  end
+
+  def distribute_allowance(_parent, _args, context), do: access_error(context)
 
   def list_bills(_parent, _args, %{context: %{current_group: group}}) do
     {:ok, group.id |> Bills.list_bills() |> Enum.map(&format_bill/1)}
@@ -441,6 +474,29 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       salary_account_id: settings.salary_account_id,
       reserve_goal: decimal_string(settings.reserve_goal),
       upcoming_salary_dates: upcoming
+    }
+  end
+
+  defp format_allowance(plan) do
+    %{
+      cycle_end_date: Date.to_iso8601(plan.cycle_end_date),
+      opens_on: Date.to_iso8601(plan.opens_on),
+      free: Decimal.to_string(plan.free),
+      shortfall: Decimal.to_string(plan.shortfall),
+      amount: Decimal.to_string(plan.amount),
+      can_distribute: plan.can_distribute,
+      distributed: Decimal.to_string(plan.distributed),
+      shares:
+        Enum.map(plan.shares, fn %{account: a, amount: amount} ->
+          owner = a.owner_user
+
+          %{
+            account_id: a.id,
+            account_name: a.name,
+            owner_name: owner && (owner.name || owner.email |> String.split("@") |> hd()),
+            amount: Decimal.to_string(amount)
+          }
+        end)
     }
   end
 

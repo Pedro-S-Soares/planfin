@@ -9,6 +9,9 @@ import { formatMoney, formatMonth, formatShortDate, isInvoiceStatus, toNumber } 
 import type { FinancialAccount } from "../use-financial-accounts";
 import { StatusPill } from "./StatusPill";
 
+/** Statuses of an invoice that is closed and still owed. */
+const PAYABLE = ["closed", "partial", "overdue"];
+
 type CardSummaryProps = {
   card: FinancialAccount;
   onOpen: () => void;
@@ -25,7 +28,8 @@ export function CardSummary({ card, onOpen, onOpenInvoice, onPay }: CardSummaryP
 
   const invoices = data?.invoices?.filter((i) => i !== null) ?? [];
   const current = invoices.find((i) => i.status === "open") ?? null;
-  const toPay = invoices.find((i) => i.status !== "open" && i.status !== "paid" && toNumber(i.remaining) > 0) ?? null;
+  const toPay =
+    invoices.find((i) => PAYABLE.includes(i.status ?? "") && toNumber(i.remaining) > 0) ?? null;
 
   return (
     <Card padding={16} style={{ marginBottom: 12 }}>

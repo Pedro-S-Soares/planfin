@@ -203,3 +203,28 @@ query SalaryProjection($today: String) {
     }
   }
 }
+
+query AllowancePlan($today: String) {
+  allowancePlan(today: $today) {
+    cycleEndDate
+    opensOn
+    free
+    shortfall
+    amount
+    canDistribute
+    distributed
+    shares {
+      accountId
+      accountName
+      ownerName
+      amount
+    }
+  }
+}
+
+query ReserveStatus($today: String) {
+  reserveStatus(today: $today) {
+    goal
+    total
+  }
+}

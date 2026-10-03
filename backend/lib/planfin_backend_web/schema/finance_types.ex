@@ -173,7 +173,44 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :left, :string
   end
 
+  object :allowance_share do
+    field :account_id, :id
+    field :account_name, :string
+    field :owner_name, :string
+    field :amount, :string
+  end
+
+  @desc "End-of-cycle left over, split between the allowance accounts"
+  object :allowance_plan do
+    field :cycle_end_date, :string
+    @desc "First day the distribution is offered (cycle closing)"
+    field :opens_on, :string
+    field :free, :string
+    @desc "Part of the free money kept because the next salary can't cover what is on it"
+    field :shortfall, :string
+    field :amount, :string
+    field :can_distribute, :boolean
+    @desc "Allowance already transferred in this cycle"
+    field :distributed, :string
+    field :shares, list_of(:allowance_share)
+  end
+
+  object :reserve_status do
+    field :goal, :string
+    field :total, :string
+  end
+
   object :finance_queries do
+    field :allowance_plan, :allowance_plan do
+      arg(:today, :string)
+      resolve(&Finance.allowance_plan/3)
+    end
+
+    field :reserve_status, :reserve_status do
+      arg(:today, :string)
+      resolve(&Finance.reserve_status/3)
+    end
+
     field :salary_projection, :salary_projection do
       arg(:today, :string)
       resolve(&Finance.salary_projection/3)
@@ -233,6 +270,13 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
   end
 
   object :finance_mutations do
+    @desc "Transfer the end-of-cycle left over to the allowance accounts in equal parts"
+    field :distribute_allowance, :allowance_plan do
+      arg(:amount, :string)
+      arg(:today, :string)
+      resolve(&Finance.distribute_allowance/3)
+    end
+
     field :update_financial_settings, :financial_settings do
       arg(:salary_amount, :string)
       arg(:salary_business_day, :integer)
