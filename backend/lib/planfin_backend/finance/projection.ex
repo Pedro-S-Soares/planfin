@@ -29,7 +29,7 @@ defmodule PlanfinBackend.Finance.Projection do
       account_bills =
         occurrences
         |> Enum.filter(fn occ ->
-          occ.bill.account.kind != "credit_card" and occ.status != "paid" and
+          occ.bill.account.kind != "credit_card" and occ.status in ["pending", "overdue"] and
             in_range?(occ.due_date, next.start_date, next.end_date)
         end)
         |> sum_by(& &1.amount)
@@ -59,7 +59,7 @@ defmodule PlanfinBackend.Finance.Projection do
       pending_bills =
         occurrences
         |> Enum.filter(fn occ ->
-          occ.bill.account_id == card.id and occ.status != "paid" and
+          occ.bill.account_id == card.id and occ.status in ["pending", "overdue"] and
             in_range?(occ.due_date, invoice.start_date, Date.add(invoice.closing_date, -1))
         end)
         |> sum_by(& &1.amount)

@@ -44,7 +44,7 @@ export function PayBillScreen() {
       <FormLabel>{params.isCard ? "Data da cobrança" : "Data do pagamento"}</FormLabel>
       <DatePickerField value={date} onChange={setDate} />
       {error ? <Text style={{ color: Colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
-      <Btn label={params.isCard ? "Lançar na fatura" : "Registrar pagamento"} onPress={handlePay} loading={loading} />
+      <Btn label={params.isCard ? "Lançar na fatura agora" : "Registrar pagamento"} onPress={handlePay} loading={loading} />
     </ScrollView>
   );
 }

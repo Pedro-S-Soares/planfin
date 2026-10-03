@@ -8,6 +8,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   # ---- Queries ----
 
   def list_accounts(_parent, args, %{context: %{current_group: group}}) do
+    charge_card_bills(group.id, args)
     today = today(args)
     {:ok, group.id |> Finance.list_accounts() |> Enum.map(&format_account(&1, today))}
   end
@@ -15,6 +16,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def list_accounts(_parent, _args, context), do: access_error(context)
 
   def list_invoices(_parent, %{card_id: card_id} = args, %{context: %{current_group: group}}) do
+    charge_card_bills(group.id, args)
+
     with {:ok, card} <- fetch_card(group.id, card_id) do
       past = args |> Map.get(:past, 3) |> max(0) |> min(24)
       {:ok, card |> Invoices.list(today(args), past) |> Enum.map(&format_invoice/1)}
@@ -26,6 +29,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def get_invoice(_parent, %{card_id: card_id, month: month} = args, %{
         context: %{current_group: group}
       }) do
+    charge_card_bills(group.id, args)
+
     with {:ok, card} <- fetch_card(group.id, card_id),
          {:ok, month} <- parse_month(month) do
       {:ok, card |> Invoices.build(month, today(args), with_entries: true) |> format_invoice()}
@@ -50,6 +55,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def list_movements(_parent, _args, context), do: access_error(context)
 
   def panel(_parent, args, %{context: %{current_group: group}}) do
+    charge_card_bills(group.id, args)
     today = today(args)
     horizon = horizon(group.id, today)
 
@@ -80,6 +86,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def cycle_proposal(_parent, _args, context), do: access_error(context)
 
   def salary_projection(_parent, args, %{context: %{current_group: group}}) do
+    charge_card_bills(group.id, args)
+
     case Projection.build(group.id, today(args)) do
       nil -> {:ok, nil}
       p -> {:ok, format_projection(p)}
@@ -89,6 +97,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def salary_projection(_parent, _args, context), do: access_error(context)
 
   def allowance_plan(_parent, args, %{context: %{current_group: group}}) do
+    charge_card_bills(group.id, args)
     {:ok, group.id |> Allowance.build(today(args)) |> format_allowance()}
   end
 
@@ -128,6 +137,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def list_bills(_parent, _args, context), do: access_error(context)
 
   def bill_occurrences(_parent, %{month: month} = args, %{context: %{current_group: group}}) do
+    charge_card_bills(group.id, args)
+
     with {:ok, month} <- parse_month(month) do
       {:ok, group.id |> Bills.occurrences(month, today(args)) |> Enum.map(&format_occurrence/1)}
     end
@@ -245,6 +256,9 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
       {:error, msg} when is_binary(msg) ->
         {:error, msg}
+
+      {:error, :already_paid} ->
+        {:error, "This month is already paid"}
 
       {:error, reason} ->
         {:error, inspect(reason)}
@@ -644,6 +658,11 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   end
 
   # ---- Helpers ----
+
+  # Card bills whose day has come are charged lazily, right before any read
+  # that shows balances, invoices or bills.
+  @doc false
+  def charge_card_bills(group_id, args), do: Bills.charge_due_card_bills(group_id, today(args))
 
   defp fetch_account(group_id, id) do
     case Finance.get_account(group_id, id) do

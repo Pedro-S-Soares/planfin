@@ -20,6 +20,7 @@ const STATUS: Record<string, { label: string; color: string }> = {
   paid: { label: "Paga", color: Colors.successText },
   pending: { label: "A pagar", color: Colors.textSec },
   overdue: { label: "Vencida", color: Colors.danger },
+  skipped: { label: "Pulada", color: Colors.textTer },
 };
 
 export function BillsScreen() {
@@ -42,8 +43,9 @@ export function BillsScreen() {
   );
 
   const items = data?.billOccurrences?.filter((o) => o !== null) ?? [];
-  const total = items.reduce((acc, o) => acc + toNumber(o.amount), 0);
-  const paid = items.filter((o) => o.status === "paid").reduce((acc, o) => acc + toNumber(o.amount), 0);
+  const active = items.filter((o) => o.status !== "skipped");
+  const total = active.reduce((acc, o) => acc + toNumber(o.amount), 0);
+  const paid = active.filter((o) => o.status === "paid").reduce((acc, o) => acc + toNumber(o.amount), 0);
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
@@ -88,13 +90,37 @@ export function BillsScreen() {
               const billId = o.bill.id;
               if (o.status === "paid") {
                 confirm(
-                  { title: "Desfazer pagamento", message: "O lançamento criado no pagamento será apagado.", confirmLabel: "Desfazer", destructive: true },
+                  isCard
+                    ? {
+                        title: "Tirar da fatura",
+                        message: `A cobrança de ${formatMonth(month)} sai da fatura e não volta sozinha neste mês.`,
+                        confirmLabel: "Tirar",
+                        destructive: true,
+                      }
+                    : {
+                        title: "Desfazer pagamento",
+                        message: "O lançamento criado no pagamento será apagado.",
+                        confirmLabel: "Desfazer",
+                        destructive: true,
+                      },
                   () => unpayBill({ variables: { billId, month } }),
                 );
               } else {
                 navigation.navigate("PayBill", { billId, month, amount: o.amount ?? "0", name: o.bill.name ?? "", isCard });
               }
             };
+            const actionLabel =
+              o.status === "paid"
+                ? isCard
+                  ? "✓ Na fatura"
+                  : "✓ Paga"
+                : o.status === "skipped"
+                  ? "Pulada · lançar"
+                  : isCard
+                    ? `Entra em ${formatShortDate(o.dueDate)}`
+                    : o.status === "overdue"
+                      ? "Pagar · vencida"
+                      : "Pagar";
             return (
               <View key={o.bill?.id ?? ""} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10 }}>
                 <TouchableOpacity onPress={() => o.bill?.id && navigation.navigate("BillForm", { billId: o.bill.id })} style={{ flex: 1 }} activeOpacity={0.7}>
@@ -111,8 +137,7 @@ export function BillsScreen() {
                     style={{ marginTop: 4, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: o.status === "paid" ? Colors.successLight : Colors.primaryLight }}
                   >
                     <Text style={{ fontSize: 12, fontWeight: "700", color: o.status === "paid" ? status.color : Colors.primaryText }}>
-                      {o.status === "paid" ? "✓ Paga" : isCard ? "Lançar" : "Pagar"}
-                      {o.status === "overdue" ? " · vencida" : ""}
+                      {actionLabel}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -122,6 +147,9 @@ export function BillsScreen() {
         )}
       </Card>
 
+      <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 12, lineHeight: 17 }}>
+        As despesas no cartão entram sozinhas na fatura no dia do vencimento. As da conta você marca como pagas.
+      </Text>
       <Btn label="+ Nova despesa fixa" onPress={() => navigation.navigate("BillForm", {})} />
     </ScrollView>
   );
