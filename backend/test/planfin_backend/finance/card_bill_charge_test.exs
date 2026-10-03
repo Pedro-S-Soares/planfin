@@ -137,20 +137,38 @@ defmodule PlanfinBackend.Finance.CardBillChargeTest do
     assert hd(Bills.occurrences(ctx.group.id, {2026, 10}, ~D[2026-10-05])).status == "overdue"
   end
 
-  test "no occurrence before the day the bill was created" do
+  test "a bill created after its day this month still shows this month, unpaid, without auto charge" do
     ctx = setup_group()
 
-    bill(
-      ctx,
-      %{name: "Academia", amount: Decimal.new("99.90"), due_day: 2, account_id: ctx.card.id},
-      ~N[2026-10-03 12:00:00]
-    )
+    b =
+      bill(
+        ctx,
+        %{name: "Academia", amount: Decimal.new("99.90"), due_day: 1, account_id: ctx.card.id},
+        ~N[2026-10-03 12:00:00]
+      )
 
     :ok = Bills.charge_due_card_bills(ctx.group.id, ~D[2026-10-03])
     assert charges(ctx.card) == []
-    assert Bills.occurrences(ctx.group.id, {2026, 10}, ~D[2026-10-03]) == []
 
-    assert [%{due_date: ~D[2026-11-02]}] =
-             Bills.occurrences(ctx.group.id, {2026, 11}, ~D[2026-10-03])
+    assert [
+             %{
+               status: "overdue",
+               due_date: ~D[2026-10-01],
+               next_due_date: ~D[2026-11-01],
+               paid_on: nil
+             }
+           ] =
+             Bills.occurrences(ctx.group.id, {2026, 10}, ~D[2026-10-03])
+
+    {:ok, paid} =
+      Bills.pay(ctx.group.id, ctx.user.id, b, {2026, 10}, Decimal.new("99.90"), ~D[2026-10-03])
+
+    assert paid.status == "paid"
+    assert paid.paid_on == ~D[2026-10-03]
+    assert paid.next_due_date == ~D[2026-11-01]
+
+    # Next month it is charged automatically on the 1st
+    :ok = Bills.charge_due_card_bills(ctx.group.id, ~D[2026-11-01])
+    assert length(charges(ctx.card)) == 2
   end
 end

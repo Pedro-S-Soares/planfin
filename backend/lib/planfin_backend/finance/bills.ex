@@ -11,7 +11,10 @@ defmodule PlanfinBackend.Finance.Bills do
   (`charge_due_card_bills/2`), landing on the invoice of that date. Removing
   such a charge marks the month as `skipped` so it is not charged again.
 
-  A bill only has occurrences due on or after the day it was created.
+  A bill exists every month from the month it was created on, whatever its
+  day: a bill created on the 3rd with day 1 already has this month's
+  occurrence, pending until the user marks it paid. Only the automatic card
+  charge waits for a due date after the bill was created.
   """
 
   import Ecto.Query, warn: false
@@ -122,9 +125,13 @@ defmodule PlanfinBackend.Finance.Bills do
     |> Enum.reduce(Decimal.new("0"), &Decimal.add(&2, &1.amount))
   end
 
-  # Occurrences due before the bill existed were settled outside the app.
-  defp exists_in?(%RecurringBill{inserted_at: inserted_at} = bill, month),
-    do: Date.compare(due_date(bill, month), NaiveDateTime.to_date(inserted_at)) != :lt
+  defp exists_in?(%RecurringBill{inserted_at: inserted_at}, month),
+    do: {inserted_at.year, inserted_at.month} <= month
+
+  # A due date that passed before the bill was registered may already be on
+  # the card; it is shown as pending but never charged automatically.
+  defp auto_chargeable?(%RecurringBill{inserted_at: inserted_at}, due),
+    do: Date.compare(due, NaiveDateTime.to_date(inserted_at)) != :lt
 
   defp occurrence(bill, month, payments, today) do
     due = due_date(bill, month)
@@ -143,7 +150,9 @@ defmodule PlanfinBackend.Finance.Bills do
       bill: bill,
       month: month,
       due_date: due,
+      next_due_date: due_date(bill, Calendar.add_months(month, 1)),
       status: status,
+      paid_on: expense && expense.date,
       amount: if(expense, do: expense.amount, else: bill.amount),
       expense_id: expense && expense.id
     }
@@ -171,6 +180,7 @@ defmodule PlanfinBackend.Finance.Bills do
           exists_in?(bill, month),
           not Map.has_key?(payments, {bill.id, month}),
           due = due_date(bill, month),
+          auto_chargeable?(bill, due),
           Date.compare(due, today) != :gt do
         pay(group_id, owner_id, bill, month, bill.amount, due)
       end

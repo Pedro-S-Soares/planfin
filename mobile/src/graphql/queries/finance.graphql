@@ -135,6 +135,8 @@ query BillOccurrences($month: String!, $today: String) {
   billOccurrences(month: $month, today: $today) {
     month
     dueDate
+    nextDueDate
+    paidOn
     status
     amount
     expenseId

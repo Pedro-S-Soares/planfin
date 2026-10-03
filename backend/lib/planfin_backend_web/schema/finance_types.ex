@@ -73,8 +73,12 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     @desc "YYYY-MM"
     field :month, :string
     field :due_date, :string
-    @desc "pending | overdue | paid"
+    @desc "Due date of the following month"
+    field :next_due_date, :string
+    @desc "pending | overdue | paid | skipped"
     field :status, :string
+    @desc "Date of the payment/charge when paid"
+    field :paid_on, :string
     @desc "Real amount when paid, estimate otherwise"
     field :amount, :string
     field :expense_id, :id

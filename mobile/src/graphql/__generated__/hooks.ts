@@ -68,7 +68,11 @@ export type BillOccurrence = {
   expenseId?: Maybe<Scalars['ID']['output']>;
   /** YYYY-MM */
   month?: Maybe<Scalars['String']['output']>;
-  /** pending | overdue | paid */
+  /** Due date of the following month */
+  nextDueDate?: Maybe<Scalars['String']['output']>;
+  /** Date of the payment/charge when paid */
+  paidOn?: Maybe<Scalars['String']['output']>;
+  /** pending | overdue | paid | skipped */
   status?: Maybe<Scalars['String']['output']>;
 };
 
@@ -1352,7 +1356,7 @@ export type BillOccurrencesQueryVariables = Exact<{
 }>;
 
 
-export type BillOccurrencesQuery = { __typename?: 'RootQueryType', billOccurrences?: Array<{ __typename?: 'BillOccurrence', month?: string | null, dueDate?: string | null, status?: string | null, amount?: string | null, expenseId?: string | null, bill?: { __typename?: 'RecurringBill', id?: string | null, name?: string | null, amount?: string | null, dueDay?: number | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null } | null> | null };
+export type BillOccurrencesQuery = { __typename?: 'RootQueryType', billOccurrences?: Array<{ __typename?: 'BillOccurrence', month?: string | null, dueDate?: string | null, nextDueDate?: string | null, paidOn?: string | null, status?: string | null, amount?: string | null, expenseId?: string | null, bill?: { __typename?: 'RecurringBill', id?: string | null, name?: string | null, amount?: string | null, dueDay?: number | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null } | null> | null };
 
 export type FinancialSettingsQueryVariables = Exact<{
   today?: InputMaybe<Scalars['String']['input']>;
@@ -3822,6 +3826,8 @@ export const BillOccurrencesDocument = gql`
   billOccurrences(month: $month, today: $today) {
     month
     dueDate
+    nextDueDate
+    paidOn
     status
     amount
     expenseId
