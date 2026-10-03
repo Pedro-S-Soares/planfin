@@ -333,6 +333,8 @@ export function HomeScreen() {
                   isExtra: item.isExtra ?? undefined,
                   subcategoryId: item.subcategory?.id ?? undefined,
                   categoryId: undefined,
+                  accountId: item.account?.id ?? undefined,
+                  countsInBudget: item.countsInBudget ?? undefined,
                 })}
                 authorLabel={authorLabel(item.createdBy, user?.id)}
               />

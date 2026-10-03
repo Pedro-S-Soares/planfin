@@ -124,7 +124,7 @@ defmodule PlanfinBackend.BudgetDays do
     # Only regular (non-extra) entries count toward the daily balance.
     # Filter by group_id and date range instead of period_id.
     base_query =
-      Expense
+      Expense.in_budget()
       |> where(
         [e],
         e.group_id == ^period.group_id and
@@ -161,7 +161,7 @@ defmodule PlanfinBackend.BudgetDays do
   def compute_remaining_total(period) do
     # Both regular and extra entries affect the total budget.
     base_query =
-      Expense
+      Expense.in_budget()
       |> where(
         [e],
         e.group_id == ^period.group_id and
@@ -199,7 +199,7 @@ defmodule PlanfinBackend.BudgetDays do
     budget = Decimal.sub(period.total_budget, Decimal.mult(period.daily_limit, Decimal.new(days)))
 
     base_query =
-      Expense
+      Expense.in_budget()
       |> where(
         [e],
         e.group_id == ^period.group_id and
@@ -275,7 +275,7 @@ defmodule PlanfinBackend.BudgetDays do
   """
   def get_total_spent_for_day(group_id, date) do
     base_query =
-      Expense
+      Expense.in_budget()
       |> where([e], e.group_id == ^group_id and e.date == ^date and e.is_extra == false)
 
     total_expenses =

@@ -195,7 +195,10 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       note: Map.get(args, :note),
       is_extra: Map.get(args, :is_extra, false),
       subcategory_id: Map.get(args, :subcategory_id),
-      type: Map.get(args, :type, "expense")
+      type: Map.get(args, :type, "expense"),
+      account_id: Map.get(args, :account_id),
+      installments: Map.get(args, :installments, 1),
+      counts_in_budget: Map.get(args, :counts_in_budget, true)
     }
 
     case Expenses.create_expense(group.id, user.id, attrs) do
@@ -208,7 +211,16 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       {:error, :date_out_of_range} ->
         {:error, "Date is out of the period range"}
 
-      {:error, changeset} ->
+      {:error, :account_not_found} ->
+        {:error, "Account not found"}
+
+      {:error, :installments_require_card} ->
+        {:error, "Installments require a credit card"}
+
+      {:error, :invalid_installments} ->
+        {:error, "Invalid number of installments"}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
         {:error, format_errors(changeset)}
     end
   end
@@ -224,6 +236,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       |> maybe_put(:is_extra, args[:is_extra], & &1)
       |> maybe_put(:subcategory_id, args[:subcategory_id], & &1)
       |> maybe_put(:type, args[:type], & &1)
+      |> put_if_present(:account_id, args)
 
     case Expenses.update_expense(group.id, id, attrs) do
       {:ok, expense} ->
@@ -231,6 +244,9 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
       {:error, :not_found} ->
         {:error, "Expense not found"}
+
+      {:error, :account_not_found} ->
+        {:error, "Account not found"}
 
       {:error, :date_out_of_range} ->
         {:error, "Date is out of the period range"}
@@ -438,7 +454,8 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
     }
   end
 
-  defp format_expense(expense) do
+  @doc false
+  def format_expense(expense) do
     %{
       id: to_string(expense.id),
       amount: Decimal.to_string(expense.amount),
@@ -448,9 +465,19 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       type: expense.type,
       subcategory:
         if(expense.subcategory, do: format_subcategory(expense.subcategory), else: nil),
-      created_by: format_created_by(expense)
+      created_by: format_created_by(expense),
+      account: format_expense_account(expense),
+      counts_in_budget: expense.counts_in_budget,
+      installment_group_id: expense.installment_group_id,
+      installment_number: expense.installment_number,
+      installment_count: expense.installment_count
     }
   end
+
+  defp format_expense_account(%{account: %PlanfinBackend.Finance.Account{} = a}),
+    do: %{id: a.id, name: a.name, kind: a.kind}
+
+  defp format_expense_account(_), do: nil
 
   defp format_created_by(%{created_by: %{id: id, email: email} = user}) do
     %{id: to_string(id), email: email, name: Map.get(user, :name)}
@@ -473,7 +500,8 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   defp format_subcategory_category(_not_loaded), do: nil
 
-  defp format_errors(%Ecto.Changeset{} = changeset) do
+  @doc false
+  def format_errors(%Ecto.Changeset{} = changeset) do
     changeset
     |> Ecto.Changeset.traverse_errors(fn {msg, opts} ->
       Enum.reduce(opts, msg, fn {key, val}, acc ->

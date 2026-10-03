@@ -1,6 +1,7 @@
 defmodule PlanfinBackend.Expenses.Expense do
   use Ecto.Schema
   import Ecto.Changeset
+  import Ecto.Query, only: [from: 2]
 
   alias PlanfinBackend.Repo
   alias PlanfinBackend.Categories.Subcategory
@@ -14,14 +15,28 @@ defmodule PlanfinBackend.Expenses.Expense do
     field :note, :string
     field :is_extra, :boolean, default: false
     field :type, :string, default: "expense"
+    field :counts_in_budget, :boolean, default: true
+    field :installment_group_id, :binary_id
+    field :installment_number, :integer
+    field :installment_count, :integer
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :created_by, PlanfinBackend.Accounts.User, type: :integer
     belongs_to :period, PlanfinBackend.Periods.Period, type: :binary_id
     belongs_to :budget_day, PlanfinBackend.Periods.BudgetDay, type: :binary_id
     belongs_to :subcategory, PlanfinBackend.Categories.Subcategory, type: :binary_id
+    belongs_to :account, PlanfinBackend.Finance.Account, type: :binary_id
 
     timestamps()
+  end
+
+  @doc """
+  Entries that feed the daily/period budget. Every budget calculation must start
+  from this query: entries with `counts_in_budget: false` (future installments,
+  bills, salary, reserve and allowance movements) never touch the budget.
+  """
+  def in_budget do
+    from(e in __MODULE__, where: e.counts_in_budget == true)
   end
 
   @doc """
@@ -39,7 +54,12 @@ defmodule PlanfinBackend.Expenses.Expense do
       :created_by_id,
       :period_id,
       :budget_day_id,
-      :subcategory_id
+      :subcategory_id,
+      :account_id,
+      :counts_in_budget,
+      :installment_group_id,
+      :installment_number,
+      :installment_count
     ])
     |> validate_required([:amount, :date, :group_id, :created_by_id])
     |> validate_inclusion(:type, ["expense", "income"])

@@ -19,6 +19,8 @@ import { Chip } from "../components/ui/Chip";
 import { displayToAPI, formatCents } from "../lib/currency";
 import { categoryColor, Colors, Radius } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { AccountPicker } from "../modules/finance/components/AccountPicker";
+import { useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import type { AppStackParamList } from "../../App";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
@@ -34,6 +36,7 @@ const schema = yup.object({
   note: yup.string().optional(),
   categoryId: yup.string().optional(),
   subcategoryId: yup.string().optional(),
+  accountId: yup.string().nullable().optional(),
 });
 
 function apiToDisplay(apiAmount: string): string {
@@ -45,7 +48,10 @@ export function EditExpenseScreen() {
   usePageTitle("Planfin - Editar gasto");
   const navigation = useNavigation();
   const route = useRoute<NativeStackScreenProps<AppStackParamList, "EditExpense">["route"]>();
-  const { id, amount, date, note, isExtra, subcategoryId, categoryId } = route.params;
+  const { id, amount, date, note, isExtra, subcategoryId, categoryId, accountId: initialAccountId, countsInBudget } =
+    route.params;
+  const { accounts } = useFinancialAccounts();
+  const isBudgetEntry = countsInBudget !== false;
 
   const { period, refetch } = usePeriod();
   const { data: catData } = useCategoriesQuery({ variables: { type: "expense" } });
@@ -60,6 +66,7 @@ export function EditExpenseScreen() {
       note: note ?? "",
       categoryId: categoryId ?? "",
       subcategoryId: subcategoryId ?? "",
+      accountId: initialAccountId ?? null,
     },
   });
 
@@ -70,13 +77,29 @@ export function EditExpenseScreen() {
   const [updateExpense, { loading: updating }] = useUpdateExpenseMutation({
     onCompleted: () => { refetch(); navigation.goBack(); },
     onError: (error) => setError("root", { message: error.message }),
-    refetchQueries: [{ query: ActivePeriodDocument }, "ExpenseHistory"],
+    refetchQueries: [
+      { query: ActivePeriodDocument },
+      "ExpenseHistory",
+      "ExpenseHistoryWithAuthors",
+      "FinancialAccounts",
+      "Invoices",
+      "Invoice",
+      "AccountMovements",
+    ],
   });
 
   const [deleteExpense, { loading: deleting }] = useDeleteExpenseMutation({
     onCompleted: () => { refetch(); navigation.goBack(); },
     onError: (error) => setError("root", { message: error.message }),
-    refetchQueries: [{ query: ActivePeriodDocument }, "ExpenseHistory"],
+    refetchQueries: [
+      { query: ActivePeriodDocument },
+      "ExpenseHistory",
+      "ExpenseHistoryWithAuthors",
+      "FinancialAccounts",
+      "Invoices",
+      "Invoice",
+      "AccountMovements",
+    ],
   });
 
   const onSubmit = (values: yup.InferType<typeof schema>) => {
@@ -88,6 +111,7 @@ export function EditExpenseScreen() {
         isExtra: values.isExtra ?? false,
         note: values.note || null,
         subcategoryId: values.subcategoryId || null,
+        ...(values.accountId !== (initialAccountId ?? null) ? { accountId: values.accountId ?? null } : {}),
       },
     });
   };
@@ -122,9 +146,17 @@ export function EditExpenseScreen() {
             value={value}
             onChange={onChange}
             error={errors.date?.message}
-            minDate={period?.startDate ?? undefined}
-            maxDate={period?.endDate ?? undefined}
+            minDate={isBudgetEntry ? period?.startDate ?? undefined : undefined}
+            maxDate={isBudgetEntry ? period?.endDate ?? undefined : undefined}
           />
+        )}
+      />
+
+      <Controller
+        control={control}
+        name="accountId"
+        render={({ field: { onChange, value } }) => (
+          <AccountPicker label="Pago com" accounts={accounts} value={value ?? null} onChange={onChange} allowNone />
         )}
       />
 

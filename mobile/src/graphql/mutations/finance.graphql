@@ -1,0 +1,74 @@
+mutation CreateFinancialAccount(
+  $name: String!
+  $kind: String!
+  $balance: String
+  $closingDay: Int
+  $dueDay: Int
+  $ownerUserId: ID
+  $today: String
+) {
+  createFinancialAccount(
+    name: $name
+    kind: $kind
+    balance: $balance
+    closingDay: $closingDay
+    dueDay: $dueDay
+    ownerUserId: $ownerUserId
+    today: $today
+  ) {
+    id
+    name
+    kind
+    isPrimary
+    balance
+    closingDay
+    dueDay
+  }
+}
+
+mutation UpdateFinancialAccount($id: ID!, $name: String, $closingDay: Int, $dueDay: Int, $ownerUserId: ID) {
+  updateFinancialAccount(id: $id, name: $name, closingDay: $closingDay, dueDay: $dueDay, ownerUserId: $ownerUserId) {
+    id
+    name
+    closingDay
+    dueDay
+  }
+}
+
+mutation MakePrimaryAccount($id: ID!) {
+  makePrimaryAccount(id: $id) {
+    id
+    isPrimary
+  }
+}
+
+mutation ArchiveFinancialAccount($id: ID!) {
+  archiveFinancialAccount(id: $id)
+}
+
+mutation SetAccountBalance($id: ID!, $balance: String!, $today: String) {
+  setAccountBalance(id: $id, balance: $balance, today: $today) {
+    id
+    balance
+    balanceDate
+  }
+}
+
+mutation CreateTransfer($fromAccountId: ID!, $toAccountId: ID!, $amount: String!, $date: String!, $kind: String, $note: String) {
+  createTransfer(fromAccountId: $fromAccountId, toAccountId: $toAccountId, amount: $amount, date: $date, kind: $kind, note: $note) {
+    id
+  }
+}
+
+mutation PayInvoice($cardId: ID!, $month: String!, $fromAccountId: ID!, $amount: String!, $date: String!) {
+  payInvoice(cardId: $cardId, month: $month, fromAccountId: $fromAccountId, amount: $amount, date: $date) {
+    month
+    status
+    paid
+    remaining
+  }
+}
+
+mutation AssignEntriesToAccount($accountId: ID!, $fromDate: String!) {
+  assignEntriesToAccount(accountId: $accountId, fromDate: $fromDate)
+}

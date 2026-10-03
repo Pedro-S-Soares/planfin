@@ -1,0 +1,84 @@
+query FinancialAccounts($today: String) {
+  financialAccounts(today: $today) {
+    id
+    name
+    kind
+    isPrimary
+    balance
+    balanceDate
+    closingDay
+    dueDay
+    owner {
+      id
+      name
+      email
+    }
+  }
+}
+
+query Invoices($cardId: ID!, $today: String, $past: Int) {
+  invoices(cardId: $cardId, today: $today, past: $past) {
+    cardId
+    month
+    startDate
+    closingDate
+    dueDate
+    total
+    paid
+    remaining
+    status
+  }
+}
+
+query Invoice($cardId: ID!, $month: String!, $today: String) {
+  invoice(cardId: $cardId, month: $month, today: $today) {
+    cardId
+    month
+    startDate
+    closingDate
+    dueDate
+    total
+    paid
+    remaining
+    status
+    entries {
+      id
+      amount
+      date
+      note
+      type
+      isExtra
+      countsInBudget
+      installmentNumber
+      installmentCount
+      account {
+        id
+        name
+        kind
+      }
+      subcategory {
+        id
+        name
+        category {
+          id
+          name
+          icon
+        }
+      }
+      createdBy {
+        id
+        email
+      }
+    }
+  }
+}
+
+query AccountMovements($accountId: ID!, $limit: Int) {
+  accountMovements(accountId: $accountId, limit: $limit) {
+    id
+    kind
+    date
+    description
+    amount
+  }
+}

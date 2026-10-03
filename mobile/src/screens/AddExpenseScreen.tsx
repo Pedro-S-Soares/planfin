@@ -2,7 +2,7 @@ import { View, Text, TextInput, TouchableOpacity, Switch, ScrollView } from "rea
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import {
   useCategoriesQuery,
   useCreateExpenseMutation,
@@ -18,6 +18,12 @@ import { toISODate } from "../lib/date";
 import { displayToAPI } from "../lib/currency";
 import { categoryColor, Colors, Radius } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { AccountPicker } from "../modules/finance/components/AccountPicker";
+import { InstallmentsPicker } from "../modules/finance/components/InstallmentsPicker";
+import { ToggleRow } from "../modules/finance/components/ToggleRow";
+import { defaultSpendingAccountId, useFinancialAccounts } from "../modules/finance/use-financial-accounts";
+import { parseCents } from "../lib/currency";
+import type { AppStackParamList } from "../../App";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -32,12 +38,18 @@ const schema = yup.object({
   note: yup.string().optional(),
   categoryId: yup.string().optional(),
   subcategoryId: yup.string().optional(),
+  // undefined = use the default account; null = no account
+  accountId: yup.string().nullable().optional(),
+  installments: yup.number().default(1),
+  countsInBudget: yup.boolean().default(true),
 });
 
 export function AddExpenseScreen() {
   usePageTitle("Planfin - Novo gasto");
   const navigation = useNavigation();
+  const { params } = useRoute<RouteProp<AppStackParamList, "AddExpense">>();
   const { period, refetch } = usePeriod();
+  const { accounts } = useFinancialAccounts();
 
   const { data: catData } = useCategoriesQuery({ variables: { type: "expense" } });
   const categories = catData?.categories ?? [];
@@ -46,8 +58,11 @@ export function AddExpenseScreen() {
     resolver: yupResolver(schema),
     defaultValues: {
       amount: "0,00",
-      date: toISODate(new Date()),
+      date: params?.date ?? toISODate(new Date()),
       isExtra: false,
+      accountId: params?.accountId,
+      installments: 1,
+      countsInBudget: !params?.outsideBudget,
       note: "",
       categoryId: "",
       subcategoryId: "",
@@ -55,13 +70,29 @@ export function AddExpenseScreen() {
   });
 
   const selectedCategoryId = watch("categoryId");
+  const chosenAccountId = watch("accountId");
+  const accountId = chosenAccountId === undefined ? defaultSpendingAccountId(accounts) : chosenAccountId;
+  const account = accounts.find((a) => a.id === accountId) ?? null;
+  const isCard = account?.kind === "credit_card";
+  // Allowance and reserve accounts never touch the household budget.
+  const isPrivateAccount = account?.kind === "allowance" || account?.kind === "reserve";
+  const countsInBudget = watch("countsInBudget") && !isPrivateAccount;
+  const amountValue = parseCents(watch("amount")) / 100;
   const subcategories: NonNullable<Subcategory>[] =
     categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
 
   const [createExpense, { loading }] = useCreateExpenseMutation({
     onCompleted: () => { refetch(); navigation.goBack(); },
     onError: (error) => setError("root", { message: error.message }),
-    refetchQueries: [{ query: ActivePeriodDocument }, "ExpenseHistory"],
+    refetchQueries: [
+      { query: ActivePeriodDocument },
+      "ExpenseHistory",
+      "ExpenseHistoryWithAuthors",
+      "FinancialAccounts",
+      "Invoices",
+      "Invoice",
+      "AccountMovements",
+    ],
   });
 
   const onSubmit = (values: yup.InferType<typeof schema>) => {
@@ -72,6 +103,9 @@ export function AddExpenseScreen() {
         isExtra: values.isExtra ?? false,
         note: values.note || null,
         subcategoryId: values.subcategoryId || null,
+        accountId,
+        installments: isCard ? values.installments : 1,
+        countsInBudget,
       },
     });
   };
@@ -104,11 +138,29 @@ export function AddExpenseScreen() {
             value={value}
             onChange={onChange}
             error={errors.date?.message}
-            minDate={period?.startDate ?? undefined}
-            maxDate={period?.endDate ?? undefined}
+            minDate={countsInBudget ? period?.startDate ?? undefined : undefined}
+            maxDate={countsInBudget ? period?.endDate ?? undefined : undefined}
           />
         )}
       />
+
+      <Controller
+        control={control}
+        name="accountId"
+        render={({ field: { onChange } }) => (
+          <AccountPicker label="Pago com" accounts={accounts} value={accountId} onChange={onChange} allowNone />
+        )}
+      />
+
+      {isCard ? (
+        <Controller
+          control={control}
+          name="installments"
+          render={({ field: { onChange, value } }) => (
+            <InstallmentsPicker value={value ?? 1} onChange={onChange} total={amountValue} />
+          )}
+        />
+      ) : null}
 
       <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 }}>
         Categoria
@@ -156,6 +208,22 @@ export function AddExpenseScreen() {
         </>
       )}
 
+      {isPrivateAccount ? null : (
+        <Controller
+          control={control}
+          name="countsInBudget"
+          render={({ field: { onChange, value } }) => (
+            <ToggleRow
+              title="Conta no orçamento"
+              description={value ? "Entra no limite diário do período" : "Só movimenta a conta ou o cartão (ex.: compra antiga, salário)"}
+              value={value ?? true}
+              onChange={onChange}
+            />
+          )}
+        />
+      )}
+
+      {countsInBudget ? (
       <Controller
         control={control}
         name="isExtra"
@@ -193,6 +261,7 @@ export function AddExpenseScreen() {
           </TouchableOpacity>
         )}
       />
+      ) : null}
 
       <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
         Nota (opcional)
