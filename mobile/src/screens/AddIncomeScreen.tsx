@@ -75,7 +75,8 @@ export function AddIncomeScreen() {
   const account = accounts.find((a) => a.id === accountId) ?? null;
   const isCard = account?.kind === "credit_card";
   // Allowance and reserve accounts never touch the household budget.
-  const isPrivateAccount = account?.kind === "allowance" || account?.kind === "reserve";
+  // Allowance, reserve and meal voucher money is separate from the household budget.
+  const isPrivateAccount = account?.kind === "allowance" || account?.kind === "reserve" || account?.kind === "benefit";
   const countsInBudget = watch("countsInBudget") && !isPrivateAccount;
   const amountValue = parseCents(watch("amount")) / 100;
   const subcategories: NonNullable<Subcategory>[] =

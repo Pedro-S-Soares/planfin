@@ -146,12 +146,14 @@ defmodule PlanfinBackend.Finance do
   end
 
   # A movement is already inside the reconciled balance when it is dated before
-  # the reconciliation day, or on that day but recorded before it.
+  # the reconciliation day, or on that day but recorded before it. Timestamps
+  # have second precision, so a movement recorded in the same second as the
+  # reconciliation counts as after it.
   defp after_reconciliation(query, %Account{balance_date: date, balance_set_at: set_at}) do
     where(
       query,
       [m],
-      m.date > ^date or (m.date == ^date and m.inserted_at > ^set_at)
+      m.date > ^date or (m.date == ^date and m.inserted_at >= ^set_at)
     )
   end
 

@@ -43,6 +43,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   def active_period(_parent, _args, context), do: access_error(context)
 
   def expense_history(_parent, %{period_id: period_id}, %{context: %{current_group: group}}) do
+    PlanfinBackend.Finance.Benefits.credit_due(group.id, Date.utc_today())
     PlanfinBackend.Finance.Bills.charge_due_card_bills(group.id, Date.utc_today())
 
     case Periods.get_period(group.id, period_id) do

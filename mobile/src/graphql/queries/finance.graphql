@@ -9,6 +9,9 @@ query FinancialAccounts($today: String) {
     closingDay
     dueDay
     invoiceGoal
+    monthlyCredit
+    creditDay
+    nextCreditDate
     owner {
       id
       name

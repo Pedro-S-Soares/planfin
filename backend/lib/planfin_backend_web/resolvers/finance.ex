@@ -285,10 +285,12 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       kind: args.kind,
       closing_day: args[:closing_day],
       due_day: args[:due_day],
+      credit_day: args[:credit_day],
       owner_user_id: parse_int(args[:owner_user_id])
     }
 
     with {:ok, attrs} <- put_decimal(attrs, :balance, args[:balance]),
+         {:ok, attrs} <- put_decimal(attrs, :monthly_credit, args[:monthly_credit]),
          :ok <- validate_owner(group.id, attrs.owner_user_id),
          {:ok, account} <- Finance.create_account(group.id, attrs, today(args)) do
       {:ok, format_account(account, today(args))}
@@ -303,7 +305,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def update_account(_parent, %{id: id} = args, %{context: %{current_group: group}}) do
     attrs =
       args
-      |> Map.take([:name, :closing_day, :due_day])
+      |> Map.take([:name, :closing_day, :due_day, :credit_day])
       |> then(fn a ->
         if Map.has_key?(args, :owner_user_id),
           do: Map.put(a, :owner_user_id, parse_int(args.owner_user_id)),
@@ -311,6 +313,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       end)
 
     with {:ok, attrs} <- put_optional_decimal(attrs, :invoice_goal, args),
+         {:ok, attrs} <- put_optional_decimal(attrs, :monthly_credit, args),
          {:ok, account} <- fetch_account(group.id, id),
          :ok <- validate_owner(group.id, Map.get(attrs, :owner_user_id)),
          {:ok, account} <- Finance.update_account(account, attrs) do
@@ -617,6 +620,13 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       closing_day: account.closing_day,
       due_day: account.due_day,
       invoice_goal: decimal_string(account.invoice_goal),
+      monthly_credit: decimal_string(account.monthly_credit),
+      credit_day: account.credit_day,
+      next_credit_date:
+        case PlanfinBackend.Finance.Benefits.next_credit_date(account, today) do
+          nil -> nil
+          date -> Date.to_iso8601(date)
+        end,
       owner: format_owner(account.owner_user)
     }
   end
@@ -664,7 +674,11 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   # Card bills whose day has come are charged lazily, right before any read
   # that shows balances, invoices or bills.
   @doc false
-  def charge_card_bills(group_id, args), do: Bills.charge_due_card_bills(group_id, today(args))
+  def charge_card_bills(group_id, args) do
+    today = today(args)
+    :ok = PlanfinBackend.Finance.Benefits.credit_due(group_id, today)
+    Bills.charge_due_card_bills(group_id, today)
+  end
 
   defp fetch_account(group_id, id) do
     case Finance.get_account(group_id, id) do

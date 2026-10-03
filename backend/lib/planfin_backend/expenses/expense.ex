@@ -67,6 +67,7 @@ defmodule PlanfinBackend.Expenses.Expense do
     |> validate_inclusion(:type, ["expense", "income"])
     |> validate_amount_positive()
     |> validate_type_matches_subcategory()
+    |> unique_constraint(:date, name: :expenses_benefit_credit_once)
   end
 
   defp validate_amount_positive(changeset) do
