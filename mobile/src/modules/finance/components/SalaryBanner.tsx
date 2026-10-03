@@ -1,7 +1,7 @@
 import { Text, TouchableOpacity, View } from "react-native";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { useRegisterSalaryMutation } from "../../../graphql/__generated__/hooks";
-import { alertWeb, confirm } from "../../../lib/alert";
+import { confirm } from "../../../lib/alert";
 import { Colors, Radius } from "../../../theme/tokens";
 import { formatMoney, formatShortDate } from "../format";
 
@@ -15,7 +15,7 @@ export function SalaryBanner({ amount, date }: SalaryBannerProps) {
   const { currency } = useCurrency();
   const [registerSalary, { loading }] = useRegisterSalaryMutation({
     refetchQueries: ["FinancePanel", "FinancialAccounts", "AccountMovements"],
-    onError: (e) => alertWeb("Erro", e.message),
+    onError: () => undefined, // o toast global avisa o erro
   });
 
   const handleRegister = () =>

@@ -98,7 +98,7 @@ export function BillFormScreen() {
         name="dueDay"
         render={({ field: { onChange, value } }) => (
           <FieldInput
-            label="Vence no dia"
+            label="Pagar todo dia"
             value={value}
             onChange={(v) => onChange(v.replace(/\D/g, "").slice(0, 2))}
             keyboardType="number-pad"

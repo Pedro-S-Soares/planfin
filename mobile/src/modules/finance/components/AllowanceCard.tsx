@@ -5,7 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Card } from "../../../components/ui/Card";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { useAllowancePlanQuery, useDistributeAllowanceMutation } from "../../../graphql/__generated__/hooks";
-import { alertWeb, confirm } from "../../../lib/alert";
+import { confirm } from "../../../lib/alert";
 import { toISODate } from "../../../lib/date";
 import { Colors, Radius } from "../../../theme/tokens";
 import { formatMoney, formatShortDate, toNumber } from "../format";
@@ -23,7 +23,7 @@ export function AllowanceCard() {
   const { data, refetch } = useAllowancePlanQuery({ variables: { today }, fetchPolicy: "cache-and-network" });
   const [distribute, { loading }] = useDistributeAllowanceMutation({
     refetchQueries: ["AllowancePlan", "FinancePanel", "FinancialAccounts", "AccountMovements"],
-    onError: (e) => alertWeb("Erro", e.message),
+    onError: () => undefined, // o toast global avisa o erro
   });
 
   useFocusEffect(

@@ -597,6 +597,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       bill: format_bill(occ.bill),
       month: Invoices.format_month(occ.month),
       due_date: Date.to_iso8601(occ.due_date),
+      next_due_date: Date.to_iso8601(occ.next_due_date),
+      paid_on: occ.paid_on && Date.to_iso8601(occ.paid_on),
       status: occ.status,
       amount: Decimal.to_string(occ.amount),
       expense_id: occ.expense_id

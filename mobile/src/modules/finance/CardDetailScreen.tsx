@@ -8,7 +8,6 @@ import { Card } from "../../components/ui/Card";
 import { InlineError } from "../../components/ui/InlineError";
 import { usePeriod } from "../../context/PeriodContext";
 import { useAssignEntriesToAccountMutation, useInvoicesQuery } from "../../graphql/__generated__/hooks";
-import { alertWeb } from "../../lib/alert";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { Colors } from "../../theme/tokens";
@@ -35,8 +34,7 @@ export function CardDetailScreen() {
   });
   const [assignEntries, { loading: assigning }] = useAssignEntriesToAccountMutation({
     refetchQueries: ["Invoices", "Invoice", "FinancialAccounts"],
-    onCompleted: (d) => alertWeb("Pronto", `${d.assignEntriesToAccount ?? 0} lançamentos foram para o cartão.`),
-    onError: (e) => alertWeb("Erro", e.message),
+    onError: () => undefined, // o toast global avisa o erro
   });
 
   // Months before the card had any purchase only add noise.

@@ -10,18 +10,13 @@ import { useBillOccurrencesQuery, useUnpayBillMutation } from "../../graphql/__g
 import { confirm } from "../../lib/alert";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors, Radius } from "../../theme/tokens";
-import { addMonths, formatMoney, formatMonth, formatShortDate, monthOf, toNumber } from "./format";
+import { Colors } from "../../theme/tokens";
+import { BillRow } from "./components/BillRow";
+import { addMonths, formatMoney, formatMonth, monthOf, toNumber } from "./format";
 import type { AppStackParamList } from "../../../App";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
-const STATUS: Record<string, { label: string; color: string }> = {
-  paid: { label: "Paga", color: Colors.successText },
-  pending: { label: "A pagar", color: Colors.textSec },
-  overdue: { label: "Vencida", color: Colors.danger },
-  skipped: { label: "Pulada", color: Colors.textTer },
-};
 
 export function BillsScreen() {
   usePageTitle("Planfin - Despesas fixas");
@@ -83,72 +78,45 @@ export function BillsScreen() {
           </Text>
         ) : (
           items.map((o) => {
-            const status = STATUS[o.status ?? "pending"] ?? STATUS.pending;
-            const isCard = o.bill?.account?.kind === "credit_card";
-            const handlePress = () => {
-              if (!o.bill?.id) return;
-              const billId = o.bill.id;
-              if (o.status === "paid") {
-                confirm(
-                  isCard
-                    ? {
-                        title: "Tirar da fatura",
-                        message: `A cobrança de ${formatMonth(month)} sai da fatura e não volta sozinha neste mês.`,
-                        confirmLabel: "Tirar",
-                        destructive: true,
-                      }
-                    : {
-                        title: "Desfazer pagamento",
-                        message: "O lançamento criado no pagamento será apagado.",
-                        confirmLabel: "Desfazer",
-                        destructive: true,
-                      },
-                  () => unpayBill({ variables: { billId, month } }),
-                );
-              } else {
-                navigation.navigate("PayBill", { billId, month, amount: o.amount ?? "0", name: o.bill.name ?? "", isCard });
-              }
-            };
-            const actionLabel =
-              o.status === "paid"
-                ? isCard
-                  ? "✓ Na fatura"
-                  : "✓ Paga"
-                : o.status === "skipped"
-                  ? "Pulada · lançar"
-                  : isCard
-                    ? `Entra em ${formatShortDate(o.dueDate)}`
-                    : o.status === "overdue"
-                      ? "Pagar · vencida"
-                      : "Pagar";
+            const bill = o.bill;
+            if (!bill?.id) return null;
+            const billId = bill.id;
+            const isCard = bill.account?.kind === "credit_card";
             return (
-              <View key={o.bill?.id ?? ""} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10 }}>
-                <TouchableOpacity onPress={() => o.bill?.id && navigation.navigate("BillForm", { billId: o.bill.id })} style={{ flex: 1 }} activeOpacity={0.7}>
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.text }}>{o.bill?.name}</Text>
-                  <Text style={{ fontSize: 12, color: Colors.textSec }}>
-                    {isCard ? "💳" : "🏦"} {o.bill?.account?.name} · vence {formatShortDate(o.dueDate)}
-                  </Text>
-                </TouchableOpacity>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.text }}>{formatMoney(o.amount, currency.symbol)}</Text>
-                  <TouchableOpacity
-                    onPress={handlePress}
-                    activeOpacity={0.75}
-                    style={{ marginTop: 4, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: o.status === "paid" ? Colors.successLight : Colors.primaryLight }}
-                  >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: o.status === "paid" ? status.color : Colors.primaryText }}>
-                      {actionLabel}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <BillRow
+                key={billId}
+                occurrence={o}
+                onEdit={() => navigation.navigate("BillForm", { billId })}
+                onPay={() =>
+                  navigation.navigate("PayBill", { billId, month, amount: o.amount ?? "0", name: bill.name ?? "", isCard })
+                }
+                onUndo={() =>
+                  confirm(
+                    isCard
+                      ? {
+                          title: "Tirar da fatura",
+                          message: `A cobrança de ${formatMonth(month)} sai da fatura e não volta sozinha neste mês.`,
+                          confirmLabel: "Tirar",
+                          destructive: true,
+                        }
+                      : {
+                          title: "Desfazer pagamento",
+                          message: "O lançamento criado no pagamento será apagado.",
+                          confirmLabel: "Desfazer",
+                          destructive: true,
+                        },
+                    () => unpayBill({ variables: { billId, month } }),
+                  )
+                }
+              />
             );
           })
         )}
       </Card>
 
       <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 12, lineHeight: 17 }}>
-        As despesas no cartão entram sozinhas na fatura no dia do vencimento. As da conta você marca como pagas.
+        Toque no nome para editar ou excluir. As despesas no cartão entram sozinhas na fatura no dia; as da conta
+        você marca como pagas.
       </Text>
       <Btn label="+ Nova despesa fixa" onPress={() => navigation.navigate("BillForm", {})} />
     </ScrollView>
