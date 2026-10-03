@@ -19,6 +19,7 @@ defmodule PlanfinBackend.Expenses.Expense do
     field :installment_group_id, :binary_id
     field :installment_number, :integer
     field :installment_count, :integer
+    field :source, :string
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :created_by, PlanfinBackend.Accounts.User, type: :integer
@@ -59,7 +60,8 @@ defmodule PlanfinBackend.Expenses.Expense do
       :counts_in_budget,
       :installment_group_id,
       :installment_number,
-      :installment_count
+      :installment_count,
+      :source
     ])
     |> validate_required([:amount, :date, :group_id, :created_by_id])
     |> validate_inclusion(:type, ["expense", "income"])

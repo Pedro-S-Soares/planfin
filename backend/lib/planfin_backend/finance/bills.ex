@@ -167,7 +167,8 @@ defmodule PlanfinBackend.Finance.Bills do
                note: bill.name,
                account_id: bill.account_id,
                subcategory_id: bill.subcategory_id,
-               counts_in_budget: false
+               counts_in_budget: false,
+               source: "bill"
              }),
            {:ok, _payment} <-
              %BillPayment{}

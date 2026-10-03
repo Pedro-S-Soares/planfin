@@ -102,12 +102,65 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :free, :string
     field :horizon_date, :string
     field :commitments, list_of(:commitment)
+    field :salary, :salary_info
+  end
+
+  object :salary_info do
+    field :configured, :boolean
+    field :amount, :string
+    @desc "First day of the current cycle (this cycle's salary date)"
+    field :cycle_start_date, :string
+    field :next_salary_date, :string
+    @desc "The salary of the current cycle has not been registered yet"
+    field :pending, :boolean
+  end
+
+  object :financial_settings do
+    field :salary_amount, :string
+    field :salary_business_day, :integer
+    field :salary_account_id, :id
+    field :reserve_goal, :string
+    @desc "Next salary dates (with manual overrides applied)"
+    field :upcoming_salary_dates, list_of(:salary_date)
+  end
+
+  object :salary_date do
+    @desc "YYYY-MM"
+    field :month, :string
+    field :date, :string
+    field :is_manual, :boolean
+  end
+
+  @desc "Budget proposal for a salary cycle"
+  object :cycle_proposal do
+    field :start_date, :string
+    field :end_date, :string
+    field :days, :integer
+    field :salary, :string
+    @desc "Fixed bills paid from accounts"
+    field :account_bills, :string
+    @desc "Fixed bills charged on cards"
+    field :card_bills, :string
+    @desc "Installments 2..N landing on the invoice this cycle pays into"
+    field :installments, :string
+    @desc "salary − bills − installments, before the gordura"
+    field :available, :string
   end
 
   object :finance_queries do
     field :finance_panel, :finance_panel do
       arg(:today, :string)
       resolve(&Finance.panel/3)
+    end
+
+    field :financial_settings, :financial_settings do
+      arg(:today, :string)
+      resolve(&Finance.get_settings/3)
+    end
+
+    field :cycle_proposal, :cycle_proposal do
+      arg(:today, :string)
+      resolve(&Finance.cycle_proposal/3)
     end
 
     field :recurring_bills, list_of(:recurring_bill) do
@@ -149,6 +202,29 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
   end
 
   object :finance_mutations do
+    field :update_financial_settings, :financial_settings do
+      arg(:salary_amount, :string)
+      arg(:salary_business_day, :integer)
+      arg(:salary_account_id, :id)
+      arg(:reserve_goal, :string)
+      arg(:today, :string)
+      resolve(&Finance.update_settings/3)
+    end
+
+    @desc "Manual salary date for a month (null date restores the automatic one)"
+    field :set_salary_date, :boolean do
+      arg(:month, non_null(:string))
+      arg(:date, :string)
+      resolve(&Finance.set_salary_date/3)
+    end
+
+    @desc "Record the salary as income on the salary account"
+    field :register_salary, :expense do
+      arg(:amount, :string)
+      arg(:date, non_null(:string))
+      resolve(&Finance.register_salary/3)
+    end
+
     field :create_recurring_bill, :recurring_bill do
       arg(:name, non_null(:string))
       arg(:amount, non_null(:string))

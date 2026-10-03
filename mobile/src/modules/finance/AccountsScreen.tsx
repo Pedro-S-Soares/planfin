@@ -80,6 +80,8 @@ export function AccountsScreen() {
             ))}
             <Btn label="🧾 Despesas fixas" variant="secondary" onPress={() => navigation.navigate("Bills", {})} />
             <View style={{ height: 10 }} />
+            <Btn label="💼 Salário e ciclo" variant="secondary" onPress={() => navigation.navigate("SalarySettings")} />
+            <View style={{ height: 10 }} />
             {moneyAccounts.length > 0 ? (
               <Btn
                 label="Transferir entre contas"

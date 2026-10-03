@@ -101,6 +101,13 @@ query FinancePanel($today: String) {
       billId
       month
     }
+    salary {
+      configured
+      amount
+      cycleStartDate
+      nextSalaryDate
+      pending
+    }
   }
 }
 
@@ -146,5 +153,32 @@ query BillOccurrences($month: String!, $today: String) {
         categoryId
       }
     }
+  }
+}
+
+query FinancialSettings($today: String) {
+  financialSettings(today: $today) {
+    salaryAmount
+    salaryBusinessDay
+    salaryAccountId
+    reserveGoal
+    upcomingSalaryDates {
+      month
+      date
+      isManual
+    }
+  }
+}
+
+query CycleProposal($today: String) {
+  cycleProposal(today: $today) {
+    startDate
+    endDate
+    days
+    salary
+    accountBills
+    cardBills
+    installments
+    available
   }
 }
