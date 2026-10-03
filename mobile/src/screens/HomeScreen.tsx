@@ -33,6 +33,7 @@ import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { InlineError } from "../components/ui/InlineError";
 import { Colors, Radius, Shadow } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { FinancePanel } from "../modules/finance/components/FinancePanel";
 import type { AppStackParamList } from "../../App";
 import type { GroupPeriod } from "../context/PeriodContext";
 
@@ -276,6 +277,8 @@ export function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        <FinancePanel />
+
         {/* Balance card */}
         <BalanceViewToggle value={balanceView} onChange={setBalanceView} />
         {balanceView === "daily" ? (

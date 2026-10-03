@@ -34,6 +34,20 @@ export type AuthPayload = {
   user?: Maybe<User>;
 };
 
+/** A recurring bill in a given month */
+export type BillOccurrence = {
+  __typename?: 'BillOccurrence';
+  /** Real amount when paid, estimate otherwise */
+  amount?: Maybe<Scalars['String']['output']>;
+  bill?: Maybe<RecurringBill>;
+  dueDate?: Maybe<Scalars['String']['output']>;
+  expenseId?: Maybe<Scalars['ID']['output']>;
+  /** YYYY-MM */
+  month?: Maybe<Scalars['String']['output']>;
+  /** pending | overdue | paid */
+  status?: Maybe<Scalars['String']['output']>;
+};
+
 export type BudgetDay = {
   __typename?: 'BudgetDay';
   availableBalance?: Maybe<Scalars['String']['output']>;
@@ -52,6 +66,20 @@ export type Category = {
   name?: Maybe<Scalars['String']['output']>;
   subcategories?: Maybe<Array<Maybe<Subcategory>>>;
   type?: Maybe<Scalars['String']['output']>;
+};
+
+/** Something that must leave the primary account before the next money arrives */
+export type Commitment = {
+  __typename?: 'Commitment';
+  amount?: Maybe<Scalars['String']['output']>;
+  billId?: Maybe<Scalars['ID']['output']>;
+  cardId?: Maybe<Scalars['ID']['output']>;
+  dueDate?: Maybe<Scalars['String']['output']>;
+  /** invoice | bill */
+  kind?: Maybe<Scalars['String']['output']>;
+  label?: Maybe<Scalars['String']['output']>;
+  month?: Maybe<Scalars['String']['output']>;
+  status?: Maybe<Scalars['String']['output']>;
 };
 
 export type Expense = {
@@ -84,6 +112,20 @@ export type ExpenseDay = {
   date?: Maybe<Scalars['String']['output']>;
   expenses?: Maybe<Array<Maybe<Expense>>>;
   total?: Maybe<Scalars['String']['output']>;
+};
+
+export type FinancePanel = {
+  __typename?: 'FinancePanel';
+  /** Tenho: live balance of the primary account */
+  available?: Maybe<Scalars['String']['output']>;
+  commitments?: Maybe<Array<Maybe<Commitment>>>;
+  /** Comprometido: invoices and bills due until horizonDate */
+  committed?: Maybe<Scalars['String']['output']>;
+  /** Posso gastar: available − committed */
+  free?: Maybe<Scalars['String']['output']>;
+  hasAccounts?: Maybe<Scalars['Boolean']['output']>;
+  horizonDate?: Maybe<Scalars['String']['output']>;
+  primaryAccountId?: Maybe<Scalars['ID']['output']>;
 };
 
 /** Checking account, credit card, allowance account or reserve of the group */
@@ -171,6 +213,17 @@ export type PeriodSummary = {
   totalSpent?: Maybe<Scalars['String']['output']>;
 };
 
+export type RecurringBill = {
+  __typename?: 'RecurringBill';
+  account?: Maybe<ExpenseAccount>;
+  /** Estimated monthly amount */
+  amount?: Maybe<Scalars['String']['output']>;
+  dueDay?: Maybe<Scalars['Int']['output']>;
+  id?: Maybe<Scalars['ID']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
+  subcategory?: Maybe<Subcategory>;
+};
+
 export type RedeemInvitePayload = {
   __typename?: 'RedeemInvitePayload';
   group?: Maybe<Group>;
@@ -188,11 +241,13 @@ export type RootMutationType = {
   createGroup?: Maybe<Group>;
   createInvite?: Maybe<UserInvite>;
   createPeriod?: Maybe<Period>;
+  createRecurringBill?: Maybe<RecurringBill>;
   createSubcategory?: Maybe<Subcategory>;
   createTransfer?: Maybe<Transfer>;
   deleteCategory?: Maybe<Scalars['Boolean']['output']>;
   deleteExpense?: Maybe<Scalars['Boolean']['output']>;
   deleteGroup?: Maybe<Scalars['Boolean']['output']>;
+  deleteRecurringBill?: Maybe<Scalars['Boolean']['output']>;
   deleteSubcategory?: Maybe<Scalars['Boolean']['output']>;
   deleteTransfer?: Maybe<Scalars['Boolean']['output']>;
   forgotPassword?: Maybe<Scalars['Boolean']['output']>;
@@ -201,6 +256,8 @@ export type RootMutationType = {
   login?: Maybe<AuthPayload>;
   logout?: Maybe<Scalars['Boolean']['output']>;
   makePrimaryAccount?: Maybe<FinancialAccount>;
+  /** Mark the bill of a month as paid, recording the real amount */
+  payBill?: Maybe<BillOccurrence>;
   /** Pay (part of) a card invoice from another account */
   payInvoice?: Maybe<Invoice>;
   redeemInviteCode?: Maybe<RedeemInvitePayload>;
@@ -213,11 +270,13 @@ export type RootMutationType = {
   /** Reconcile the account with the bank: its balance today becomes `balance` */
   setAccountBalance?: Maybe<FinancialAccount>;
   switchActiveGroup?: Maybe<Group>;
+  unpayBill?: Maybe<Scalars['Boolean']['output']>;
   updateCategory?: Maybe<Category>;
   updateExpense?: Maybe<Expense>;
   updateFinancialAccount?: Maybe<FinancialAccount>;
   updatePeriod?: Maybe<Period>;
   updateProfile?: Maybe<User>;
+  updateRecurringBill?: Maybe<RecurringBill>;
   updateSubcategory?: Maybe<Subcategory>;
 };
 
@@ -278,6 +337,15 @@ export type RootMutationTypeCreatePeriodArgs = {
 };
 
 
+export type RootMutationTypeCreateRecurringBillArgs = {
+  accountId: Scalars['ID']['input'];
+  amount: Scalars['String']['input'];
+  dueDay: Scalars['Int']['input'];
+  name: Scalars['String']['input'];
+  subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
 export type RootMutationTypeCreateSubcategoryArgs = {
   categoryId: Scalars['ID']['input'];
   name: Scalars['String']['input'];
@@ -305,6 +373,11 @@ export type RootMutationTypeDeleteExpenseArgs = {
 
 
 export type RootMutationTypeDeleteGroupArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type RootMutationTypeDeleteRecurringBillArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -344,6 +417,14 @@ export type RootMutationTypeLoginArgs = {
 
 export type RootMutationTypeMakePrimaryAccountArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type RootMutationTypePayBillArgs = {
+  amount: Scalars['String']['input'];
+  billId: Scalars['ID']['input'];
+  date: Scalars['String']['input'];
+  month: Scalars['String']['input'];
 };
 
 
@@ -410,6 +491,12 @@ export type RootMutationTypeSwitchActiveGroupArgs = {
 };
 
 
+export type RootMutationTypeUnpayBillArgs = {
+  billId: Scalars['ID']['input'];
+  month: Scalars['String']['input'];
+};
+
+
 export type RootMutationTypeUpdateCategoryArgs = {
   icon?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
@@ -450,6 +537,16 @@ export type RootMutationTypeUpdateProfileArgs = {
 };
 
 
+export type RootMutationTypeUpdateRecurringBillArgs = {
+  accountId?: InputMaybe<Scalars['ID']['input']>;
+  amount?: InputMaybe<Scalars['String']['input']>;
+  dueDay?: InputMaybe<Scalars['Int']['input']>;
+  id: Scalars['ID']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+  subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
 export type RootMutationTypeUpdateSubcategoryArgs = {
   id: Scalars['ID']['input'];
   name: Scalars['String']['input'];
@@ -460,10 +557,12 @@ export type RootQueryType = {
   accountMovements?: Maybe<Array<Maybe<AccountMovement>>>;
   activeGroup?: Maybe<Group>;
   activePeriod?: Maybe<Period>;
+  billOccurrences?: Maybe<Array<Maybe<BillOccurrence>>>;
   categories?: Maybe<Array<Maybe<Category>>>;
   expenseHistory?: Maybe<Array<Maybe<ExpenseDay>>>;
   /** Expenses dated within [from, to] (ISO dates, inclusive, max 400 days), across periods */
   expensesInRange?: Maybe<Array<Maybe<Expense>>>;
+  financePanel?: Maybe<FinancePanel>;
   financialAccounts?: Maybe<Array<Maybe<FinancialAccount>>>;
   groupInvites?: Maybe<Array<Maybe<GroupInvite>>>;
   groupMembers?: Maybe<Array<Maybe<GroupMember>>>;
@@ -476,6 +575,7 @@ export type RootQueryType = {
   myGroups?: Maybe<Array<Maybe<Group>>>;
   periodSummary?: Maybe<PeriodSummary>;
   periods?: Maybe<Array<Maybe<Period>>>;
+  recurringBills?: Maybe<Array<Maybe<RecurringBill>>>;
 };
 
 
@@ -487,6 +587,12 @@ export type RootQueryTypeAccountMovementsArgs = {
 
 export type RootQueryTypeActivePeriodArgs = {
   periodId?: InputMaybe<Scalars['ID']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type RootQueryTypeBillOccurrencesArgs = {
+  month: Scalars['String']['input'];
   today?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -505,6 +611,11 @@ export type RootQueryTypeExpensesInRangeArgs = {
   from: Scalars['String']['input'];
   to: Scalars['String']['input'];
   type?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type RootQueryTypeFinancePanelArgs = {
+  today?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -820,6 +931,54 @@ export type AssignEntriesToAccountMutationVariables = Exact<{
 
 export type AssignEntriesToAccountMutation = { __typename?: 'RootMutationType', assignEntriesToAccount?: number | null };
 
+export type CreateRecurringBillMutationVariables = Exact<{
+  name: Scalars['String']['input'];
+  amount: Scalars['String']['input'];
+  dueDay: Scalars['Int']['input'];
+  accountId: Scalars['ID']['input'];
+  subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+
+export type CreateRecurringBillMutation = { __typename?: 'RootMutationType', createRecurringBill?: { __typename?: 'RecurringBill', id?: string | null } | null };
+
+export type UpdateRecurringBillMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+  amount?: InputMaybe<Scalars['String']['input']>;
+  dueDay?: InputMaybe<Scalars['Int']['input']>;
+  accountId?: InputMaybe<Scalars['ID']['input']>;
+  subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+}>;
+
+
+export type UpdateRecurringBillMutation = { __typename?: 'RootMutationType', updateRecurringBill?: { __typename?: 'RecurringBill', id?: string | null } | null };
+
+export type DeleteRecurringBillMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type DeleteRecurringBillMutation = { __typename?: 'RootMutationType', deleteRecurringBill?: boolean | null };
+
+export type PayBillMutationVariables = Exact<{
+  billId: Scalars['ID']['input'];
+  month: Scalars['String']['input'];
+  amount: Scalars['String']['input'];
+  date: Scalars['String']['input'];
+}>;
+
+
+export type PayBillMutation = { __typename?: 'RootMutationType', payBill?: { __typename?: 'BillOccurrence', status?: string | null, amount?: string | null } | null };
+
+export type UnpayBillMutationVariables = Exact<{
+  billId: Scalars['ID']['input'];
+  month: Scalars['String']['input'];
+}>;
+
+
+export type UnpayBillMutation = { __typename?: 'RootMutationType', unpayBill?: boolean | null };
+
 export type CreateGroupMutationVariables = Exact<{
   name: Scalars['String']['input'];
 }>;
@@ -954,6 +1113,26 @@ export type AccountMovementsQueryVariables = Exact<{
 
 
 export type AccountMovementsQuery = { __typename?: 'RootQueryType', accountMovements?: Array<{ __typename?: 'AccountMovement', id?: string | null, kind?: string | null, date?: string | null, description?: string | null, amount?: string | null } | null> | null };
+
+export type FinancePanelQueryVariables = Exact<{
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type FinancePanelQuery = { __typename?: 'RootQueryType', financePanel?: { __typename?: 'FinancePanel', hasAccounts?: boolean | null, primaryAccountId?: string | null, available?: string | null, committed?: string | null, free?: string | null, horizonDate?: string | null, commitments?: Array<{ __typename?: 'Commitment', kind?: string | null, label?: string | null, dueDate?: string | null, amount?: string | null, status?: string | null, cardId?: string | null, billId?: string | null, month?: string | null } | null> | null } | null };
+
+export type RecurringBillsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type RecurringBillsQuery = { __typename?: 'RootQueryType', recurringBills?: Array<{ __typename?: 'RecurringBill', id?: string | null, name?: string | null, amount?: string | null, dueDay?: number | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null> | null };
+
+export type BillOccurrencesQueryVariables = Exact<{
+  month: Scalars['String']['input'];
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type BillOccurrencesQuery = { __typename?: 'RootQueryType', billOccurrences?: Array<{ __typename?: 'BillOccurrence', month?: string | null, dueDate?: string | null, status?: string | null, amount?: string | null, expenseId?: string | null, bill?: { __typename?: 'RecurringBill', id?: string | null, name?: string | null, amount?: string | null, dueDay?: number | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null } | null> | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2018,6 +2197,194 @@ export function useAssignEntriesToAccountMutation(baseOptions?: Apollo.MutationH
 export type AssignEntriesToAccountMutationHookResult = ReturnType<typeof useAssignEntriesToAccountMutation>;
 export type AssignEntriesToAccountMutationResult = Apollo.MutationResult<AssignEntriesToAccountMutation>;
 export type AssignEntriesToAccountMutationOptions = Apollo.BaseMutationOptions<AssignEntriesToAccountMutation, AssignEntriesToAccountMutationVariables>;
+export const CreateRecurringBillDocument = gql`
+    mutation CreateRecurringBill($name: String!, $amount: String!, $dueDay: Int!, $accountId: ID!, $subcategoryId: ID) {
+  createRecurringBill(
+    name: $name
+    amount: $amount
+    dueDay: $dueDay
+    accountId: $accountId
+    subcategoryId: $subcategoryId
+  ) {
+    id
+  }
+}
+    `;
+export type CreateRecurringBillMutationFn = Apollo.MutationFunction<CreateRecurringBillMutation, CreateRecurringBillMutationVariables>;
+
+/**
+ * __useCreateRecurringBillMutation__
+ *
+ * To run a mutation, you first call `useCreateRecurringBillMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateRecurringBillMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createRecurringBillMutation, { data, loading, error }] = useCreateRecurringBillMutation({
+ *   variables: {
+ *      name: // value for 'name'
+ *      amount: // value for 'amount'
+ *      dueDay: // value for 'dueDay'
+ *      accountId: // value for 'accountId'
+ *      subcategoryId: // value for 'subcategoryId'
+ *   },
+ * });
+ */
+export function useCreateRecurringBillMutation(baseOptions?: Apollo.MutationHookOptions<CreateRecurringBillMutation, CreateRecurringBillMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateRecurringBillMutation, CreateRecurringBillMutationVariables>(CreateRecurringBillDocument, options);
+      }
+export type CreateRecurringBillMutationHookResult = ReturnType<typeof useCreateRecurringBillMutation>;
+export type CreateRecurringBillMutationResult = Apollo.MutationResult<CreateRecurringBillMutation>;
+export type CreateRecurringBillMutationOptions = Apollo.BaseMutationOptions<CreateRecurringBillMutation, CreateRecurringBillMutationVariables>;
+export const UpdateRecurringBillDocument = gql`
+    mutation UpdateRecurringBill($id: ID!, $name: String, $amount: String, $dueDay: Int, $accountId: ID, $subcategoryId: ID) {
+  updateRecurringBill(
+    id: $id
+    name: $name
+    amount: $amount
+    dueDay: $dueDay
+    accountId: $accountId
+    subcategoryId: $subcategoryId
+  ) {
+    id
+  }
+}
+    `;
+export type UpdateRecurringBillMutationFn = Apollo.MutationFunction<UpdateRecurringBillMutation, UpdateRecurringBillMutationVariables>;
+
+/**
+ * __useUpdateRecurringBillMutation__
+ *
+ * To run a mutation, you first call `useUpdateRecurringBillMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateRecurringBillMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateRecurringBillMutation, { data, loading, error }] = useUpdateRecurringBillMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *      amount: // value for 'amount'
+ *      dueDay: // value for 'dueDay'
+ *      accountId: // value for 'accountId'
+ *      subcategoryId: // value for 'subcategoryId'
+ *   },
+ * });
+ */
+export function useUpdateRecurringBillMutation(baseOptions?: Apollo.MutationHookOptions<UpdateRecurringBillMutation, UpdateRecurringBillMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateRecurringBillMutation, UpdateRecurringBillMutationVariables>(UpdateRecurringBillDocument, options);
+      }
+export type UpdateRecurringBillMutationHookResult = ReturnType<typeof useUpdateRecurringBillMutation>;
+export type UpdateRecurringBillMutationResult = Apollo.MutationResult<UpdateRecurringBillMutation>;
+export type UpdateRecurringBillMutationOptions = Apollo.BaseMutationOptions<UpdateRecurringBillMutation, UpdateRecurringBillMutationVariables>;
+export const DeleteRecurringBillDocument = gql`
+    mutation DeleteRecurringBill($id: ID!) {
+  deleteRecurringBill(id: $id)
+}
+    `;
+export type DeleteRecurringBillMutationFn = Apollo.MutationFunction<DeleteRecurringBillMutation, DeleteRecurringBillMutationVariables>;
+
+/**
+ * __useDeleteRecurringBillMutation__
+ *
+ * To run a mutation, you first call `useDeleteRecurringBillMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteRecurringBillMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteRecurringBillMutation, { data, loading, error }] = useDeleteRecurringBillMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteRecurringBillMutation(baseOptions?: Apollo.MutationHookOptions<DeleteRecurringBillMutation, DeleteRecurringBillMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteRecurringBillMutation, DeleteRecurringBillMutationVariables>(DeleteRecurringBillDocument, options);
+      }
+export type DeleteRecurringBillMutationHookResult = ReturnType<typeof useDeleteRecurringBillMutation>;
+export type DeleteRecurringBillMutationResult = Apollo.MutationResult<DeleteRecurringBillMutation>;
+export type DeleteRecurringBillMutationOptions = Apollo.BaseMutationOptions<DeleteRecurringBillMutation, DeleteRecurringBillMutationVariables>;
+export const PayBillDocument = gql`
+    mutation PayBill($billId: ID!, $month: String!, $amount: String!, $date: String!) {
+  payBill(billId: $billId, month: $month, amount: $amount, date: $date) {
+    status
+    amount
+  }
+}
+    `;
+export type PayBillMutationFn = Apollo.MutationFunction<PayBillMutation, PayBillMutationVariables>;
+
+/**
+ * __usePayBillMutation__
+ *
+ * To run a mutation, you first call `usePayBillMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePayBillMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [payBillMutation, { data, loading, error }] = usePayBillMutation({
+ *   variables: {
+ *      billId: // value for 'billId'
+ *      month: // value for 'month'
+ *      amount: // value for 'amount'
+ *      date: // value for 'date'
+ *   },
+ * });
+ */
+export function usePayBillMutation(baseOptions?: Apollo.MutationHookOptions<PayBillMutation, PayBillMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PayBillMutation, PayBillMutationVariables>(PayBillDocument, options);
+      }
+export type PayBillMutationHookResult = ReturnType<typeof usePayBillMutation>;
+export type PayBillMutationResult = Apollo.MutationResult<PayBillMutation>;
+export type PayBillMutationOptions = Apollo.BaseMutationOptions<PayBillMutation, PayBillMutationVariables>;
+export const UnpayBillDocument = gql`
+    mutation UnpayBill($billId: ID!, $month: String!) {
+  unpayBill(billId: $billId, month: $month)
+}
+    `;
+export type UnpayBillMutationFn = Apollo.MutationFunction<UnpayBillMutation, UnpayBillMutationVariables>;
+
+/**
+ * __useUnpayBillMutation__
+ *
+ * To run a mutation, you first call `useUnpayBillMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUnpayBillMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [unpayBillMutation, { data, loading, error }] = useUnpayBillMutation({
+ *   variables: {
+ *      billId: // value for 'billId'
+ *      month: // value for 'month'
+ *   },
+ * });
+ */
+export function useUnpayBillMutation(baseOptions?: Apollo.MutationHookOptions<UnpayBillMutation, UnpayBillMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UnpayBillMutation, UnpayBillMutationVariables>(UnpayBillDocument, options);
+      }
+export type UnpayBillMutationHookResult = ReturnType<typeof useUnpayBillMutation>;
+export type UnpayBillMutationResult = Apollo.MutationResult<UnpayBillMutation>;
+export type UnpayBillMutationOptions = Apollo.BaseMutationOptions<UnpayBillMutation, UnpayBillMutationVariables>;
 export const CreateGroupDocument = gql`
     mutation CreateGroup($name: String!) {
   createGroup(name: $name) {
@@ -2857,6 +3224,183 @@ export type AccountMovementsQueryHookResult = ReturnType<typeof useAccountMoveme
 export type AccountMovementsLazyQueryHookResult = ReturnType<typeof useAccountMovementsLazyQuery>;
 export type AccountMovementsSuspenseQueryHookResult = ReturnType<typeof useAccountMovementsSuspenseQuery>;
 export type AccountMovementsQueryResult = Apollo.QueryResult<AccountMovementsQuery, AccountMovementsQueryVariables>;
+export const FinancePanelDocument = gql`
+    query FinancePanel($today: String) {
+  financePanel(today: $today) {
+    hasAccounts
+    primaryAccountId
+    available
+    committed
+    free
+    horizonDate
+    commitments {
+      kind
+      label
+      dueDate
+      amount
+      status
+      cardId
+      billId
+      month
+    }
+  }
+}
+    `;
+
+/**
+ * __useFinancePanelQuery__
+ *
+ * To run a query within a React component, call `useFinancePanelQuery` and pass it any options that fit your needs.
+ * When your component renders, `useFinancePanelQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useFinancePanelQuery({
+ *   variables: {
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useFinancePanelQuery(baseOptions?: Apollo.QueryHookOptions<FinancePanelQuery, FinancePanelQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<FinancePanelQuery, FinancePanelQueryVariables>(FinancePanelDocument, options);
+      }
+export function useFinancePanelLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<FinancePanelQuery, FinancePanelQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<FinancePanelQuery, FinancePanelQueryVariables>(FinancePanelDocument, options);
+        }
+// @ts-ignore
+export function useFinancePanelSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<FinancePanelQuery, FinancePanelQueryVariables>): Apollo.UseSuspenseQueryResult<FinancePanelQuery, FinancePanelQueryVariables>;
+export function useFinancePanelSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<FinancePanelQuery, FinancePanelQueryVariables>): Apollo.UseSuspenseQueryResult<FinancePanelQuery | undefined, FinancePanelQueryVariables>;
+export function useFinancePanelSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<FinancePanelQuery, FinancePanelQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<FinancePanelQuery, FinancePanelQueryVariables>(FinancePanelDocument, options);
+        }
+export type FinancePanelQueryHookResult = ReturnType<typeof useFinancePanelQuery>;
+export type FinancePanelLazyQueryHookResult = ReturnType<typeof useFinancePanelLazyQuery>;
+export type FinancePanelSuspenseQueryHookResult = ReturnType<typeof useFinancePanelSuspenseQuery>;
+export type FinancePanelQueryResult = Apollo.QueryResult<FinancePanelQuery, FinancePanelQueryVariables>;
+export const RecurringBillsDocument = gql`
+    query RecurringBills {
+  recurringBills {
+    id
+    name
+    amount
+    dueDay
+    account {
+      id
+      name
+      kind
+    }
+    subcategory {
+      id
+      name
+      categoryId
+    }
+  }
+}
+    `;
+
+/**
+ * __useRecurringBillsQuery__
+ *
+ * To run a query within a React component, call `useRecurringBillsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useRecurringBillsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useRecurringBillsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useRecurringBillsQuery(baseOptions?: Apollo.QueryHookOptions<RecurringBillsQuery, RecurringBillsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<RecurringBillsQuery, RecurringBillsQueryVariables>(RecurringBillsDocument, options);
+      }
+export function useRecurringBillsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<RecurringBillsQuery, RecurringBillsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<RecurringBillsQuery, RecurringBillsQueryVariables>(RecurringBillsDocument, options);
+        }
+// @ts-ignore
+export function useRecurringBillsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<RecurringBillsQuery, RecurringBillsQueryVariables>): Apollo.UseSuspenseQueryResult<RecurringBillsQuery, RecurringBillsQueryVariables>;
+export function useRecurringBillsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<RecurringBillsQuery, RecurringBillsQueryVariables>): Apollo.UseSuspenseQueryResult<RecurringBillsQuery | undefined, RecurringBillsQueryVariables>;
+export function useRecurringBillsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<RecurringBillsQuery, RecurringBillsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<RecurringBillsQuery, RecurringBillsQueryVariables>(RecurringBillsDocument, options);
+        }
+export type RecurringBillsQueryHookResult = ReturnType<typeof useRecurringBillsQuery>;
+export type RecurringBillsLazyQueryHookResult = ReturnType<typeof useRecurringBillsLazyQuery>;
+export type RecurringBillsSuspenseQueryHookResult = ReturnType<typeof useRecurringBillsSuspenseQuery>;
+export type RecurringBillsQueryResult = Apollo.QueryResult<RecurringBillsQuery, RecurringBillsQueryVariables>;
+export const BillOccurrencesDocument = gql`
+    query BillOccurrences($month: String!, $today: String) {
+  billOccurrences(month: $month, today: $today) {
+    month
+    dueDate
+    status
+    amount
+    expenseId
+    bill {
+      id
+      name
+      amount
+      dueDay
+      account {
+        id
+        name
+        kind
+      }
+      subcategory {
+        id
+        name
+        categoryId
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useBillOccurrencesQuery__
+ *
+ * To run a query within a React component, call `useBillOccurrencesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useBillOccurrencesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useBillOccurrencesQuery({
+ *   variables: {
+ *      month: // value for 'month'
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useBillOccurrencesQuery(baseOptions: Apollo.QueryHookOptions<BillOccurrencesQuery, BillOccurrencesQueryVariables> & ({ variables: BillOccurrencesQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<BillOccurrencesQuery, BillOccurrencesQueryVariables>(BillOccurrencesDocument, options);
+      }
+export function useBillOccurrencesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<BillOccurrencesQuery, BillOccurrencesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<BillOccurrencesQuery, BillOccurrencesQueryVariables>(BillOccurrencesDocument, options);
+        }
+// @ts-ignore
+export function useBillOccurrencesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<BillOccurrencesQuery, BillOccurrencesQueryVariables>): Apollo.UseSuspenseQueryResult<BillOccurrencesQuery, BillOccurrencesQueryVariables>;
+export function useBillOccurrencesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<BillOccurrencesQuery, BillOccurrencesQueryVariables>): Apollo.UseSuspenseQueryResult<BillOccurrencesQuery | undefined, BillOccurrencesQueryVariables>;
+export function useBillOccurrencesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<BillOccurrencesQuery, BillOccurrencesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<BillOccurrencesQuery, BillOccurrencesQueryVariables>(BillOccurrencesDocument, options);
+        }
+export type BillOccurrencesQueryHookResult = ReturnType<typeof useBillOccurrencesQuery>;
+export type BillOccurrencesLazyQueryHookResult = ReturnType<typeof useBillOccurrencesLazyQuery>;
+export type BillOccurrencesSuspenseQueryHookResult = ReturnType<typeof useBillOccurrencesSuspenseQuery>;
+export type BillOccurrencesQueryResult = Apollo.QueryResult<BillOccurrencesQuery, BillOccurrencesQueryVariables>;
 export const MyGroupsDocument = gql`
     query MyGroups {
   myGroups {

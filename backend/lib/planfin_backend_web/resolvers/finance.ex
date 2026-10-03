@@ -2,7 +2,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   require Ecto.Query
 
   alias PlanfinBackend.{Expenses, Finance}
-  alias PlanfinBackend.Finance.Invoices
+  alias PlanfinBackend.Finance.{Bills, Invoices, Panel}
   alias PlanfinBackendWeb.Resolvers.Budget
 
   # ---- Queries ----
@@ -49,7 +49,103 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def list_movements(_parent, _args, context), do: access_error(context)
 
+  def panel(_parent, args, %{context: %{current_group: group}}) do
+    today = today(args)
+    horizon = horizon(group.id, today)
+    {:ok, group.id |> Panel.build(today, horizon) |> format_panel()}
+  end
+
+  def panel(_parent, _args, context), do: access_error(context)
+
+  def list_bills(_parent, _args, %{context: %{current_group: group}}) do
+    {:ok, group.id |> Bills.list_bills() |> Enum.map(&format_bill/1)}
+  end
+
+  def list_bills(_parent, _args, context), do: access_error(context)
+
+  def bill_occurrences(_parent, %{month: month} = args, %{context: %{current_group: group}}) do
+    with {:ok, month} <- parse_month(month) do
+      {:ok, group.id |> Bills.occurrences(month, today(args)) |> Enum.map(&format_occurrence/1)}
+    end
+  end
+
+  def bill_occurrences(_parent, _args, context), do: access_error(context)
+
   # ---- Mutations ----
+
+  def create_bill(_parent, args, %{context: %{current_group: group}}) do
+    with {:ok, amount} <- parse_decimal(args.amount),
+         {:ok, bill} <-
+           Bills.create_bill(group.id, %{
+             name: args.name,
+             amount: amount,
+             due_day: args.due_day,
+             account_id: args.account_id,
+             subcategory_id: args[:subcategory_id]
+           }) do
+      {:ok, format_bill(bill)}
+    else
+      error -> bill_error(error)
+    end
+  end
+
+  def create_bill(_parent, _args, context), do: access_error(context)
+
+  def update_bill(_parent, %{id: id} = args, %{context: %{current_group: group}}) do
+    with {:ok, bill} <- fetch_bill(group.id, id),
+         {:ok, attrs} <- bill_attrs(args),
+         {:ok, bill} <- Bills.update_bill(bill, attrs) do
+      {:ok, format_bill(bill)}
+    else
+      error -> bill_error(error)
+    end
+  end
+
+  def update_bill(_parent, _args, context), do: access_error(context)
+
+  def delete_bill(_parent, %{id: id}, %{context: %{current_group: group}}) do
+    with {:ok, bill} <- fetch_bill(group.id, id),
+         {:ok, _} <- Bills.deactivate_bill(bill) do
+      {:ok, true}
+    end
+  end
+
+  def delete_bill(_parent, _args, context), do: access_error(context)
+
+  def pay_bill(_parent, args, %{context: %{current_group: group, current_user: user}}) do
+    with {:ok, bill} <- fetch_bill(group.id, args.bill_id),
+         {:ok, month} <- parse_month(args.month),
+         {:ok, amount} <- parse_decimal(args.amount),
+         {:ok, date} <- parse_date(args.date),
+         {:ok, occurrence} <- Bills.pay(group.id, user.id, bill, month, amount, date) do
+      {:ok, format_occurrence(occurrence)}
+    else
+      {:error, %Ecto.Changeset{} = cs} ->
+        if Keyword.has_key?(cs.errors, :bill_id),
+          do: {:error, "This month is already paid"},
+          else: {:error, Budget.format_errors(cs)}
+
+      {:error, msg} when is_binary(msg) ->
+        {:error, msg}
+
+      {:error, reason} ->
+        {:error, inspect(reason)}
+    end
+  end
+
+  def pay_bill(_parent, _args, context), do: access_error(context)
+
+  def unpay_bill(_parent, args, %{context: %{current_group: group}}) do
+    with {:ok, bill} <- fetch_bill(group.id, args.bill_id),
+         {:ok, month} <- parse_month(args.month) do
+      case Bills.unpay(group.id, bill, month) do
+        :ok -> {:ok, true}
+        {:error, :not_found} -> {:error, "This month is not paid"}
+      end
+    end
+  end
+
+  def unpay_bill(_parent, _args, context), do: access_error(context)
 
   def create_account(_parent, args, %{context: %{current_group: group}}) do
     attrs = %{
@@ -201,6 +297,60 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   # ---- Formatting ----
 
   @doc false
+  def horizon(group_id, today), do: Panel.default_horizon(group_id, today)
+
+  defp format_panel(panel) do
+    %{
+      has_accounts: panel.has_accounts,
+      primary_account_id: panel.primary_account_id,
+      available: decimal_string(panel.available),
+      committed: Decimal.to_string(panel.committed),
+      free: decimal_string(panel.free),
+      horizon_date: Date.to_iso8601(panel.horizon_date),
+      commitments:
+        Enum.map(panel.commitments, fn c ->
+          %{
+            c
+            | due_date: Date.to_iso8601(c.due_date),
+              amount: Decimal.to_string(c.amount),
+              month: Invoices.format_month(c.month)
+          }
+        end)
+    }
+  end
+
+  defp format_bill(bill) do
+    %{
+      id: bill.id,
+      name: bill.name,
+      amount: Decimal.to_string(bill.amount),
+      due_day: bill.due_day,
+      account: %{id: bill.account.id, name: bill.account.name, kind: bill.account.kind},
+      subcategory:
+        if(match?(%PlanfinBackend.Categories.Subcategory{}, bill.subcategory),
+          do: %{
+            id: bill.subcategory.id,
+            name: bill.subcategory.name,
+            category_id: bill.subcategory.category_id,
+            category: nil
+          },
+          else: nil
+        )
+    }
+  end
+
+  defp format_occurrence(occ) do
+    %{
+      bill: format_bill(occ.bill),
+      month: Invoices.format_month(occ.month),
+      due_date: Date.to_iso8601(occ.due_date),
+      status: occ.status,
+      amount: Decimal.to_string(occ.amount),
+      expense_id: occ.expense_id
+    }
+  end
+
+  @doc false
   def format_account(account, today) do
     %{
       id: account.id,
@@ -261,6 +411,26 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       {:error, :not_found} -> {:error, "Account not found"}
     end
   end
+
+  defp fetch_bill(group_id, id) do
+    case Bills.get_bill(group_id, id) do
+      {:ok, bill} -> {:ok, bill}
+      {:error, :not_found} -> {:error, "Bill not found"}
+    end
+  end
+
+  defp bill_attrs(args) do
+    base = Map.take(args, [:name, :due_day, :account_id, :subcategory_id])
+
+    case args[:amount] do
+      nil -> {:ok, base}
+      amount -> with {:ok, d} <- parse_decimal(amount), do: {:ok, Map.put(base, :amount, d)}
+    end
+  end
+
+  defp bill_error({:error, %Ecto.Changeset{} = cs}), do: {:error, Budget.format_errors(cs)}
+  defp bill_error({:error, :account_not_found}), do: {:error, "Account not found"}
+  defp bill_error({:error, msg}) when is_binary(msg), do: {:error, msg}
 
   defp fetch_card(group_id, id) do
     case fetch_account(group_id, id) do

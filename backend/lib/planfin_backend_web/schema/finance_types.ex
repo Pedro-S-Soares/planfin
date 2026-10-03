@@ -55,7 +55,72 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :note, :string
   end
 
+  object :recurring_bill do
+    field :id, :id
+    field :name, :string
+    @desc "Estimated monthly amount"
+    field :amount, :string
+    field :due_day, :integer
+    field :account, :expense_account
+    field :subcategory, :subcategory
+  end
+
+  @desc "A recurring bill in a given month"
+  object :bill_occurrence do
+    field :bill, :recurring_bill
+    @desc "YYYY-MM"
+    field :month, :string
+    field :due_date, :string
+    @desc "pending | overdue | paid"
+    field :status, :string
+    @desc "Real amount when paid, estimate otherwise"
+    field :amount, :string
+    field :expense_id, :id
+  end
+
+  @desc "Something that must leave the primary account before the next money arrives"
+  object :commitment do
+    @desc "invoice | bill"
+    field :kind, :string
+    field :label, :string
+    field :due_date, :string
+    field :amount, :string
+    field :status, :string
+    field :card_id, :id
+    field :bill_id, :id
+    field :month, :string
+  end
+
+  object :finance_panel do
+    field :has_accounts, :boolean
+    field :primary_account_id, :id
+    @desc "Tenho: live balance of the primary account"
+    field :available, :string
+    @desc "Comprometido: invoices and bills due until horizonDate"
+    field :committed, :string
+    @desc "Posso gastar: available − committed"
+    field :free, :string
+    field :horizon_date, :string
+    field :commitments, list_of(:commitment)
+  end
+
   object :finance_queries do
+    field :finance_panel, :finance_panel do
+      arg(:today, :string)
+      resolve(&Finance.panel/3)
+    end
+
+    field :recurring_bills, list_of(:recurring_bill) do
+      resolve(&Finance.list_bills/3)
+    end
+
+    field :bill_occurrences, list_of(:bill_occurrence) do
+      @desc "YYYY-MM"
+      arg(:month, non_null(:string))
+      arg(:today, :string)
+      resolve(&Finance.bill_occurrences/3)
+    end
+
     field :financial_accounts, list_of(:financial_account) do
       arg(:today, :string)
       resolve(&Finance.list_accounts/3)
@@ -84,6 +149,45 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
   end
 
   object :finance_mutations do
+    field :create_recurring_bill, :recurring_bill do
+      arg(:name, non_null(:string))
+      arg(:amount, non_null(:string))
+      arg(:due_day, non_null(:integer))
+      arg(:account_id, non_null(:id))
+      arg(:subcategory_id, :id)
+      resolve(&Finance.create_bill/3)
+    end
+
+    field :update_recurring_bill, :recurring_bill do
+      arg(:id, non_null(:id))
+      arg(:name, :string)
+      arg(:amount, :string)
+      arg(:due_day, :integer)
+      arg(:account_id, :id)
+      arg(:subcategory_id, :id)
+      resolve(&Finance.update_bill/3)
+    end
+
+    field :delete_recurring_bill, :boolean do
+      arg(:id, non_null(:id))
+      resolve(&Finance.delete_bill/3)
+    end
+
+    @desc "Mark the bill of a month as paid, recording the real amount"
+    field :pay_bill, :bill_occurrence do
+      arg(:bill_id, non_null(:id))
+      arg(:month, non_null(:string))
+      arg(:amount, non_null(:string))
+      arg(:date, non_null(:string))
+      resolve(&Finance.pay_bill/3)
+    end
+
+    field :unpay_bill, :boolean do
+      arg(:bill_id, non_null(:id))
+      arg(:month, non_null(:string))
+      resolve(&Finance.unpay_bill/3)
+    end
+
     field :create_financial_account, :financial_account do
       arg(:name, non_null(:string))
       arg(:kind, non_null(:string))

@@ -72,3 +72,15 @@ export function formatShortDate(iso: string | null | undefined): string {
 export function signedApiAmount(apiAmount: string, negative: boolean): string {
   return negative && toNumber(apiAmount) > 0 ? `-${apiAmount}` : apiAmount;
 }
+
+/** "2026-10" + 1 → "2026-11" */
+export function addMonths(month: string, delta: number): string {
+  const [y, m] = month.split("-").map(Number);
+  const total = y * 12 + (m - 1) + delta;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, "0")}`;
+}
+
+/** Month ("YYYY-MM") of a Date. */
+export function monthOf(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}

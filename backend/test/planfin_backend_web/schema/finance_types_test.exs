@@ -161,4 +161,68 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypesTest do
     resp = gql(conn, "query { accountMovements(accountId: \"#{foreign.id}\") { id } }")
     assert [%{"message" => "Account not found"}] = resp["errors"]
   end
+
+  test "recurring bill lifecycle and finance panel", %{conn: conn} do
+    {conn, _user, _group} = setup_conn(conn)
+    {checking, _card} = create_accounts(conn)
+
+    resp =
+      gql(
+        conn,
+        """
+        mutation($account: ID!) {
+          createRecurringBill(name: "Aluguel", amount: "1000.00", dueDay: 10, accountId: $account) {
+            id name dueDay account { kind }
+          }
+        }
+        """,
+        %{account: checking["id"]}
+      )
+
+    bill = resp["data"]["createRecurringBill"]
+    assert bill["account"]["kind"] == "checking"
+
+    month = Date.utc_today() |> Date.to_iso8601() |> String.slice(0, 7)
+
+    resp =
+      gql(conn, """
+      query { billOccurrences(month: "#{month}") { status amount bill { name } } }
+      """)
+
+    assert [%{"bill" => %{"name" => "Aluguel"}, "amount" => "1000.00"}] =
+             resp["data"]["billOccurrences"]
+
+    resp =
+      gql(conn, """
+      query { financePanel(today: "#{@today}") { hasAccounts available committed free horizonDate commitments { kind label } } }
+      """)
+
+    panel = resp["data"]["financePanel"]
+    assert panel["hasAccounts"]
+    assert panel["available"] == "1500.00"
+
+    resp =
+      gql(
+        conn,
+        """
+        mutation($bill: ID!) {
+          payBill(billId: $bill, month: "#{month}", amount: "987.65", date: "#{Date.utc_today()}") { status amount expenseId }
+        }
+        """,
+        %{bill: bill["id"]}
+      )
+
+    assert %{"status" => "paid", "amount" => "987.65"} = resp["data"]["payBill"]
+
+    resp =
+      gql(conn, """
+      mutation { unpayBill(billId: "#{bill["id"]}", month: "#{month}") }
+      """)
+
+    assert resp["data"]["unpayBill"] == true
+
+    resp = gql(conn, "mutation { deleteRecurringBill(id: \"#{bill["id"]}\") }")
+    assert resp["data"]["deleteRecurringBill"] == true
+    assert gql(conn, "query { recurringBills { id } }")["data"]["recurringBills"] == []
+  end
 end
