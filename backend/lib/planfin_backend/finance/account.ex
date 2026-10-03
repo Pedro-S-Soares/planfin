@@ -24,6 +24,7 @@ defmodule PlanfinBackend.Finance.Account do
     field :balance_set_at, :naive_datetime
     field :closing_day, :integer
     field :due_day, :integer
+    field :invoice_goal, :decimal
     field :archived_at, :naive_datetime
 
     belongs_to :group, PlanfinBackend.Groups.Group
@@ -45,6 +46,7 @@ defmodule PlanfinBackend.Finance.Account do
       :balance_set_at,
       :closing_day,
       :due_day,
+      :invoice_goal,
       :archived_at,
       :group_id,
       :owner_user_id
@@ -53,6 +55,7 @@ defmodule PlanfinBackend.Finance.Account do
     |> validate_required([:name, :kind, :balance, :balance_date, :balance_set_at, :group_id])
     |> validate_length(:name, min: 1, max: 60)
     |> validate_inclusion(:kind, @kinds)
+    |> validate_number(:invoice_goal, greater_than_or_equal_to: 0)
     |> validate_card_days()
     |> validate_primary_is_checking()
     |> unique_constraint(:is_primary, name: :financial_accounts_one_primary_per_group)

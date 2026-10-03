@@ -34,6 +34,7 @@ import { InlineError } from "../components/ui/InlineError";
 import { Colors, Radius, Shadow } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { FinancePanel } from "../modules/finance/components/FinancePanel";
+import { NextSalaryCard } from "../modules/finance/components/NextSalaryCard";
 import type { AppStackParamList } from "../../App";
 import type { GroupPeriod } from "../context/PeriodContext";
 
@@ -310,6 +311,8 @@ export function HomeScreen() {
             ))}
           </View>
         )}
+
+        <NextSalaryCard />
 
         {/* Today's expenses */}
         <Card padding={16}>

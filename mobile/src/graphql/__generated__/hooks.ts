@@ -155,6 +155,8 @@ export type FinancialAccount = {
   closingDay?: Maybe<Scalars['Int']['output']>;
   dueDay?: Maybe<Scalars['Int']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
+  /** Target for the card invoice */
+  invoiceGoal?: Maybe<Scalars['String']['output']>;
   isPrimary?: Maybe<Scalars['Boolean']['output']>;
   /** checking | credit_card | allowance | reserve */
   kind?: Maybe<Scalars['String']['output']>;
@@ -239,6 +241,19 @@ export type PeriodSummary = {
   difference?: Maybe<Scalars['String']['output']>;
   totalBudgeted?: Maybe<Scalars['String']['output']>;
   totalSpent?: Maybe<Scalars['String']['output']>;
+};
+
+export type ProjectedInvoice = {
+  __typename?: 'ProjectedInvoice';
+  /** Still owed on the invoice today */
+  amount?: Maybe<Scalars['String']['output']>;
+  cardId?: Maybe<Scalars['ID']['output']>;
+  cardName?: Maybe<Scalars['String']['output']>;
+  dueDate?: Maybe<Scalars['String']['output']>;
+  month?: Maybe<Scalars['String']['output']>;
+  /** Card bills that will still be charged on this invoice */
+  pendingBills?: Maybe<Scalars['String']['output']>;
+  status?: Maybe<Scalars['String']['output']>;
 };
 
 export type RecurringBill = {
@@ -566,6 +581,7 @@ export type RootMutationTypeUpdateFinancialAccountArgs = {
   closingDay?: InputMaybe<Scalars['Int']['input']>;
   dueDay?: InputMaybe<Scalars['Int']['input']>;
   id: Scalars['ID']['input'];
+  invoiceGoal?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   ownerUserId?: InputMaybe<Scalars['ID']['input']>;
 };
@@ -632,6 +648,7 @@ export type RootQueryType = {
   periodSummary?: Maybe<PeriodSummary>;
   periods?: Maybe<Array<Maybe<Period>>>;
   recurringBills?: Maybe<Array<Maybe<RecurringBill>>>;
+  salaryProjection?: Maybe<SalaryProjection>;
 };
 
 
@@ -718,6 +735,11 @@ export type RootQueryTypePeriodSummaryArgs = {
   periodId: Scalars['ID']['input'];
 };
 
+
+export type RootQueryTypeSalaryProjectionArgs = {
+  today?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type SalaryDate = {
   __typename?: 'SalaryDate';
   date?: Maybe<Scalars['String']['output']>;
@@ -735,6 +757,19 @@ export type SalaryInfo = {
   nextSalaryDate?: Maybe<Scalars['String']['output']>;
   /** The salary of the current cycle has not been registered yet */
   pending?: Maybe<Scalars['Boolean']['output']>;
+};
+
+/** What the next salary already has to cover */
+export type SalaryProjection = {
+  __typename?: 'SalaryProjection';
+  accountBills?: Maybe<Scalars['String']['output']>;
+  committed?: Maybe<Scalars['String']['output']>;
+  cycleEndDate?: Maybe<Scalars['String']['output']>;
+  invoices?: Maybe<Array<Maybe<ProjectedInvoice>>>;
+  /** salary − committed */
+  left?: Maybe<Scalars['String']['output']>;
+  salary?: Maybe<Scalars['String']['output']>;
+  salaryDate?: Maybe<Scalars['String']['output']>;
 };
 
 export type Subcategory = {
@@ -961,6 +996,14 @@ export type UpdateFinancialAccountMutationVariables = Exact<{
 
 
 export type UpdateFinancialAccountMutation = { __typename?: 'RootMutationType', updateFinancialAccount?: { __typename?: 'FinancialAccount', id?: string | null, name?: string | null, closingDay?: number | null, dueDay?: number | null } | null };
+
+export type SetInvoiceGoalMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+  invoiceGoal?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type SetInvoiceGoalMutation = { __typename?: 'RootMutationType', updateFinancialAccount?: { __typename?: 'FinancialAccount', id?: string | null, invoiceGoal?: string | null } | null };
 
 export type MakePrimaryAccountMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -1198,7 +1241,7 @@ export type FinancialAccountsQueryVariables = Exact<{
 }>;
 
 
-export type FinancialAccountsQuery = { __typename?: 'RootQueryType', financialAccounts?: Array<{ __typename?: 'FinancialAccount', id?: string | null, name?: string | null, kind?: string | null, isPrimary?: boolean | null, balance?: string | null, balanceDate?: string | null, closingDay?: number | null, dueDay?: number | null, owner?: { __typename?: 'User', id?: string | null, name?: string | null, email?: string | null } | null } | null> | null };
+export type FinancialAccountsQuery = { __typename?: 'RootQueryType', financialAccounts?: Array<{ __typename?: 'FinancialAccount', id?: string | null, name?: string | null, kind?: string | null, isPrimary?: boolean | null, balance?: string | null, balanceDate?: string | null, closingDay?: number | null, dueDay?: number | null, invoiceGoal?: string | null, owner?: { __typename?: 'User', id?: string | null, name?: string | null, email?: string | null } | null } | null> | null };
 
 export type InvoicesQueryVariables = Exact<{
   cardId: Scalars['ID']['input'];
@@ -1259,6 +1302,13 @@ export type CycleProposalQueryVariables = Exact<{
 
 
 export type CycleProposalQuery = { __typename?: 'RootQueryType', cycleProposal?: { __typename?: 'CycleProposal', startDate?: string | null, endDate?: string | null, days?: number | null, salary?: string | null, accountBills?: string | null, cardBills?: string | null, installments?: string | null, available?: string | null } | null };
+
+export type SalaryProjectionQueryVariables = Exact<{
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type SalaryProjectionQuery = { __typename?: 'RootQueryType', salaryProjection?: { __typename?: 'SalaryProjection', salaryDate?: string | null, cycleEndDate?: string | null, salary?: string | null, accountBills?: string | null, committed?: string | null, left?: string | null, invoices?: Array<{ __typename?: 'ProjectedInvoice', cardId?: string | null, cardName?: string | null, month?: string | null, dueDate?: string | null, status?: string | null, amount?: string | null, pendingBills?: string | null } | null> | null } | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2098,6 +2148,41 @@ export function useUpdateFinancialAccountMutation(baseOptions?: Apollo.MutationH
 export type UpdateFinancialAccountMutationHookResult = ReturnType<typeof useUpdateFinancialAccountMutation>;
 export type UpdateFinancialAccountMutationResult = Apollo.MutationResult<UpdateFinancialAccountMutation>;
 export type UpdateFinancialAccountMutationOptions = Apollo.BaseMutationOptions<UpdateFinancialAccountMutation, UpdateFinancialAccountMutationVariables>;
+export const SetInvoiceGoalDocument = gql`
+    mutation SetInvoiceGoal($id: ID!, $invoiceGoal: String) {
+  updateFinancialAccount(id: $id, invoiceGoal: $invoiceGoal) {
+    id
+    invoiceGoal
+  }
+}
+    `;
+export type SetInvoiceGoalMutationFn = Apollo.MutationFunction<SetInvoiceGoalMutation, SetInvoiceGoalMutationVariables>;
+
+/**
+ * __useSetInvoiceGoalMutation__
+ *
+ * To run a mutation, you first call `useSetInvoiceGoalMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetInvoiceGoalMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setInvoiceGoalMutation, { data, loading, error }] = useSetInvoiceGoalMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      invoiceGoal: // value for 'invoiceGoal'
+ *   },
+ * });
+ */
+export function useSetInvoiceGoalMutation(baseOptions?: Apollo.MutationHookOptions<SetInvoiceGoalMutation, SetInvoiceGoalMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetInvoiceGoalMutation, SetInvoiceGoalMutationVariables>(SetInvoiceGoalDocument, options);
+      }
+export type SetInvoiceGoalMutationHookResult = ReturnType<typeof useSetInvoiceGoalMutation>;
+export type SetInvoiceGoalMutationResult = Apollo.MutationResult<SetInvoiceGoalMutation>;
+export type SetInvoiceGoalMutationOptions = Apollo.BaseMutationOptions<SetInvoiceGoalMutation, SetInvoiceGoalMutationVariables>;
 export const MakePrimaryAccountDocument = gql`
     mutation MakePrimaryAccount($id: ID!) {
   makePrimaryAccount(id: $id) {
@@ -3236,6 +3321,7 @@ export const FinancialAccountsDocument = gql`
     balanceDate
     closingDay
     dueDay
+    invoiceGoal
     owner {
       id
       name
@@ -3748,6 +3834,63 @@ export type CycleProposalQueryHookResult = ReturnType<typeof useCycleProposalQue
 export type CycleProposalLazyQueryHookResult = ReturnType<typeof useCycleProposalLazyQuery>;
 export type CycleProposalSuspenseQueryHookResult = ReturnType<typeof useCycleProposalSuspenseQuery>;
 export type CycleProposalQueryResult = Apollo.QueryResult<CycleProposalQuery, CycleProposalQueryVariables>;
+export const SalaryProjectionDocument = gql`
+    query SalaryProjection($today: String) {
+  salaryProjection(today: $today) {
+    salaryDate
+    cycleEndDate
+    salary
+    accountBills
+    committed
+    left
+    invoices {
+      cardId
+      cardName
+      month
+      dueDate
+      status
+      amount
+      pendingBills
+    }
+  }
+}
+    `;
+
+/**
+ * __useSalaryProjectionQuery__
+ *
+ * To run a query within a React component, call `useSalaryProjectionQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSalaryProjectionQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSalaryProjectionQuery({
+ *   variables: {
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useSalaryProjectionQuery(baseOptions?: Apollo.QueryHookOptions<SalaryProjectionQuery, SalaryProjectionQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SalaryProjectionQuery, SalaryProjectionQueryVariables>(SalaryProjectionDocument, options);
+      }
+export function useSalaryProjectionLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SalaryProjectionQuery, SalaryProjectionQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SalaryProjectionQuery, SalaryProjectionQueryVariables>(SalaryProjectionDocument, options);
+        }
+// @ts-ignore
+export function useSalaryProjectionSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<SalaryProjectionQuery, SalaryProjectionQueryVariables>): Apollo.UseSuspenseQueryResult<SalaryProjectionQuery, SalaryProjectionQueryVariables>;
+export function useSalaryProjectionSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<SalaryProjectionQuery, SalaryProjectionQueryVariables>): Apollo.UseSuspenseQueryResult<SalaryProjectionQuery | undefined, SalaryProjectionQueryVariables>;
+export function useSalaryProjectionSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<SalaryProjectionQuery, SalaryProjectionQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<SalaryProjectionQuery, SalaryProjectionQueryVariables>(SalaryProjectionDocument, options);
+        }
+export type SalaryProjectionQueryHookResult = ReturnType<typeof useSalaryProjectionQuery>;
+export type SalaryProjectionLazyQueryHookResult = ReturnType<typeof useSalaryProjectionLazyQuery>;
+export type SalaryProjectionSuspenseQueryHookResult = ReturnType<typeof useSalaryProjectionSuspenseQuery>;
+export type SalaryProjectionQueryResult = Apollo.QueryResult<SalaryProjectionQuery, SalaryProjectionQueryVariables>;
 export const MyGroupsDocument = gql`
     query MyGroups {
   myGroups {

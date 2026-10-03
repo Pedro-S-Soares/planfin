@@ -8,6 +8,7 @@ query FinancialAccounts($today: String) {
     balanceDate
     closingDay
     dueDay
+    invoiceGoal
     owner {
       id
       name
@@ -180,5 +181,25 @@ query CycleProposal($today: String) {
     cardBills
     installments
     available
+  }
+}
+
+query SalaryProjection($today: String) {
+  salaryProjection(today: $today) {
+    salaryDate
+    cycleEndDate
+    salary
+    accountBills
+    committed
+    left
+    invoices {
+      cardId
+      cardName
+      month
+      dueDate
+      status
+      amount
+      pendingBills
+    }
   }
 }

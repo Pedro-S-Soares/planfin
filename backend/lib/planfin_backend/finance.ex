@@ -65,7 +65,9 @@ defmodule PlanfinBackend.Finance do
   @doc "Updates name, owner and card days. Balance changes go through `set_balance/3`."
   def update_account(%Account{} = account, attrs) do
     account
-    |> Account.changeset(Map.take(attrs, [:name, :closing_day, :due_day, :owner_user_id]))
+    |> Account.changeset(
+      Map.take(attrs, [:name, :closing_day, :due_day, :owner_user_id, :invoice_goal])
+    )
     |> Repo.update()
     |> preload_owner()
   end

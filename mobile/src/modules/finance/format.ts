@@ -1,7 +1,7 @@
 import { formatDateBR } from "../../lib/date";
 
 export type AccountKind = "checking" | "credit_card" | "allowance" | "reserve";
-export type InvoiceStatus = "open" | "closed" | "partial" | "paid" | "overdue";
+export type InvoiceStatus = "upcoming" | "open" | "closed" | "partial" | "paid" | "overdue" | "empty";
 
 export const ACCOUNT_KIND_LABEL: Record<AccountKind, string> = {
   checking: "Conta corrente",
@@ -18,7 +18,9 @@ export const ACCOUNT_KIND_ICON: Record<AccountKind, string> = {
 };
 
 export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
+  upcoming: "Futura",
   open: "Aberta",
+  empty: "Sem compras",
   closed: "Fechada",
   partial: "Paga em parte",
   paid: "Paga",
@@ -33,6 +35,8 @@ export function isAccountKind(value: string | null | undefined): value is Accoun
 
 export function isInvoiceStatus(value: string | null | undefined): value is InvoiceStatus {
   return (
+    value === "upcoming" ||
+    value === "empty" ||
     value === "open" ||
     value === "closed" ||
     value === "partial" ||

@@ -35,6 +35,13 @@ mutation UpdateFinancialAccount($id: ID!, $name: String, $closingDay: Int, $dueD
   }
 }
 
+mutation SetInvoiceGoal($id: ID!, $invoiceGoal: String) {
+  updateFinancialAccount(id: $id, invoiceGoal: $invoiceGoal) {
+    id
+    invoiceGoal
+  }
+}
+
 mutation MakePrimaryAccount($id: ID!) {
   makePrimaryAccount(id: $id) {
     id
