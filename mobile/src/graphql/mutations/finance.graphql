@@ -72,3 +72,30 @@ mutation PayInvoice($cardId: ID!, $month: String!, $fromAccountId: ID!, $amount:
 mutation AssignEntriesToAccount($accountId: ID!, $fromDate: String!) {
   assignEntriesToAccount(accountId: $accountId, fromDate: $fromDate)
 }
+
+mutation CreateRecurringBill($name: String!, $amount: String!, $dueDay: Int!, $accountId: ID!, $subcategoryId: ID) {
+  createRecurringBill(name: $name, amount: $amount, dueDay: $dueDay, accountId: $accountId, subcategoryId: $subcategoryId) {
+    id
+  }
+}
+
+mutation UpdateRecurringBill($id: ID!, $name: String, $amount: String, $dueDay: Int, $accountId: ID, $subcategoryId: ID) {
+  updateRecurringBill(id: $id, name: $name, amount: $amount, dueDay: $dueDay, accountId: $accountId, subcategoryId: $subcategoryId) {
+    id
+  }
+}
+
+mutation DeleteRecurringBill($id: ID!) {
+  deleteRecurringBill(id: $id)
+}
+
+mutation PayBill($billId: ID!, $month: String!, $amount: String!, $date: String!) {
+  payBill(billId: $billId, month: $month, amount: $amount, date: $date) {
+    status
+    amount
+  }
+}
+
+mutation UnpayBill($billId: ID!, $month: String!) {
+  unpayBill(billId: $billId, month: $month)
+}

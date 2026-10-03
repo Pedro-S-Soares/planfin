@@ -45,6 +45,9 @@ import { CardDetailScreen } from "./src/modules/finance/CardDetailScreen";
 import { InvoiceScreen } from "./src/modules/finance/InvoiceScreen";
 import { PayInvoiceScreen } from "./src/modules/finance/PayInvoiceScreen";
 import { TransferScreen } from "./src/modules/finance/TransferScreen";
+import { BillsScreen } from "./src/modules/finance/BillsScreen";
+import { BillFormScreen } from "./src/modules/finance/BillFormScreen";
+import { PayBillScreen } from "./src/modules/finance/PayBillScreen";
 import type { AccountKind } from "./src/modules/finance/format";
 
 enableScreens();
@@ -94,6 +97,9 @@ export type AppStackParamList = {
   CardDetail: { cardId: string };
   Invoice: { cardId: string; month: string };
   PayInvoice: { cardId: string; month: string; remaining: string };
+  Bills: { month?: string } | undefined;
+  BillForm: { billId?: string };
+  PayBill: { billId: string; month: string; amount: string; name: string; isCard: boolean };
   Transfer: {
     fromAccountId?: string;
     toAccountId?: string;
@@ -337,6 +343,9 @@ function AppNavigator() {
           <AppStack.Screen name="Invoice" component={InvoiceScreen} options={pushOptions("Fatura")} />
           <AppStack.Screen name="PayInvoice" component={PayInvoiceScreen} options={modalOptions("Pagar fatura")} />
           <AppStack.Screen name="Transfer" component={TransferScreen} options={modalOptions("Transferir")} />
+          <AppStack.Screen name="Bills" component={BillsScreen} options={pushOptions("Despesas fixas")} />
+          <AppStack.Screen name="BillForm" component={BillFormScreen} options={modalOptions("Despesa fixa")} />
+          <AppStack.Screen name="PayBill" component={PayBillScreen} options={modalOptions("Pagar despesa fixa")} />
           <AppStack.Screen
             name="EditIncome"
             component={EditIncomeScreen}

@@ -78,6 +78,8 @@ export function AccountsScreen() {
                 onPay={(month, remaining) => navigation.navigate("PayInvoice", { cardId: card.id, month, remaining })}
               />
             ))}
+            <Btn label="🧾 Despesas fixas" variant="secondary" onPress={() => navigation.navigate("Bills", {})} />
+            <View style={{ height: 10 }} />
             {moneyAccounts.length > 0 ? (
               <Btn
                 label="Transferir entre contas"

@@ -82,3 +82,69 @@ query AccountMovements($accountId: ID!, $limit: Int) {
     amount
   }
 }
+
+query FinancePanel($today: String) {
+  financePanel(today: $today) {
+    hasAccounts
+    primaryAccountId
+    available
+    committed
+    free
+    horizonDate
+    commitments {
+      kind
+      label
+      dueDate
+      amount
+      status
+      cardId
+      billId
+      month
+    }
+  }
+}
+
+query RecurringBills {
+  recurringBills {
+    id
+    name
+    amount
+    dueDay
+    account {
+      id
+      name
+      kind
+    }
+    subcategory {
+      id
+      name
+      categoryId
+    }
+  }
+}
+
+query BillOccurrences($month: String!, $today: String) {
+  billOccurrences(month: $month, today: $today) {
+    month
+    dueDate
+    status
+    amount
+    expenseId
+    bill {
+      id
+      name
+      amount
+      dueDay
+      account {
+        id
+        name
+        kind
+      }
+      subcategory {
+        id
+        name
+        categoryId
+      }
+    }
+  }
+}
