@@ -12,24 +12,25 @@ import {
   useGroupMembersQuery,
   useUpdateFinancialAccountMutation,
 } from "../../graphql/__generated__/hooks";
-import { displayToAPI } from "../../lib/currency";
+import { displayToAPI, formatCents, parseCents } from "../../lib/currency";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { Colors } from "../../theme/tokens";
 import { accountFormSchema, type AccountFormValues } from "./account-form-schema";
 import { FormLabel } from "./components/FormLabel";
 import { ToggleRow } from "./components/ToggleRow";
-import { ACCOUNT_KIND_ICON, ACCOUNT_KIND_LABEL, signedApiAmount, type AccountKind } from "./format";
+import { ACCOUNT_KIND_ICON, ACCOUNT_KIND_LABEL, signedApiAmount, toNumber, type AccountKind } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
 
-const KINDS: AccountKind[] = ["checking", "credit_card", "allowance", "reserve"];
+const KINDS: AccountKind[] = ["checking", "credit_card", "benefit", "allowance", "reserve"];
 
 const KIND_HINT: Record<AccountKind, string> = {
   checking: "Onde cai o salário e saem os boletos.",
   credit_card: "As compras viram fatura; ela é paga com a conta.",
   allowance: "Conta pessoal de um de vocês. Gastos aqui não entram no orçamento da casa.",
   reserve: "Reserva de emergência ou investimento. Fica fora do orçamento.",
+  benefit: "Vale alimentação ou refeição: saldo próprio que recebe um crédito todo mês. Fica fora do limite diário.",
 };
 
 export function AccountFormScreen() {
@@ -57,6 +58,8 @@ export function AccountFormScreen() {
           closingDay: editing.closingDay ? String(editing.closingDay) : "",
           dueDay: editing.dueDay ? String(editing.dueDay) : "",
           ownerUserId: editing.owner?.id ?? null,
+          monthlyCredit: formatCents(Math.round(toNumber(editing.monthlyCredit) * 100)),
+          creditDay: editing.creditDay ? String(editing.creditDay) : "",
         }
       : undefined,
     defaultValues: {
@@ -67,6 +70,8 @@ export function AccountFormScreen() {
       closingDay: "5",
       dueDay: "15",
       ownerUserId: null,
+      monthlyCredit: "0,00",
+      creditDay: "1",
     },
   });
   const kind = watch("kind");
@@ -83,9 +88,14 @@ export function AccountFormScreen() {
       ? { closingDay: Number(values.closingDay), dueDay: Number(values.dueDay) }
       : { closingDay: null, dueDay: null };
     const ownerUserId = values.kind === "allowance" ? values.ownerUserId ?? null : null;
+    const hasCredit = values.kind === "benefit" && parseCents(values.monthlyCredit) > 0;
+    const credit = {
+      monthlyCredit: hasCredit ? displayToAPI(values.monthlyCredit) : null,
+      creditDay: hasCredit ? Number(values.creditDay) : null,
+    };
 
     if (editing) {
-      updateAccount({ variables: { id: editing.id, name: values.name, ownerUserId, ...days } });
+      updateAccount({ variables: { id: editing.id, name: values.name, ownerUserId, ...days, ...credit } });
       return;
     }
     createAccount({
@@ -96,6 +106,7 @@ export function AccountFormScreen() {
         ownerUserId,
         today: toISODate(new Date()),
         ...days,
+        ...credit,
       },
     });
   };
@@ -154,6 +165,31 @@ export function AccountFormScreen() {
             </View>
           ))}
         </View>
+      ) : null}
+
+      {kind === "benefit" ? (
+        <>
+          <FormLabel>Crédito por mês</FormLabel>
+          <Controller
+            control={control}
+            name="monthlyCredit"
+            render={({ field: { onChange, value } }) => <CurrencyInput value={value} onChange={onChange} />}
+          />
+          <Controller
+            control={control}
+            name="creditDay"
+            render={({ field: { onChange, value } }) => (
+              <FieldInput
+                label="Cai todo dia"
+                value={value ?? ""}
+                onChange={(v) => onChange(v.replace(/\D/g, "").slice(0, 2))}
+                keyboardType="number-pad"
+                error={errors.creditDay?.message}
+                hint="O crédito entra sozinho no saldo nesse dia."
+              />
+            )}
+          />
+        </>
       ) : null}
 
       {!editing && kind !== "credit_card" ? (

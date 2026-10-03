@@ -181,14 +181,19 @@ export type FinancialAccount = {
   balance?: Maybe<Scalars['String']['output']>;
   balanceDate?: Maybe<Scalars['String']['output']>;
   closingDay?: Maybe<Scalars['Int']['output']>;
+  /** Benefit accounts: day of the month the credit arrives */
+  creditDay?: Maybe<Scalars['Int']['output']>;
   dueDay?: Maybe<Scalars['Int']['output']>;
   id?: Maybe<Scalars['ID']['output']>;
   /** Target for the card invoice */
   invoiceGoal?: Maybe<Scalars['String']['output']>;
   isPrimary?: Maybe<Scalars['Boolean']['output']>;
-  /** checking | credit_card | allowance | reserve */
+  /** checking | credit_card | allowance | reserve | benefit */
   kind?: Maybe<Scalars['String']['output']>;
+  /** Benefit accounts: amount credited every month */
+  monthlyCredit?: Maybe<Scalars['String']['output']>;
   name?: Maybe<Scalars['String']['output']>;
+  nextCreditDate?: Maybe<Scalars['String']['output']>;
   owner?: Maybe<User>;
 };
 
@@ -399,8 +404,10 @@ export type RootMutationTypeCreateExpenseArgs = {
 export type RootMutationTypeCreateFinancialAccountArgs = {
   balance?: InputMaybe<Scalars['String']['input']>;
   closingDay?: InputMaybe<Scalars['Int']['input']>;
+  creditDay?: InputMaybe<Scalars['Int']['input']>;
   dueDay?: InputMaybe<Scalars['Int']['input']>;
   kind: Scalars['String']['input'];
+  monthlyCredit?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   ownerUserId?: InputMaybe<Scalars['ID']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
@@ -621,9 +628,11 @@ export type RootMutationTypeUpdateExpenseArgs = {
 
 export type RootMutationTypeUpdateFinancialAccountArgs = {
   closingDay?: InputMaybe<Scalars['Int']['input']>;
+  creditDay?: InputMaybe<Scalars['Int']['input']>;
   dueDay?: InputMaybe<Scalars['Int']['input']>;
   id: Scalars['ID']['input'];
   invoiceGoal?: InputMaybe<Scalars['String']['input']>;
+  monthlyCredit?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   ownerUserId?: InputMaybe<Scalars['ID']['input']>;
 };
@@ -1033,6 +1042,8 @@ export type CreateFinancialAccountMutationVariables = Exact<{
   balance?: InputMaybe<Scalars['String']['input']>;
   closingDay?: InputMaybe<Scalars['Int']['input']>;
   dueDay?: InputMaybe<Scalars['Int']['input']>;
+  monthlyCredit?: InputMaybe<Scalars['String']['input']>;
+  creditDay?: InputMaybe<Scalars['Int']['input']>;
   ownerUserId?: InputMaybe<Scalars['ID']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
 }>;
@@ -1045,11 +1056,13 @@ export type UpdateFinancialAccountMutationVariables = Exact<{
   name?: InputMaybe<Scalars['String']['input']>;
   closingDay?: InputMaybe<Scalars['Int']['input']>;
   dueDay?: InputMaybe<Scalars['Int']['input']>;
+  monthlyCredit?: InputMaybe<Scalars['String']['input']>;
+  creditDay?: InputMaybe<Scalars['Int']['input']>;
   ownerUserId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 
-export type UpdateFinancialAccountMutation = { __typename?: 'RootMutationType', updateFinancialAccount?: { __typename?: 'FinancialAccount', id?: string | null, name?: string | null, closingDay?: number | null, dueDay?: number | null } | null };
+export type UpdateFinancialAccountMutation = { __typename?: 'RootMutationType', updateFinancialAccount?: { __typename?: 'FinancialAccount', id?: string | null, name?: string | null, closingDay?: number | null, dueDay?: number | null, monthlyCredit?: string | null, creditDay?: number | null } | null };
 
 export type SetInvoiceGoalMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -1310,7 +1323,7 @@ export type FinancialAccountsQueryVariables = Exact<{
 }>;
 
 
-export type FinancialAccountsQuery = { __typename?: 'RootQueryType', financialAccounts?: Array<{ __typename?: 'FinancialAccount', id?: string | null, name?: string | null, kind?: string | null, isPrimary?: boolean | null, balance?: string | null, balanceDate?: string | null, closingDay?: number | null, dueDay?: number | null, invoiceGoal?: string | null, owner?: { __typename?: 'User', id?: string | null, name?: string | null, email?: string | null } | null } | null> | null };
+export type FinancialAccountsQuery = { __typename?: 'RootQueryType', financialAccounts?: Array<{ __typename?: 'FinancialAccount', id?: string | null, name?: string | null, kind?: string | null, isPrimary?: boolean | null, balance?: string | null, balanceDate?: string | null, closingDay?: number | null, dueDay?: number | null, invoiceGoal?: string | null, monthlyCredit?: string | null, creditDay?: number | null, nextCreditDate?: string | null, owner?: { __typename?: 'User', id?: string | null, name?: string | null, email?: string | null } | null } | null> | null };
 
 export type InvoicesQueryVariables = Exact<{
   cardId: Scalars['ID']['input'];
@@ -2133,13 +2146,15 @@ export type DeleteSubcategoryMutationHookResult = ReturnType<typeof useDeleteSub
 export type DeleteSubcategoryMutationResult = Apollo.MutationResult<DeleteSubcategoryMutation>;
 export type DeleteSubcategoryMutationOptions = Apollo.BaseMutationOptions<DeleteSubcategoryMutation, DeleteSubcategoryMutationVariables>;
 export const CreateFinancialAccountDocument = gql`
-    mutation CreateFinancialAccount($name: String!, $kind: String!, $balance: String, $closingDay: Int, $dueDay: Int, $ownerUserId: ID, $today: String) {
+    mutation CreateFinancialAccount($name: String!, $kind: String!, $balance: String, $closingDay: Int, $dueDay: Int, $monthlyCredit: String, $creditDay: Int, $ownerUserId: ID, $today: String) {
   createFinancialAccount(
     name: $name
     kind: $kind
     balance: $balance
     closingDay: $closingDay
     dueDay: $dueDay
+    monthlyCredit: $monthlyCredit
+    creditDay: $creditDay
     ownerUserId: $ownerUserId
     today: $today
   ) {
@@ -2173,6 +2188,8 @@ export type CreateFinancialAccountMutationFn = Apollo.MutationFunction<CreateFin
  *      balance: // value for 'balance'
  *      closingDay: // value for 'closingDay'
  *      dueDay: // value for 'dueDay'
+ *      monthlyCredit: // value for 'monthlyCredit'
+ *      creditDay: // value for 'creditDay'
  *      ownerUserId: // value for 'ownerUserId'
  *      today: // value for 'today'
  *   },
@@ -2186,18 +2203,22 @@ export type CreateFinancialAccountMutationHookResult = ReturnType<typeof useCrea
 export type CreateFinancialAccountMutationResult = Apollo.MutationResult<CreateFinancialAccountMutation>;
 export type CreateFinancialAccountMutationOptions = Apollo.BaseMutationOptions<CreateFinancialAccountMutation, CreateFinancialAccountMutationVariables>;
 export const UpdateFinancialAccountDocument = gql`
-    mutation UpdateFinancialAccount($id: ID!, $name: String, $closingDay: Int, $dueDay: Int, $ownerUserId: ID) {
+    mutation UpdateFinancialAccount($id: ID!, $name: String, $closingDay: Int, $dueDay: Int, $monthlyCredit: String, $creditDay: Int, $ownerUserId: ID) {
   updateFinancialAccount(
     id: $id
     name: $name
     closingDay: $closingDay
     dueDay: $dueDay
+    monthlyCredit: $monthlyCredit
+    creditDay: $creditDay
     ownerUserId: $ownerUserId
   ) {
     id
     name
     closingDay
     dueDay
+    monthlyCredit
+    creditDay
   }
 }
     `;
@@ -2220,6 +2241,8 @@ export type UpdateFinancialAccountMutationFn = Apollo.MutationFunction<UpdateFin
  *      name: // value for 'name'
  *      closingDay: // value for 'closingDay'
  *      dueDay: // value for 'dueDay'
+ *      monthlyCredit: // value for 'monthlyCredit'
+ *      creditDay: // value for 'creditDay'
  *      ownerUserId: // value for 'ownerUserId'
  *   },
  * });
@@ -3474,6 +3497,9 @@ export const FinancialAccountsDocument = gql`
     closingDay
     dueDay
     invoiceGoal
+    monthlyCredit
+    creditDay
+    nextCreditDate
     owner {
       id
       name

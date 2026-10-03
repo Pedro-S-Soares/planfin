@@ -4,6 +4,8 @@ mutation CreateFinancialAccount(
   $balance: String
   $closingDay: Int
   $dueDay: Int
+  $monthlyCredit: String
+  $creditDay: Int
   $ownerUserId: ID
   $today: String
 ) {
@@ -13,6 +15,8 @@ mutation CreateFinancialAccount(
     balance: $balance
     closingDay: $closingDay
     dueDay: $dueDay
+    monthlyCredit: $monthlyCredit
+    creditDay: $creditDay
     ownerUserId: $ownerUserId
     today: $today
   ) {
@@ -26,12 +30,30 @@ mutation CreateFinancialAccount(
   }
 }
 
-mutation UpdateFinancialAccount($id: ID!, $name: String, $closingDay: Int, $dueDay: Int, $ownerUserId: ID) {
-  updateFinancialAccount(id: $id, name: $name, closingDay: $closingDay, dueDay: $dueDay, ownerUserId: $ownerUserId) {
+mutation UpdateFinancialAccount(
+  $id: ID!
+  $name: String
+  $closingDay: Int
+  $dueDay: Int
+  $monthlyCredit: String
+  $creditDay: Int
+  $ownerUserId: ID
+) {
+  updateFinancialAccount(
+    id: $id
+    name: $name
+    closingDay: $closingDay
+    dueDay: $dueDay
+    monthlyCredit: $monthlyCredit
+    creditDay: $creditDay
+    ownerUserId: $ownerUserId
+  ) {
     id
     name
     closingDay
     dueDay
+    monthlyCredit
+    creditDay
   }
 }
 

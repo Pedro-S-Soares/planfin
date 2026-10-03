@@ -1,7 +1,8 @@
 defmodule PlanfinBackend.Finance.Account do
   @moduledoc """
   A money container of the group: a checking account, a credit card, an
-  allowance account (owned by one member) or a reserve.
+  allowance account (owned by one member), a reserve or a benefit (meal
+  voucher) that receives `monthly_credit` on `credit_day` every month.
 
   For non-card accounts the live balance is `balance` (as reconciled at
   `balance_date`) plus every movement after it. Cards carry `closing_day` and
@@ -13,7 +14,10 @@ defmodule PlanfinBackend.Finance.Account do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @kinds ~w(checking credit_card allowance reserve)
+  @kinds ~w(checking credit_card allowance reserve benefit)
+
+  @doc "Kinds whose money is separate from the household budget."
+  def outside_budget_kinds, do: ~w(allowance reserve benefit)
 
   schema "financial_accounts" do
     field :name, :string
@@ -25,6 +29,8 @@ defmodule PlanfinBackend.Finance.Account do
     field :closing_day, :integer
     field :due_day, :integer
     field :invoice_goal, :decimal
+    field :monthly_credit, :decimal
+    field :credit_day, :integer
     field :archived_at, :naive_datetime
 
     belongs_to :group, PlanfinBackend.Groups.Group
@@ -47,6 +53,8 @@ defmodule PlanfinBackend.Finance.Account do
       :closing_day,
       :due_day,
       :invoice_goal,
+      :monthly_credit,
+      :credit_day,
       :archived_at,
       :group_id,
       :owner_user_id
@@ -57,6 +65,7 @@ defmodule PlanfinBackend.Finance.Account do
     |> validate_inclusion(:kind, @kinds)
     |> validate_number(:invoice_goal, greater_than_or_equal_to: 0)
     |> validate_card_days()
+    |> validate_benefit_credit()
     |> validate_primary_is_checking()
     |> unique_constraint(:is_primary, name: :financial_accounts_one_primary_per_group)
   end
@@ -71,6 +80,28 @@ defmodule PlanfinBackend.Finance.Account do
       changeset
       |> put_change(:closing_day, nil)
       |> put_change(:due_day, nil)
+    end
+  end
+
+  defp validate_benefit_credit(changeset) do
+    if get_field(changeset, :kind) == "benefit" do
+      changeset
+      |> validate_number(:monthly_credit, greater_than: 0)
+      |> validate_number(:credit_day, greater_than_or_equal_to: 1, less_than_or_equal_to: 31)
+      |> require_both_credit_fields()
+    else
+      changeset
+      |> put_change(:monthly_credit, nil)
+      |> put_change(:credit_day, nil)
+    end
+  end
+
+  defp require_both_credit_fields(changeset) do
+    case {get_field(changeset, :monthly_credit), get_field(changeset, :credit_day)} do
+      {nil, nil} -> changeset
+      {_, nil} -> add_error(changeset, :credit_day, "can't be blank")
+      {nil, _} -> add_error(changeset, :monthly_credit, "can't be blank")
+      _ -> changeset
     end
   end
 

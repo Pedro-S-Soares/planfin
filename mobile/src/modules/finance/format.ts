@@ -1,6 +1,6 @@
 import { formatDateBR } from "../../lib/date";
 
-export type AccountKind = "checking" | "credit_card" | "allowance" | "reserve";
+export type AccountKind = "checking" | "credit_card" | "allowance" | "reserve" | "benefit";
 export type InvoiceStatus = "upcoming" | "open" | "closed" | "partial" | "paid" | "overdue" | "empty";
 
 export const ACCOUNT_KIND_LABEL: Record<AccountKind, string> = {
@@ -8,6 +8,7 @@ export const ACCOUNT_KIND_LABEL: Record<AccountKind, string> = {
   credit_card: "Cartão de crédito",
   allowance: "Mesada",
   reserve: "Reserva",
+  benefit: "Vale alimentação",
 };
 
 export const ACCOUNT_KIND_ICON: Record<AccountKind, string> = {
@@ -15,6 +16,7 @@ export const ACCOUNT_KIND_ICON: Record<AccountKind, string> = {
   credit_card: "💳",
   allowance: "👛",
   reserve: "🛟",
+  benefit: "🍽️",
 };
 
 export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
@@ -30,7 +32,13 @@ export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 export function isAccountKind(value: string | null | undefined): value is AccountKind {
-  return value === "checking" || value === "credit_card" || value === "allowance" || value === "reserve";
+  return (
+    value === "checking" ||
+    value === "credit_card" ||
+    value === "allowance" ||
+    value === "reserve" ||
+    value === "benefit"
+  );
 }
 
 export function isInvoiceStatus(value: string | null | undefined): value is InvoiceStatus {

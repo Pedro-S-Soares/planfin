@@ -7,7 +7,7 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
   object :financial_account do
     field :id, :id
     field :name, :string
-    @desc "checking | credit_card | allowance | reserve"
+    @desc "checking | credit_card | allowance | reserve | benefit"
     field :kind, :string
     field :is_primary, :boolean
     @desc "Live balance (nil for cards)"
@@ -17,6 +17,11 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :due_day, :integer
     @desc "Target for the card invoice"
     field :invoice_goal, :string
+    @desc "Benefit accounts: amount credited every month"
+    field :monthly_credit, :string
+    @desc "Benefit accounts: day of the month the credit arrives"
+    field :credit_day, :integer
+    field :next_credit_date, :string
     field :owner, :user
   end
 
@@ -349,6 +354,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       arg(:balance, :string)
       arg(:closing_day, :integer)
       arg(:due_day, :integer)
+      arg(:monthly_credit, :string)
+      arg(:credit_day, :integer)
       arg(:owner_user_id, :id)
       arg(:today, :string)
       resolve(&Finance.create_account/3)
@@ -361,6 +368,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       arg(:due_day, :integer)
       arg(:owner_user_id, :id)
       arg(:invoice_goal, :string)
+      arg(:monthly_credit, :string)
+      arg(:credit_day, :integer)
       resolve(&Finance.update_account/3)
     end
 
