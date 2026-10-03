@@ -6,6 +6,12 @@ defmodule PlanfinBackend.Finance.Bills do
   to the entry that paid it; otherwise it is `pending`, or `overdue` after its
   due date. Paying creates an entry outside the daily budget (fixed bills were
   already taken out of the period budget), on the bill's account or card.
+
+  Bills on a card are charged automatically on their due date
+  (`charge_due_card_bills/2`), landing on the invoice of that date. Removing
+  such a charge marks the month as `skipped` so it is not charged again.
+
+  A bill only has occurrences due on or after the day it was created.
   """
 
   import Ecto.Query, warn: false
@@ -102,7 +108,7 @@ defmodule PlanfinBackend.Finance.Bills do
         bill <- bills,
         exists_in?(bill, month),
         occ = occurrence(bill, month, payments, today),
-        occ.status != "paid",
+        occ.status in ["pending", "overdue"],
         Date.compare(occ.due_date, horizon) != :gt do
       occ
     end
@@ -116,17 +122,19 @@ defmodule PlanfinBackend.Finance.Bills do
     |> Enum.reduce(Decimal.new("0"), &Decimal.add(&2, &1.amount))
   end
 
-  # A bill only has occurrences from the month it was created on.
-  defp exists_in?(%RecurringBill{inserted_at: inserted_at}, month),
-    do: {inserted_at.year, inserted_at.month} <= month
+  # Occurrences due before the bill existed were settled outside the app.
+  defp exists_in?(%RecurringBill{inserted_at: inserted_at} = bill, month),
+    do: Date.compare(due_date(bill, month), NaiveDateTime.to_date(inserted_at)) != :lt
 
   defp occurrence(bill, month, payments, today) do
     due = due_date(bill, month)
     payment = Map.get(payments, {bill.id, month})
+    expense = payment && payment.expense
 
     status =
       cond do
-        payment -> "paid"
+        expense -> "paid"
+        payment && card?(bill) -> "skipped"
         Date.compare(today, due) == :gt -> "overdue"
         true -> "pending"
       end
@@ -136,9 +144,39 @@ defmodule PlanfinBackend.Finance.Bills do
       month: month,
       due_date: due,
       status: status,
-      amount: if(payment, do: payment.expense.amount, else: bill.amount),
-      expense_id: payment && payment.expense_id
+      amount: if(expense, do: expense.amount, else: bill.amount),
+      expense_id: expense && expense.id
     }
+  end
+
+  defp card?(%RecurringBill{account: %Account{kind: "credit_card"}}), do: true
+  defp card?(_bill), do: false
+
+  @doc """
+  Charges on the card every card bill whose due date has arrived and that was
+  neither charged nor skipped, looking back two months. Idempotent: a month is
+  charged at most once even with concurrent calls.
+  """
+  def charge_due_card_bills(group_id, %Date{} = today) do
+    bills = group_id |> list_bills() |> Enum.filter(&card?/1)
+
+    if bills != [] do
+      current = {today.year, today.month}
+      months = months_between(Calendar.add_months(current, -2), current)
+      payments = payments_for(group_id, months)
+      owner_id = Repo.get!(PlanfinBackend.Groups.Group, group_id).owner_id
+
+      for month <- months,
+          bill <- bills,
+          exists_in?(bill, month),
+          not Map.has_key?(payments, {bill.id, month}),
+          due = due_date(bill, month),
+          Date.compare(due, today) != :gt do
+        pay(group_id, owner_id, bill, month, bill.amount, due)
+      end
+    end
+
+    :ok
   end
 
   defp payments_for(group_id, months) do
@@ -159,8 +197,13 @@ defmodule PlanfinBackend.Finance.Bills do
   the bill's account (or card) and links it. Returns `{:ok, occurrence}`.
   """
   def pay(group_id, user_id, %RecurringBill{} = bill, month, %Decimal{} = amount, %Date{} = date) do
+    month_date = Date.new!(elem(month, 0), elem(month, 1), 1)
+
     Repo.transaction(fn ->
-      with {:ok, expense} <-
+      existing = Repo.get_by(BillPayment, bill_id: bill.id, month: month_date)
+
+      with :ok <- not_paid_yet(existing),
+           {:ok, expense} <-
              Expenses.create_expense(group_id, user_id, %{
                amount: amount,
                date: date,
@@ -171,14 +214,14 @@ defmodule PlanfinBackend.Finance.Bills do
                source: "bill"
              }),
            {:ok, _payment} <-
-             %BillPayment{}
+             (existing || %BillPayment{})
              |> BillPayment.changeset(%{
                group_id: group_id,
                bill_id: bill.id,
                expense_id: expense.id,
-               month: Date.new!(elem(month, 0), elem(month, 1), 1)
+               month: month_date
              })
-             |> Repo.insert() do
+             |> Repo.insert_or_update() do
         payments = payments_for(group_id, [month])
         occurrence(bill, month, payments, date)
       else
@@ -187,7 +230,14 @@ defmodule PlanfinBackend.Finance.Bills do
     end)
   end
 
-  @doc "Undoes the payment of `month`, deleting the entry it created."
+  # A skipped month (payment without entry) can be paid again.
+  defp not_paid_yet(%BillPayment{expense_id: id}) when not is_nil(id), do: {:error, :already_paid}
+  defp not_paid_yet(_), do: :ok
+
+  @doc """
+  Undoes the payment of `month`, deleting the entry it created. For a card bill
+  the month becomes `skipped`, so the automatic charge does not come back.
+  """
   def unpay(group_id, %RecurringBill{} = bill, month) do
     month_date = Date.new!(elem(month, 0), elem(month, 1), 1)
 
@@ -195,8 +245,15 @@ defmodule PlanfinBackend.Finance.Bills do
       nil ->
         {:error, :not_found}
 
+      %BillPayment{expense_id: nil} ->
+        {:error, :not_found}
+
       payment ->
-        {:ok, _} = Expenses.delete_expense(group_id, payment.expense_id)
+        Repo.transaction(fn ->
+          unless card?(Repo.preload(bill, :account)), do: Repo.delete!(payment)
+          {:ok, _} = Expenses.delete_expense(group_id, payment.expense_id)
+        end)
+
         :ok
     end
   end

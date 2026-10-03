@@ -1,5 +1,9 @@
 defmodule PlanfinBackend.Finance.BillPayment do
-  @moduledoc "Marks the occurrence of a recurring bill in `month` as paid by `expense`."
+  @moduledoc """
+  Settles the occurrence of a recurring bill in `month`. With `expense` it was
+  paid (or charged on the card). Without it, a card bill month was skipped by
+  the user and must not be charged again.
+  """
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -19,7 +23,7 @@ defmodule PlanfinBackend.Finance.BillPayment do
   def changeset(payment, attrs) do
     payment
     |> cast(attrs, [:month, :group_id, :bill_id, :expense_id])
-    |> validate_required([:month, :group_id, :bill_id, :expense_id])
+    |> validate_required([:month, :group_id, :bill_id])
     |> unique_constraint([:bill_id, :month])
   end
 end
