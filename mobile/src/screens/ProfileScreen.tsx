@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import { confirm, alertWeb } from "../lib/alert";
+import { confirm } from "../lib/alert";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -51,9 +51,7 @@ export function ProfileScreen() {
         setTimeout(() => setSaved(false), 2000);
       }
     },
-    onError: (err) => {
-      alertWeb("Erro", err.message);
-    },
+    onError: () => undefined, // o toast global avisa o erro
   });
 
   const [logout] = useLogoutMutation({

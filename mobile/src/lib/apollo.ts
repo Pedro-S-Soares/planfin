@@ -1,8 +1,11 @@
-import { ApolloClient, InMemoryCache, createHttpLink, from } from "@apollo/client";
+import { ApolloClient, ApolloLink, InMemoryCache, createHttpLink, from } from "@apollo/client";
+import type { DocumentNode } from "graphql";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
 import { storage } from "./storage";
 import { logger } from "./logger";
+import { toast } from "./toast";
+import { isSilent, successMessage, translateError } from "./operation-messages";
 
 let onAuthErrorCallback: (() => void) | null = null;
 
@@ -34,9 +37,34 @@ const authLink = setContext(async (_, { headers }) => {
   };
 });
 
+function isMutation(query: DocumentNode): boolean {
+  return query.definitions.some((d) => d.kind === "OperationDefinition" && d.operation === "mutation");
+}
+
+/** Tells the user how every mutation went: success message or translated error. */
+const toastLink = new ApolloLink((operation, forward) => {
+  if (!isMutation(operation.query)) return forward(operation);
+
+  return forward(operation).map((result) => {
+    const name = operation.operationName;
+    const firstError = result.errors?.[0]?.message;
+
+    if (firstError) {
+      if (!isSilent(name) && !/not authenticated/i.test(firstError)) toast.error(translateError(firstError));
+    } else {
+      const message = successMessage(name, operation.variables, result.data);
+      if (message) toast.success(message);
+    }
+    return result;
+  });
+});
+
 const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
   if (networkError) {
     logger.error("Apollo:NetworkError", operation.operationName, networkError.message);
+    if (isMutation(operation.query) && !isSilent(operation.operationName)) {
+      toast.error("Sem conexão com o servidor. Confira a internet e tente de novo.");
+    }
   }
 
   if (graphQLErrors) {
@@ -58,6 +86,6 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
 });
 
 export const apolloClient = new ApolloClient({
-  link: from([errorLink, authLink, httpLink]),
+  link: from([errorLink, toastLink, authLink, httpLink]),
   cache: new InMemoryCache(),
 });

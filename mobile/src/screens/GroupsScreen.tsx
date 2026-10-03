@@ -9,7 +9,7 @@ import {
   TextInput,
   Share,
 } from "react-native";
-import { confirm, alertWeb } from "../lib/alert";
+import { confirm } from "../lib/alert";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { useGroup } from "../context/GroupContext";
 import { useAuth } from "../context/AuthContext";
@@ -24,6 +24,7 @@ import { Card } from "../components/ui/Card";
 import { Btn } from "../components/ui/Btn";
 import { Colors, Radius, Shadow } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { toast } from "../lib/toast";
 
 type GroupInvitesData = { groupInvites: GroupInvite[] };
 
@@ -54,10 +55,10 @@ export function GroupsScreen() {
       async () => {
         try {
           const ok = await leaveGroup(group.id);
-          if (!ok) alertWeb("Não foi possível sair", "Dono do grupo precisa transferir ou excluir.");
+          if (!ok) toast.error("O dono do grupo precisa transferir ou excluir o grupo antes de sair.");
           else await refetch();
-        } catch (err: unknown) {
-          alertWeb("Erro", err instanceof Error ? err.message : "Erro desconhecido");
+        } catch {
+          // o toast global já avisou o erro da operação
         }
       }
     );

@@ -8,7 +8,7 @@ import {
   Platform,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { confirm, alertWeb } from "../lib/alert";
+import { confirm } from "../lib/alert";
 import { useNavigation } from "@react-navigation/native";
 import {
   useListInvitesQuery,
@@ -20,6 +20,7 @@ import { Card } from "../components/ui/Card";
 import { Btn } from "../components/ui/Btn";
 import { Colors, Radius } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { toast } from "../lib/toast";
 
 type Invite = NonNullable<NonNullable<ListInvitesQuery["listInvites"]>[number]>;
 
@@ -60,21 +61,21 @@ export function AdminInvitesScreen() {
         refetch();
       }
     },
-    onError: (err) => alertWeb("Erro", err.message),
+    onError: () => undefined, // o toast global avisa o erro
   });
 
   const [revokeInvite] = useRevokeInviteMutation({
     onCompleted: () => refetch(),
-    onError: (err) => alertWeb("Erro", err.message),
+    onError: () => undefined, // o toast global avisa o erro
   });
 
   const handleCopy = async (url: string) => {
     if (Platform.OS === "web") {
       await navigator.clipboard.writeText(url).catch(() => {});
-      alertWeb("Copiado!", "Link de convite copiado para a área de transferência.");
+      toast.success("Link de convite copiado");
     } else {
       await Clipboard.setStringAsync(url);
-      alertWeb("Copiado!", "Link de convite copiado para a área de transferência.");
+      toast.success("Link de convite copiado");
     }
   };
 
