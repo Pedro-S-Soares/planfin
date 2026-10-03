@@ -1,0 +1,339 @@
+defmodule PlanfinBackendWeb.Resolvers.Finance do
+  require Ecto.Query
+
+  alias PlanfinBackend.{Expenses, Finance}
+  alias PlanfinBackend.Finance.Invoices
+  alias PlanfinBackendWeb.Resolvers.Budget
+
+  # ---- Queries ----
+
+  def list_accounts(_parent, args, %{context: %{current_group: group}}) do
+    today = today(args)
+    {:ok, group.id |> Finance.list_accounts() |> Enum.map(&format_account(&1, today))}
+  end
+
+  def list_accounts(_parent, _args, context), do: access_error(context)
+
+  def list_invoices(_parent, %{card_id: card_id} = args, %{context: %{current_group: group}}) do
+    with {:ok, card} <- fetch_card(group.id, card_id) do
+      past = args |> Map.get(:past, 3) |> max(0) |> min(24)
+      {:ok, card |> Invoices.list(today(args), past) |> Enum.map(&format_invoice/1)}
+    end
+  end
+
+  def list_invoices(_parent, _args, context), do: access_error(context)
+
+  def get_invoice(_parent, %{card_id: card_id, month: month} = args, %{
+        context: %{current_group: group}
+      }) do
+    with {:ok, card} <- fetch_card(group.id, card_id),
+         {:ok, month} <- parse_month(month) do
+      {:ok, card |> Invoices.build(month, today(args), with_entries: true) |> format_invoice()}
+    end
+  end
+
+  def get_invoice(_parent, _args, context), do: access_error(context)
+
+  def list_movements(_parent, %{account_id: id} = args, %{context: %{current_group: group}}) do
+    with {:ok, account} <- fetch_account(group.id, id) do
+      limit = args |> Map.get(:limit, 50) |> max(1) |> min(200)
+
+      {:ok,
+       account
+       |> Finance.list_movements(limit)
+       |> Enum.map(fn m ->
+         %{m | date: Date.to_iso8601(m.date), amount: Decimal.to_string(m.amount)}
+       end)}
+    end
+  end
+
+  def list_movements(_parent, _args, context), do: access_error(context)
+
+  # ---- Mutations ----
+
+  def create_account(_parent, args, %{context: %{current_group: group}}) do
+    attrs = %{
+      name: args.name,
+      kind: args.kind,
+      closing_day: args[:closing_day],
+      due_day: args[:due_day],
+      owner_user_id: parse_int(args[:owner_user_id])
+    }
+
+    with {:ok, attrs} <- put_decimal(attrs, :balance, args[:balance]),
+         :ok <- validate_owner(group.id, attrs.owner_user_id),
+         {:ok, account} <- Finance.create_account(group.id, attrs, today(args)) do
+      {:ok, format_account(account, today(args))}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def create_account(_parent, _args, context), do: access_error(context)
+
+  def update_account(_parent, %{id: id} = args, %{context: %{current_group: group}}) do
+    attrs =
+      args
+      |> Map.take([:name, :closing_day, :due_day])
+      |> then(fn a ->
+        if Map.has_key?(args, :owner_user_id),
+          do: Map.put(a, :owner_user_id, parse_int(args.owner_user_id)),
+          else: a
+      end)
+
+    with {:ok, account} <- fetch_account(group.id, id),
+         :ok <- validate_owner(group.id, Map.get(attrs, :owner_user_id)),
+         {:ok, account} <- Finance.update_account(account, attrs) do
+      {:ok, format_account(account, Date.utc_today())}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def update_account(_parent, _args, context), do: access_error(context)
+
+  def make_primary(_parent, %{id: id}, %{context: %{current_group: group}}) do
+    with {:ok, account} <- fetch_account(group.id, id),
+         {:ok, account} <- Finance.make_primary(account) do
+      {:ok, format_account(account, Date.utc_today())}
+    else
+      {:error, :not_checking} -> {:error, "Only a checking account can be primary"}
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def make_primary(_parent, _args, context), do: access_error(context)
+
+  def archive_account(_parent, %{id: id}, %{context: %{current_group: group}}) do
+    with {:ok, account} <- fetch_account(group.id, id),
+         {:ok, _} <- Finance.archive_account(account) do
+      {:ok, true}
+    end
+  end
+
+  def archive_account(_parent, _args, context), do: access_error(context)
+
+  def set_balance(_parent, %{id: id, balance: balance} = args, %{
+        context: %{current_group: group}
+      }) do
+    with {:ok, account} <- fetch_account(group.id, id),
+         {:ok, amount} <- parse_decimal(balance),
+         {:ok, account} <- Finance.set_balance(account, amount, today(args)) do
+      {:ok, format_account(account, today(args))}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def set_balance(_parent, _args, context), do: access_error(context)
+
+  def create_transfer(_parent, args, %{context: %{current_group: group, current_user: user}}) do
+    with {:ok, amount} <- parse_decimal(args.amount),
+         {:ok, date} <- parse_date(args.date),
+         {:ok, transfer} <-
+           Finance.create_transfer(group.id, user.id, %{
+             from_account_id: args.from_account_id,
+             to_account_id: args.to_account_id,
+             amount: amount,
+             date: date,
+             kind: args[:kind] || "other",
+             note: args[:note]
+           }) do
+      {:ok, format_transfer(transfer)}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, :not_found} -> {:error, "Account not found"}
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def create_transfer(_parent, _args, context), do: access_error(context)
+
+  def delete_transfer(_parent, %{id: id}, %{context: %{current_group: group}}) do
+    case Finance.delete_transfer(group.id, id) do
+      {:ok, _} -> {:ok, true}
+      {:error, :not_found} -> {:error, "Transfer not found"}
+    end
+  end
+
+  def delete_transfer(_parent, _args, context), do: access_error(context)
+
+  def pay_invoice(_parent, args, %{context: %{current_group: group, current_user: user}}) do
+    with {:ok, card} <- fetch_card(group.id, args.card_id),
+         {:ok, month} <- parse_month(args.month),
+         {:ok, amount} <- parse_decimal(args.amount),
+         {:ok, date} <- parse_date(args.date),
+         {:ok, _transfer} <-
+           Finance.create_transfer(group.id, user.id, %{
+             from_account_id: args.from_account_id,
+             to_account_id: card.id,
+             amount: amount,
+             date: date,
+             kind: "card_payment",
+             invoice_month: Invoices.month_date(month)
+           }) do
+      {:ok, card |> Invoices.build(month, date, with_entries: true) |> format_invoice()}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, :not_found} -> {:error, "Account not found"}
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def pay_invoice(_parent, _args, context), do: access_error(context)
+
+  def assign_entries(_parent, %{account_id: id, from_date: from}, %{
+        context: %{current_group: group}
+      }) do
+    with {:ok, from} <- parse_date(from) do
+      case Expenses.assign_unassigned_to_account(group.id, id, from) do
+        {:ok, count} -> {:ok, count}
+        {:error, :account_not_found} -> {:error, "Account not found"}
+      end
+    end
+  end
+
+  def assign_entries(_parent, _args, context), do: access_error(context)
+
+  # ---- Formatting ----
+
+  @doc false
+  def format_account(account, today) do
+    %{
+      id: account.id,
+      name: account.name,
+      kind: account.kind,
+      is_primary: account.is_primary,
+      balance: account |> Finance.account_balance(today) |> decimal_string(),
+      balance_date: Date.to_iso8601(account.balance_date),
+      closing_day: account.closing_day,
+      due_day: account.due_day,
+      owner: format_owner(account.owner_user)
+    }
+  end
+
+  defp format_owner(%PlanfinBackend.Accounts.User{} = u),
+    do: %{id: to_string(u.id), email: u.email, name: u.name}
+
+  defp format_owner(_), do: nil
+
+  @doc false
+  def format_invoice(invoice) do
+    %{
+      card_id: invoice.card_id,
+      month: Invoices.format_month(invoice.month),
+      start_date: Date.to_iso8601(invoice.start_date),
+      closing_date: Date.to_iso8601(invoice.closing_date),
+      due_date: Date.to_iso8601(invoice.due_date),
+      total: Decimal.to_string(invoice.total),
+      paid: Decimal.to_string(invoice.paid),
+      remaining: Decimal.to_string(invoice.remaining),
+      status: invoice.status,
+      entries:
+        case Map.get(invoice, :entries) do
+          nil -> nil
+          entries -> Enum.map(entries, &Budget.format_expense/1)
+        end
+    }
+  end
+
+  defp format_transfer(t) do
+    %{
+      id: t.id,
+      from_account_id: t.from_account_id,
+      to_account_id: t.to_account_id,
+      amount: Decimal.to_string(t.amount),
+      date: Date.to_iso8601(t.date),
+      kind: t.kind,
+      invoice_month: t.invoice_month && Date.to_iso8601(t.invoice_month),
+      note: t.note
+    }
+  end
+
+  # ---- Helpers ----
+
+  defp fetch_account(group_id, id) do
+    case Finance.get_account(group_id, id) do
+      {:ok, account} -> {:ok, account}
+      {:error, :not_found} -> {:error, "Account not found"}
+    end
+  end
+
+  defp fetch_card(group_id, id) do
+    case fetch_account(group_id, id) do
+      {:ok, %{kind: "credit_card"} = card} -> {:ok, card}
+      {:ok, _} -> {:error, "Account is not a credit card"}
+      error -> error
+    end
+  end
+
+  defp validate_owner(_group_id, nil), do: :ok
+
+  defp validate_owner(group_id, user_id) do
+    member? =
+      PlanfinBackend.Groups.GroupMembership
+      |> Ecto.Query.where([m], m.group_id == ^group_id and m.user_id == ^user_id)
+      |> PlanfinBackend.Repo.exists?()
+
+    if member?,
+      do: :ok,
+      else: {:error, "Owner must be a member of the group"}
+  end
+
+  defp parse_month(month) do
+    case Invoices.parse_month(month) do
+      {:ok, m} -> {:ok, m}
+      {:error, _} -> {:error, "Invalid month, expected YYYY-MM"}
+    end
+  end
+
+  defp parse_decimal(value) when is_binary(value) do
+    case Decimal.parse(value) do
+      {d, ""} -> {:ok, d}
+      _ -> {:error, "Invalid amount"}
+    end
+  end
+
+  defp parse_decimal(_), do: {:error, "Invalid amount"}
+
+  defp put_decimal(attrs, _key, nil), do: {:ok, attrs}
+
+  defp put_decimal(attrs, key, value) do
+    with {:ok, d} <- parse_decimal(value), do: {:ok, Map.put(attrs, key, d)}
+  end
+
+  defp parse_date(value) do
+    case Date.from_iso8601(value || "") do
+      {:ok, d} -> {:ok, d}
+      _ -> {:error, "Invalid date"}
+    end
+  end
+
+  defp parse_int(nil), do: nil
+  defp parse_int(v) when is_integer(v), do: v
+
+  defp parse_int(v) when is_binary(v) do
+    case Integer.parse(v) do
+      {i, ""} -> i
+      _ -> nil
+    end
+  end
+
+  defp today(%{today: t}) when is_binary(t) do
+    case Date.from_iso8601(t) do
+      {:ok, d} -> d
+      _ -> Date.utc_today()
+    end
+  end
+
+  defp today(_), do: Date.utc_today()
+
+  defp decimal_string(nil), do: nil
+  defp decimal_string(d), do: Decimal.to_string(d)
+
+  defp access_error(%{context: %{current_user: _}}), do: {:error, "No active group"}
+  defp access_error(_), do: {:error, "Not authenticated"}
+end

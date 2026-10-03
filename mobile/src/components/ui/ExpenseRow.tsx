@@ -9,11 +9,15 @@ interface ExpenseItem {
   amount: string;
   type?: string | null;
   subcategory?: {
-    name: string;
+    name?: string | null;
     category?: { name?: string | null; icon?: string | null } | null;
   } | null;
   note?: string | null;
-  createdBy?: { id: string; email: string } | null;
+  createdBy?: { id?: string | null; email?: string | null } | null;
+  countsInBudget?: boolean | null;
+  installmentNumber?: number | null;
+  installmentCount?: number | null;
+  account?: { name?: string | null; kind?: string | null } | null;
 }
 
 interface ExpenseRowProps {
@@ -28,6 +32,13 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
   const colorKey = item.subcategory?.category?.name ?? item.subcategory?.name ?? "";
   const cc = categoryColor(colorKey);
   const isIncome = item.type === "income";
+  const details = [
+    authorLabel,
+    item.installmentCount ? `${item.installmentNumber}/${item.installmentCount}` : null,
+    item.account?.name ? `${item.account.kind === "credit_card" ? "💳" : "🏦"} ${item.account.name}` : null,
+    item.note,
+  ].filter(Boolean);
+  const isOutsideBudget = item.countsInBudget === false;
 
   return (
     <TouchableOpacity
@@ -75,10 +86,13 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
             </View>
           )}
         </View>
-        {(authorLabel || item.note) ? (
+        {details.length > 0 ? (
           <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 1 }} numberOfLines={1}>
-            {[authorLabel, item.note].filter(Boolean).join(" · ")}
+            {details.join(" · ")}
           </Text>
+        ) : null}
+        {isOutsideBudget ? (
+          <Text style={{ fontSize: 11, color: Colors.textTer, marginTop: 1 }}>Fora do orçamento do dia</Text>
         ) : null}
       </View>
 

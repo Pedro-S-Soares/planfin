@@ -9,6 +9,10 @@ export type ExpenseWithAuthor = {
   note: string | null;
   isExtra: boolean | null;
   type: string | null;
+  countsInBudget: boolean | null;
+  installmentNumber: number | null;
+  installmentCount: number | null;
+  account: { id: string; name: string; kind: string } | null;
   subcategory: {
     id: string;
     name: string;
@@ -35,6 +39,14 @@ export const EXPENSE_HISTORY_WITH_AUTHORS = gql`
         note
         isExtra
         type
+        countsInBudget
+        installmentNumber
+        installmentCount
+        account {
+          id
+          name
+          kind
+        }
         subcategory {
           id
           name

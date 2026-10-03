@@ -4,16 +4,19 @@ defmodule PlanfinBackendWeb.Schema do
   import_types(PlanfinBackendWeb.Schema.AccountTypes)
   import_types(PlanfinBackendWeb.Schema.BudgetTypes)
   import_types(PlanfinBackendWeb.Schema.GroupTypes)
+  import_types(PlanfinBackendWeb.Schema.FinanceTypes)
 
   query do
     import_fields(:account_queries)
     import_fields(:budget_queries)
     import_fields(:group_queries)
+    import_fields(:finance_queries)
   end
 
   mutation do
     import_fields(:account_mutations)
     import_fields(:budget_mutations)
     import_fields(:group_mutations)
+    import_fields(:finance_mutations)
   end
 end

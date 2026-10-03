@@ -59,6 +59,18 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :type, :string
     field :subcategory, :subcategory
     field :created_by, :user
+    field :account, :expense_account
+    @desc "false = outside the daily/period budget (installments 2..N, bills, salary)"
+    field :counts_in_budget, :boolean
+    field :installment_group_id, :id
+    field :installment_number, :integer
+    field :installment_count, :integer
+  end
+
+  object :expense_account do
+    field :id, :id
+    field :name, :string
+    field :kind, :string
   end
 
   object :expense_day do
@@ -132,6 +144,10 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:is_extra, :boolean)
       arg(:subcategory_id, :id)
       arg(:type, :string)
+      arg(:account_id, :id)
+      @desc "Card installments; amount is the purchase total"
+      arg(:installments, :integer)
+      arg(:counts_in_budget, :boolean)
       resolve(&Budget.create_expense/3)
     end
 
@@ -143,6 +159,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:is_extra, :boolean)
       arg(:subcategory_id, :id)
       arg(:type, :string)
+      arg(:account_id, :id)
       resolve(&Budget.update_expense/3)
     end
 

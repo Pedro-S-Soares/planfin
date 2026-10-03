@@ -110,7 +110,7 @@ defmodule PlanfinBackend.Periods do
 
   defp get_total_spent_for_day(group_id, date) do
     base_query =
-      Expense
+      Expense.in_budget()
       |> where([e], e.group_id == ^group_id and e.date == ^date and e.is_extra == false)
 
     total_expenses =
@@ -219,7 +219,7 @@ defmodule PlanfinBackend.Periods do
 
   defp get_total_spent(%Period{} = period) do
     base_query =
-      Expense
+      Expense.in_budget()
       |> where(
         [e],
         e.group_id == ^period.group_id and

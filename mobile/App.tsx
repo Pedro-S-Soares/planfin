@@ -37,6 +37,15 @@ import { PeriodProvider } from "./src/context/PeriodContext";
 import { DashboardScreen } from "./src/modules/dashboard/DashboardScreen";
 import { CategoryDetailScreen } from "./src/modules/dashboard/CategoryDetailScreen";
 import type { RangeKey } from "./src/modules/dashboard/types";
+import { AccountsScreen } from "./src/modules/finance/AccountsScreen";
+import { AccountFormScreen } from "./src/modules/finance/AccountFormScreen";
+import { AccountDetailScreen } from "./src/modules/finance/AccountDetailScreen";
+import { AdjustBalanceScreen } from "./src/modules/finance/AdjustBalanceScreen";
+import { CardDetailScreen } from "./src/modules/finance/CardDetailScreen";
+import { InvoiceScreen } from "./src/modules/finance/InvoiceScreen";
+import { PayInvoiceScreen } from "./src/modules/finance/PayInvoiceScreen";
+import { TransferScreen } from "./src/modules/finance/TransferScreen";
+import type { AccountKind } from "./src/modules/finance/format";
 
 enableScreens();
 
@@ -47,6 +56,16 @@ export type AuthStackParamList = {
   ResetPassword: { token: string };
 };
 
+/** Optional presets when opening the new expense/income form. */
+export type EntryFormParams =
+  | {
+      accountId?: string;
+      /** Start with "counts in budget" off (old purchases, salary, bills). */
+      outsideBudget?: boolean;
+      date?: string;
+    }
+  | undefined;
+
 export type AppStackParamList = {
   Onboarding: undefined;
   CreatePeriod: undefined;
@@ -56,7 +75,7 @@ export type AppStackParamList = {
   AdminInvites: undefined;
   EditPeriod: undefined;
   Periods: undefined;
-  AddExpense: undefined;
+  AddExpense: EntryFormParams;
   EditExpense: {
     id: string;
     amount: string;
@@ -65,8 +84,23 @@ export type AppStackParamList = {
     isExtra?: boolean;
     subcategoryId?: string;
     categoryId?: string;
+    accountId?: string;
+    countsInBudget?: boolean;
   };
-  AddIncome: undefined;
+  AddIncome: EntryFormParams;
+  AccountForm: { accountId?: string; kind?: AccountKind };
+  AccountDetail: { accountId: string };
+  AdjustBalance: { accountId: string; balance: string };
+  CardDetail: { cardId: string };
+  Invoice: { cardId: string; month: string };
+  PayInvoice: { cardId: string; month: string; remaining: string };
+  Transfer: {
+    fromAccountId?: string;
+    toAccountId?: string;
+    amount?: string;
+    kind?: "card_payment" | "allowance" | "reserve" | "other";
+    note?: string;
+  };
   CategoryDetail: { categoryId: string; range: RangeKey };
   EditIncome: {
     id: string;
@@ -76,15 +110,34 @@ export type AppStackParamList = {
     isExtra?: boolean;
     subcategoryId?: string;
     categoryId?: string;
+    accountId?: string;
+    countsInBudget?: boolean;
   };
 };
 
 export type MainTabParamList = {
   Home: undefined;
   History: undefined;
+  Accounts: undefined;
   Dashboard: undefined;
   Categories: undefined;
 };
+
+function modalOptions(title: string) {
+  return {
+    presentation: "modal" as const,
+    headerShown: true,
+    title,
+    headerStyle: { backgroundColor: "#FFFFFF" },
+    headerTintColor: "#6255EA",
+    headerTitleStyle: { color: "#17162B", fontWeight: "700" as const },
+    headerShadowVisible: false,
+  };
+}
+
+function pushOptions(title: string) {
+  return { ...modalOptions(title), presentation: "card" as const };
+}
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
@@ -147,6 +200,11 @@ function MainTabs() {
         name="History"
         component={HistoryScreen}
         options={{ tabBarLabel: "Histórico", tabBarIcon: () => <Text>📋</Text> }}
+      />
+      <MainTab.Screen
+        name="Accounts"
+        component={AccountsScreen}
+        options={{ tabBarLabel: "Contas", tabBarIcon: () => <Text>💳</Text> }}
       />
       <MainTab.Screen
         name="Dashboard"
@@ -272,6 +330,13 @@ function AppNavigator() {
               headerShadowVisible: false,
             }}
           />
+          <AppStack.Screen name="AccountForm" component={AccountFormScreen} options={modalOptions("Conta")} />
+          <AppStack.Screen name="AccountDetail" component={AccountDetailScreen} options={pushOptions("Conta")} />
+          <AppStack.Screen name="AdjustBalance" component={AdjustBalanceScreen} options={modalOptions("Ajustar saldo")} />
+          <AppStack.Screen name="CardDetail" component={CardDetailScreen} options={pushOptions("Cartão")} />
+          <AppStack.Screen name="Invoice" component={InvoiceScreen} options={pushOptions("Fatura")} />
+          <AppStack.Screen name="PayInvoice" component={PayInvoiceScreen} options={modalOptions("Pagar fatura")} />
+          <AppStack.Screen name="Transfer" component={TransferScreen} options={modalOptions("Transferir")} />
           <AppStack.Screen
             name="EditIncome"
             component={EditIncomeScreen}
