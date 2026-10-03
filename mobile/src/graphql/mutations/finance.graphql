@@ -132,3 +132,17 @@ mutation RegisterSalary($amount: String, $date: String!) {
     amount
   }
 }
+
+mutation DistributeAllowance($amount: String, $today: String) {
+  distributeAllowance(amount: $amount, today: $today) {
+    amount
+    distributed
+    canDistribute
+  }
+}
+
+mutation SetReserveGoal($reserveGoal: String) {
+  updateFinancialSettings(reserveGoal: $reserveGoal) {
+    reserveGoal
+  }
+}

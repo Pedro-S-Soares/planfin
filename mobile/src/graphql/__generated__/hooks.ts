@@ -28,6 +28,30 @@ export type AccountMovement = {
   kind?: Maybe<Scalars['String']['output']>;
 };
 
+/** End-of-cycle left over, split between the allowance accounts */
+export type AllowancePlan = {
+  __typename?: 'AllowancePlan';
+  amount?: Maybe<Scalars['String']['output']>;
+  canDistribute?: Maybe<Scalars['Boolean']['output']>;
+  cycleEndDate?: Maybe<Scalars['String']['output']>;
+  /** Allowance already transferred in this cycle */
+  distributed?: Maybe<Scalars['String']['output']>;
+  free?: Maybe<Scalars['String']['output']>;
+  /** First day the distribution is offered (cycle closing) */
+  opensOn?: Maybe<Scalars['String']['output']>;
+  shares?: Maybe<Array<Maybe<AllowanceShare>>>;
+  /** Part of the free money kept because the next salary can't cover what is on it */
+  shortfall?: Maybe<Scalars['String']['output']>;
+};
+
+export type AllowanceShare = {
+  __typename?: 'AllowanceShare';
+  accountId?: Maybe<Scalars['ID']['output']>;
+  accountName?: Maybe<Scalars['String']['output']>;
+  amount?: Maybe<Scalars['String']['output']>;
+  ownerName?: Maybe<Scalars['String']['output']>;
+};
+
 export type AuthPayload = {
   __typename?: 'AuthPayload';
   token?: Maybe<Scalars['String']['output']>;
@@ -273,6 +297,12 @@ export type RedeemInvitePayload = {
   invite?: Maybe<GroupInvite>;
 };
 
+export type ReserveStatus = {
+  __typename?: 'ReserveStatus';
+  goal?: Maybe<Scalars['String']['output']>;
+  total?: Maybe<Scalars['String']['output']>;
+};
+
 export type RootMutationType = {
   __typename?: 'RootMutationType';
   archiveFinancialAccount?: Maybe<Scalars['Boolean']['output']>;
@@ -293,6 +323,8 @@ export type RootMutationType = {
   deleteRecurringBill?: Maybe<Scalars['Boolean']['output']>;
   deleteSubcategory?: Maybe<Scalars['Boolean']['output']>;
   deleteTransfer?: Maybe<Scalars['Boolean']['output']>;
+  /** Transfer the end-of-cycle left over to the allowance accounts in equal parts */
+  distributeAllowance?: Maybe<AllowancePlan>;
   forgotPassword?: Maybe<Scalars['Boolean']['output']>;
   generateInviteCode?: Maybe<GroupInvite>;
   leaveGroup?: Maybe<Scalars['Boolean']['output']>;
@@ -437,6 +469,12 @@ export type RootMutationTypeDeleteSubcategoryArgs = {
 
 export type RootMutationTypeDeleteTransferArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type RootMutationTypeDistributeAllowanceArgs = {
+  amount?: InputMaybe<Scalars['String']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -627,6 +665,7 @@ export type RootQueryType = {
   accountMovements?: Maybe<Array<Maybe<AccountMovement>>>;
   activeGroup?: Maybe<Group>;
   activePeriod?: Maybe<Period>;
+  allowancePlan?: Maybe<AllowancePlan>;
   billOccurrences?: Maybe<Array<Maybe<BillOccurrence>>>;
   categories?: Maybe<Array<Maybe<Category>>>;
   cycleProposal?: Maybe<CycleProposal>;
@@ -648,6 +687,7 @@ export type RootQueryType = {
   periodSummary?: Maybe<PeriodSummary>;
   periods?: Maybe<Array<Maybe<Period>>>;
   recurringBills?: Maybe<Array<Maybe<RecurringBill>>>;
+  reserveStatus?: Maybe<ReserveStatus>;
   salaryProjection?: Maybe<SalaryProjection>;
 };
 
@@ -660,6 +700,11 @@ export type RootQueryTypeAccountMovementsArgs = {
 
 export type RootQueryTypeActivePeriodArgs = {
   periodId?: InputMaybe<Scalars['ID']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type RootQueryTypeAllowancePlanArgs = {
   today?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -733,6 +778,11 @@ export type RootQueryTypeInvoicesArgs = {
 
 export type RootQueryTypePeriodSummaryArgs = {
   periodId: Scalars['ID']['input'];
+};
+
+
+export type RootQueryTypeReserveStatusArgs = {
+  today?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1134,6 +1184,21 @@ export type RegisterSalaryMutationVariables = Exact<{
 
 export type RegisterSalaryMutation = { __typename?: 'RootMutationType', registerSalary?: { __typename?: 'Expense', id?: string | null, amount?: string | null } | null };
 
+export type DistributeAllowanceMutationVariables = Exact<{
+  amount?: InputMaybe<Scalars['String']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type DistributeAllowanceMutation = { __typename?: 'RootMutationType', distributeAllowance?: { __typename?: 'AllowancePlan', amount?: string | null, distributed?: string | null, canDistribute?: boolean | null } | null };
+
+export type SetReserveGoalMutationVariables = Exact<{
+  reserveGoal?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type SetReserveGoalMutation = { __typename?: 'RootMutationType', updateFinancialSettings?: { __typename?: 'FinancialSettings', reserveGoal?: string | null } | null };
+
 export type CreateGroupMutationVariables = Exact<{
   name: Scalars['String']['input'];
 }>;
@@ -1309,6 +1374,20 @@ export type SalaryProjectionQueryVariables = Exact<{
 
 
 export type SalaryProjectionQuery = { __typename?: 'RootQueryType', salaryProjection?: { __typename?: 'SalaryProjection', salaryDate?: string | null, cycleEndDate?: string | null, salary?: string | null, accountBills?: string | null, committed?: string | null, left?: string | null, invoices?: Array<{ __typename?: 'ProjectedInvoice', cardId?: string | null, cardName?: string | null, month?: string | null, dueDate?: string | null, status?: string | null, amount?: string | null, pendingBills?: string | null } | null> | null } | null };
+
+export type AllowancePlanQueryVariables = Exact<{
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type AllowancePlanQuery = { __typename?: 'RootQueryType', allowancePlan?: { __typename?: 'AllowancePlan', cycleEndDate?: string | null, opensOn?: string | null, free?: string | null, shortfall?: string | null, amount?: string | null, canDistribute?: boolean | null, distributed?: string | null, shares?: Array<{ __typename?: 'AllowanceShare', accountId?: string | null, accountName?: string | null, ownerName?: string | null, amount?: string | null } | null> | null } | null };
+
+export type ReserveStatusQueryVariables = Exact<{
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type ReserveStatusQuery = { __typename?: 'RootQueryType', reserveStatus?: { __typename?: 'ReserveStatus', goal?: string | null, total?: string | null } | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2709,6 +2788,75 @@ export function useRegisterSalaryMutation(baseOptions?: Apollo.MutationHookOptio
 export type RegisterSalaryMutationHookResult = ReturnType<typeof useRegisterSalaryMutation>;
 export type RegisterSalaryMutationResult = Apollo.MutationResult<RegisterSalaryMutation>;
 export type RegisterSalaryMutationOptions = Apollo.BaseMutationOptions<RegisterSalaryMutation, RegisterSalaryMutationVariables>;
+export const DistributeAllowanceDocument = gql`
+    mutation DistributeAllowance($amount: String, $today: String) {
+  distributeAllowance(amount: $amount, today: $today) {
+    amount
+    distributed
+    canDistribute
+  }
+}
+    `;
+export type DistributeAllowanceMutationFn = Apollo.MutationFunction<DistributeAllowanceMutation, DistributeAllowanceMutationVariables>;
+
+/**
+ * __useDistributeAllowanceMutation__
+ *
+ * To run a mutation, you first call `useDistributeAllowanceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDistributeAllowanceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [distributeAllowanceMutation, { data, loading, error }] = useDistributeAllowanceMutation({
+ *   variables: {
+ *      amount: // value for 'amount'
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useDistributeAllowanceMutation(baseOptions?: Apollo.MutationHookOptions<DistributeAllowanceMutation, DistributeAllowanceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DistributeAllowanceMutation, DistributeAllowanceMutationVariables>(DistributeAllowanceDocument, options);
+      }
+export type DistributeAllowanceMutationHookResult = ReturnType<typeof useDistributeAllowanceMutation>;
+export type DistributeAllowanceMutationResult = Apollo.MutationResult<DistributeAllowanceMutation>;
+export type DistributeAllowanceMutationOptions = Apollo.BaseMutationOptions<DistributeAllowanceMutation, DistributeAllowanceMutationVariables>;
+export const SetReserveGoalDocument = gql`
+    mutation SetReserveGoal($reserveGoal: String) {
+  updateFinancialSettings(reserveGoal: $reserveGoal) {
+    reserveGoal
+  }
+}
+    `;
+export type SetReserveGoalMutationFn = Apollo.MutationFunction<SetReserveGoalMutation, SetReserveGoalMutationVariables>;
+
+/**
+ * __useSetReserveGoalMutation__
+ *
+ * To run a mutation, you first call `useSetReserveGoalMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetReserveGoalMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setReserveGoalMutation, { data, loading, error }] = useSetReserveGoalMutation({
+ *   variables: {
+ *      reserveGoal: // value for 'reserveGoal'
+ *   },
+ * });
+ */
+export function useSetReserveGoalMutation(baseOptions?: Apollo.MutationHookOptions<SetReserveGoalMutation, SetReserveGoalMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetReserveGoalMutation, SetReserveGoalMutationVariables>(SetReserveGoalDocument, options);
+      }
+export type SetReserveGoalMutationHookResult = ReturnType<typeof useSetReserveGoalMutation>;
+export type SetReserveGoalMutationResult = Apollo.MutationResult<SetReserveGoalMutation>;
+export type SetReserveGoalMutationOptions = Apollo.BaseMutationOptions<SetReserveGoalMutation, SetReserveGoalMutationVariables>;
 export const CreateGroupDocument = gql`
     mutation CreateGroup($name: String!) {
   createGroup(name: $name) {
@@ -3891,6 +4039,105 @@ export type SalaryProjectionQueryHookResult = ReturnType<typeof useSalaryProject
 export type SalaryProjectionLazyQueryHookResult = ReturnType<typeof useSalaryProjectionLazyQuery>;
 export type SalaryProjectionSuspenseQueryHookResult = ReturnType<typeof useSalaryProjectionSuspenseQuery>;
 export type SalaryProjectionQueryResult = Apollo.QueryResult<SalaryProjectionQuery, SalaryProjectionQueryVariables>;
+export const AllowancePlanDocument = gql`
+    query AllowancePlan($today: String) {
+  allowancePlan(today: $today) {
+    cycleEndDate
+    opensOn
+    free
+    shortfall
+    amount
+    canDistribute
+    distributed
+    shares {
+      accountId
+      accountName
+      ownerName
+      amount
+    }
+  }
+}
+    `;
+
+/**
+ * __useAllowancePlanQuery__
+ *
+ * To run a query within a React component, call `useAllowancePlanQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAllowancePlanQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAllowancePlanQuery({
+ *   variables: {
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useAllowancePlanQuery(baseOptions?: Apollo.QueryHookOptions<AllowancePlanQuery, AllowancePlanQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AllowancePlanQuery, AllowancePlanQueryVariables>(AllowancePlanDocument, options);
+      }
+export function useAllowancePlanLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AllowancePlanQuery, AllowancePlanQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AllowancePlanQuery, AllowancePlanQueryVariables>(AllowancePlanDocument, options);
+        }
+// @ts-ignore
+export function useAllowancePlanSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<AllowancePlanQuery, AllowancePlanQueryVariables>): Apollo.UseSuspenseQueryResult<AllowancePlanQuery, AllowancePlanQueryVariables>;
+export function useAllowancePlanSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AllowancePlanQuery, AllowancePlanQueryVariables>): Apollo.UseSuspenseQueryResult<AllowancePlanQuery | undefined, AllowancePlanQueryVariables>;
+export function useAllowancePlanSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<AllowancePlanQuery, AllowancePlanQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<AllowancePlanQuery, AllowancePlanQueryVariables>(AllowancePlanDocument, options);
+        }
+export type AllowancePlanQueryHookResult = ReturnType<typeof useAllowancePlanQuery>;
+export type AllowancePlanLazyQueryHookResult = ReturnType<typeof useAllowancePlanLazyQuery>;
+export type AllowancePlanSuspenseQueryHookResult = ReturnType<typeof useAllowancePlanSuspenseQuery>;
+export type AllowancePlanQueryResult = Apollo.QueryResult<AllowancePlanQuery, AllowancePlanQueryVariables>;
+export const ReserveStatusDocument = gql`
+    query ReserveStatus($today: String) {
+  reserveStatus(today: $today) {
+    goal
+    total
+  }
+}
+    `;
+
+/**
+ * __useReserveStatusQuery__
+ *
+ * To run a query within a React component, call `useReserveStatusQuery` and pass it any options that fit your needs.
+ * When your component renders, `useReserveStatusQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReserveStatusQuery({
+ *   variables: {
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useReserveStatusQuery(baseOptions?: Apollo.QueryHookOptions<ReserveStatusQuery, ReserveStatusQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ReserveStatusQuery, ReserveStatusQueryVariables>(ReserveStatusDocument, options);
+      }
+export function useReserveStatusLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ReserveStatusQuery, ReserveStatusQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ReserveStatusQuery, ReserveStatusQueryVariables>(ReserveStatusDocument, options);
+        }
+// @ts-ignore
+export function useReserveStatusSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<ReserveStatusQuery, ReserveStatusQueryVariables>): Apollo.UseSuspenseQueryResult<ReserveStatusQuery, ReserveStatusQueryVariables>;
+export function useReserveStatusSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ReserveStatusQuery, ReserveStatusQueryVariables>): Apollo.UseSuspenseQueryResult<ReserveStatusQuery | undefined, ReserveStatusQueryVariables>;
+export function useReserveStatusSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<ReserveStatusQuery, ReserveStatusQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<ReserveStatusQuery, ReserveStatusQueryVariables>(ReserveStatusDocument, options);
+        }
+export type ReserveStatusQueryHookResult = ReturnType<typeof useReserveStatusQuery>;
+export type ReserveStatusLazyQueryHookResult = ReturnType<typeof useReserveStatusLazyQuery>;
+export type ReserveStatusSuspenseQueryHookResult = ReturnType<typeof useReserveStatusSuspenseQuery>;
+export type ReserveStatusQueryResult = Apollo.QueryResult<ReserveStatusQuery, ReserveStatusQueryVariables>;
 export const MyGroupsDocument = gql`
     query MyGroups {
   myGroups {

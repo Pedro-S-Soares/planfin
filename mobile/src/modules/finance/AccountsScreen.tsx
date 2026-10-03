@@ -9,6 +9,7 @@ import { usePageTitle } from "../../hooks/usePageTitle";
 import { Colors } from "../../theme/tokens";
 import { AccountBalanceCard } from "./components/AccountBalanceCard";
 import { CardSummary } from "./components/CardSummary";
+import { ReserveCard } from "./components/ReserveCard";
 import { TabHeader } from "./components/TabHeader";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
@@ -82,6 +83,7 @@ export function AccountsScreen() {
             <View style={{ height: 10 }} />
             <Btn label="💼 Salário e ciclo" variant="secondary" onPress={() => navigation.navigate("SalarySettings")} />
             <View style={{ height: 10 }} />
+            {accounts.some((a) => a.kind === "reserve") ? <ReserveCard /> : null}
             {moneyAccounts.length > 0 ? (
               <Btn
                 label="Transferir entre contas"

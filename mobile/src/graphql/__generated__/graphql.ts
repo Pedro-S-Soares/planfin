@@ -27,6 +27,30 @@ export type AccountMovement = {
   kind?: Maybe<Scalars['String']['output']>;
 };
 
+/** End-of-cycle left over, split between the allowance accounts */
+export type AllowancePlan = {
+  __typename?: 'AllowancePlan';
+  amount?: Maybe<Scalars['String']['output']>;
+  canDistribute?: Maybe<Scalars['Boolean']['output']>;
+  cycleEndDate?: Maybe<Scalars['String']['output']>;
+  /** Allowance already transferred in this cycle */
+  distributed?: Maybe<Scalars['String']['output']>;
+  free?: Maybe<Scalars['String']['output']>;
+  /** First day the distribution is offered (cycle closing) */
+  opensOn?: Maybe<Scalars['String']['output']>;
+  shares?: Maybe<Array<Maybe<AllowanceShare>>>;
+  /** Part of the free money kept because the next salary can't cover what is on it */
+  shortfall?: Maybe<Scalars['String']['output']>;
+};
+
+export type AllowanceShare = {
+  __typename?: 'AllowanceShare';
+  accountId?: Maybe<Scalars['ID']['output']>;
+  accountName?: Maybe<Scalars['String']['output']>;
+  amount?: Maybe<Scalars['String']['output']>;
+  ownerName?: Maybe<Scalars['String']['output']>;
+};
+
 export type AuthPayload = {
   __typename?: 'AuthPayload';
   token?: Maybe<Scalars['String']['output']>;
@@ -272,6 +296,12 @@ export type RedeemInvitePayload = {
   invite?: Maybe<GroupInvite>;
 };
 
+export type ReserveStatus = {
+  __typename?: 'ReserveStatus';
+  goal?: Maybe<Scalars['String']['output']>;
+  total?: Maybe<Scalars['String']['output']>;
+};
+
 export type RootMutationType = {
   __typename?: 'RootMutationType';
   archiveFinancialAccount?: Maybe<Scalars['Boolean']['output']>;
@@ -292,6 +322,8 @@ export type RootMutationType = {
   deleteRecurringBill?: Maybe<Scalars['Boolean']['output']>;
   deleteSubcategory?: Maybe<Scalars['Boolean']['output']>;
   deleteTransfer?: Maybe<Scalars['Boolean']['output']>;
+  /** Transfer the end-of-cycle left over to the allowance accounts in equal parts */
+  distributeAllowance?: Maybe<AllowancePlan>;
   forgotPassword?: Maybe<Scalars['Boolean']['output']>;
   generateInviteCode?: Maybe<GroupInvite>;
   leaveGroup?: Maybe<Scalars['Boolean']['output']>;
@@ -436,6 +468,12 @@ export type RootMutationTypeDeleteSubcategoryArgs = {
 
 export type RootMutationTypeDeleteTransferArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type RootMutationTypeDistributeAllowanceArgs = {
+  amount?: InputMaybe<Scalars['String']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -626,6 +664,7 @@ export type RootQueryType = {
   accountMovements?: Maybe<Array<Maybe<AccountMovement>>>;
   activeGroup?: Maybe<Group>;
   activePeriod?: Maybe<Period>;
+  allowancePlan?: Maybe<AllowancePlan>;
   billOccurrences?: Maybe<Array<Maybe<BillOccurrence>>>;
   categories?: Maybe<Array<Maybe<Category>>>;
   cycleProposal?: Maybe<CycleProposal>;
@@ -647,6 +686,7 @@ export type RootQueryType = {
   periodSummary?: Maybe<PeriodSummary>;
   periods?: Maybe<Array<Maybe<Period>>>;
   recurringBills?: Maybe<Array<Maybe<RecurringBill>>>;
+  reserveStatus?: Maybe<ReserveStatus>;
   salaryProjection?: Maybe<SalaryProjection>;
 };
 
@@ -659,6 +699,11 @@ export type RootQueryTypeAccountMovementsArgs = {
 
 export type RootQueryTypeActivePeriodArgs = {
   periodId?: InputMaybe<Scalars['ID']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type RootQueryTypeAllowancePlanArgs = {
   today?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -732,6 +777,11 @@ export type RootQueryTypeInvoicesArgs = {
 
 export type RootQueryTypePeriodSummaryArgs = {
   periodId: Scalars['ID']['input'];
+};
+
+
+export type RootQueryTypeReserveStatusArgs = {
+  today?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1133,6 +1183,21 @@ export type RegisterSalaryMutationVariables = Exact<{
 
 export type RegisterSalaryMutation = { __typename?: 'RootMutationType', registerSalary?: { __typename?: 'Expense', id?: string | null, amount?: string | null } | null };
 
+export type DistributeAllowanceMutationVariables = Exact<{
+  amount?: InputMaybe<Scalars['String']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type DistributeAllowanceMutation = { __typename?: 'RootMutationType', distributeAllowance?: { __typename?: 'AllowancePlan', amount?: string | null, distributed?: string | null, canDistribute?: boolean | null } | null };
+
+export type SetReserveGoalMutationVariables = Exact<{
+  reserveGoal?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type SetReserveGoalMutation = { __typename?: 'RootMutationType', updateFinancialSettings?: { __typename?: 'FinancialSettings', reserveGoal?: string | null } | null };
+
 export type CreateGroupMutationVariables = Exact<{
   name: Scalars['String']['input'];
 }>;
@@ -1309,6 +1374,20 @@ export type SalaryProjectionQueryVariables = Exact<{
 
 export type SalaryProjectionQuery = { __typename?: 'RootQueryType', salaryProjection?: { __typename?: 'SalaryProjection', salaryDate?: string | null, cycleEndDate?: string | null, salary?: string | null, accountBills?: string | null, committed?: string | null, left?: string | null, invoices?: Array<{ __typename?: 'ProjectedInvoice', cardId?: string | null, cardName?: string | null, month?: string | null, dueDate?: string | null, status?: string | null, amount?: string | null, pendingBills?: string | null } | null> | null } | null };
 
+export type AllowancePlanQueryVariables = Exact<{
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type AllowancePlanQuery = { __typename?: 'RootQueryType', allowancePlan?: { __typename?: 'AllowancePlan', cycleEndDate?: string | null, opensOn?: string | null, free?: string | null, shortfall?: string | null, amount?: string | null, canDistribute?: boolean | null, distributed?: string | null, shares?: Array<{ __typename?: 'AllowanceShare', accountId?: string | null, accountName?: string | null, ownerName?: string | null, amount?: string | null } | null> | null } | null };
+
+export type ReserveStatusQueryVariables = Exact<{
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type ReserveStatusQuery = { __typename?: 'RootQueryType', reserveStatus?: { __typename?: 'ReserveStatus', goal?: string | null, total?: string | null } | null };
+
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -1379,6 +1458,8 @@ export const UnpayBillDocument = {"kind":"Document","definitions":[{"kind":"Oper
 export const UpdateFinancialSettingsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateFinancialSettings"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"salaryAmount"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"salaryBusinessDay"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"salaryAccountId"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"reserveGoal"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"today"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateFinancialSettings"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"salaryAmount"},"value":{"kind":"Variable","name":{"kind":"Name","value":"salaryAmount"}}},{"kind":"Argument","name":{"kind":"Name","value":"salaryBusinessDay"},"value":{"kind":"Variable","name":{"kind":"Name","value":"salaryBusinessDay"}}},{"kind":"Argument","name":{"kind":"Name","value":"salaryAccountId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"salaryAccountId"}}},{"kind":"Argument","name":{"kind":"Name","value":"reserveGoal"},"value":{"kind":"Variable","name":{"kind":"Name","value":"reserveGoal"}}},{"kind":"Argument","name":{"kind":"Name","value":"today"},"value":{"kind":"Variable","name":{"kind":"Name","value":"today"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"salaryAmount"}},{"kind":"Field","name":{"kind":"Name","value":"salaryBusinessDay"}},{"kind":"Field","name":{"kind":"Name","value":"salaryAccountId"}},{"kind":"Field","name":{"kind":"Name","value":"reserveGoal"}}]}}]}}]} as unknown as DocumentNode<UpdateFinancialSettingsMutation, UpdateFinancialSettingsMutationVariables>;
 export const SetSalaryDateDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SetSalaryDate"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"month"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"date"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"setSalaryDate"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"month"},"value":{"kind":"Variable","name":{"kind":"Name","value":"month"}}},{"kind":"Argument","name":{"kind":"Name","value":"date"},"value":{"kind":"Variable","name":{"kind":"Name","value":"date"}}}]}]}}]} as unknown as DocumentNode<SetSalaryDateMutation, SetSalaryDateMutationVariables>;
 export const RegisterSalaryDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"RegisterSalary"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"amount"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"date"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"registerSalary"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"amount"},"value":{"kind":"Variable","name":{"kind":"Name","value":"amount"}}},{"kind":"Argument","name":{"kind":"Name","value":"date"},"value":{"kind":"Variable","name":{"kind":"Name","value":"date"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"amount"}}]}}]}}]} as unknown as DocumentNode<RegisterSalaryMutation, RegisterSalaryMutationVariables>;
+export const DistributeAllowanceDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DistributeAllowance"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"amount"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"today"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"distributeAllowance"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"amount"},"value":{"kind":"Variable","name":{"kind":"Name","value":"amount"}}},{"kind":"Argument","name":{"kind":"Name","value":"today"},"value":{"kind":"Variable","name":{"kind":"Name","value":"today"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"distributed"}},{"kind":"Field","name":{"kind":"Name","value":"canDistribute"}}]}}]}}]} as unknown as DocumentNode<DistributeAllowanceMutation, DistributeAllowanceMutationVariables>;
+export const SetReserveGoalDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SetReserveGoal"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"reserveGoal"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateFinancialSettings"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"reserveGoal"},"value":{"kind":"Variable","name":{"kind":"Name","value":"reserveGoal"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"reserveGoal"}}]}}]}}]} as unknown as DocumentNode<SetReserveGoalMutation, SetReserveGoalMutationVariables>;
 export const CreateGroupDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateGroup"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"name"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createGroup"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"name"},"value":{"kind":"Variable","name":{"kind":"Name","value":"name"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"ownerId"}}]}}]}}]} as unknown as DocumentNode<CreateGroupMutation, CreateGroupMutationVariables>;
 export const RenameGroupDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"RenameGroup"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"name"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"renameGroup"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"name"},"value":{"kind":"Variable","name":{"kind":"Name","value":"name"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]} as unknown as DocumentNode<RenameGroupMutation, RenameGroupMutationVariables>;
 export const DeleteGroupDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteGroup"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteGroup"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}]}]}}]} as unknown as DocumentNode<DeleteGroupMutation, DeleteGroupMutationVariables>;
@@ -1403,6 +1484,8 @@ export const BillOccurrencesDocument = {"kind":"Document","definitions":[{"kind"
 export const FinancialSettingsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"FinancialSettings"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"today"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"financialSettings"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"today"},"value":{"kind":"Variable","name":{"kind":"Name","value":"today"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"salaryAmount"}},{"kind":"Field","name":{"kind":"Name","value":"salaryBusinessDay"}},{"kind":"Field","name":{"kind":"Name","value":"salaryAccountId"}},{"kind":"Field","name":{"kind":"Name","value":"reserveGoal"}},{"kind":"Field","name":{"kind":"Name","value":"upcomingSalaryDates"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"month"}},{"kind":"Field","name":{"kind":"Name","value":"date"}},{"kind":"Field","name":{"kind":"Name","value":"isManual"}}]}}]}}]}}]} as unknown as DocumentNode<FinancialSettingsQuery, FinancialSettingsQueryVariables>;
 export const CycleProposalDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"CycleProposal"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"today"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cycleProposal"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"today"},"value":{"kind":"Variable","name":{"kind":"Name","value":"today"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"startDate"}},{"kind":"Field","name":{"kind":"Name","value":"endDate"}},{"kind":"Field","name":{"kind":"Name","value":"days"}},{"kind":"Field","name":{"kind":"Name","value":"salary"}},{"kind":"Field","name":{"kind":"Name","value":"accountBills"}},{"kind":"Field","name":{"kind":"Name","value":"cardBills"}},{"kind":"Field","name":{"kind":"Name","value":"installments"}},{"kind":"Field","name":{"kind":"Name","value":"available"}}]}}]}}]} as unknown as DocumentNode<CycleProposalQuery, CycleProposalQueryVariables>;
 export const SalaryProjectionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"SalaryProjection"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"today"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"salaryProjection"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"today"},"value":{"kind":"Variable","name":{"kind":"Name","value":"today"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"salaryDate"}},{"kind":"Field","name":{"kind":"Name","value":"cycleEndDate"}},{"kind":"Field","name":{"kind":"Name","value":"salary"}},{"kind":"Field","name":{"kind":"Name","value":"accountBills"}},{"kind":"Field","name":{"kind":"Name","value":"committed"}},{"kind":"Field","name":{"kind":"Name","value":"left"}},{"kind":"Field","name":{"kind":"Name","value":"invoices"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cardId"}},{"kind":"Field","name":{"kind":"Name","value":"cardName"}},{"kind":"Field","name":{"kind":"Name","value":"month"}},{"kind":"Field","name":{"kind":"Name","value":"dueDate"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"pendingBills"}}]}}]}}]}}]} as unknown as DocumentNode<SalaryProjectionQuery, SalaryProjectionQueryVariables>;
+export const AllowancePlanDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"AllowancePlan"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"today"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"allowancePlan"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"today"},"value":{"kind":"Variable","name":{"kind":"Name","value":"today"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"cycleEndDate"}},{"kind":"Field","name":{"kind":"Name","value":"opensOn"}},{"kind":"Field","name":{"kind":"Name","value":"free"}},{"kind":"Field","name":{"kind":"Name","value":"shortfall"}},{"kind":"Field","name":{"kind":"Name","value":"amount"}},{"kind":"Field","name":{"kind":"Name","value":"canDistribute"}},{"kind":"Field","name":{"kind":"Name","value":"distributed"}},{"kind":"Field","name":{"kind":"Name","value":"shares"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"accountId"}},{"kind":"Field","name":{"kind":"Name","value":"accountName"}},{"kind":"Field","name":{"kind":"Name","value":"ownerName"}},{"kind":"Field","name":{"kind":"Name","value":"amount"}}]}}]}}]}}]} as unknown as DocumentNode<AllowancePlanQuery, AllowancePlanQueryVariables>;
+export const ReserveStatusDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ReserveStatus"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"today"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"reserveStatus"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"today"},"value":{"kind":"Variable","name":{"kind":"Name","value":"today"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"goal"}},{"kind":"Field","name":{"kind":"Name","value":"total"}}]}}]}}]} as unknown as DocumentNode<ReserveStatusQuery, ReserveStatusQueryVariables>;
 export const MyGroupsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"MyGroups"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"myGroups"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"ownerId"}},{"kind":"Field","name":{"kind":"Name","value":"insertedAt"}}]}}]}}]} as unknown as DocumentNode<MyGroupsQuery, MyGroupsQueryVariables>;
 export const ActiveGroupDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ActiveGroup"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"activeGroup"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"ownerId"}}]}}]}}]} as unknown as DocumentNode<ActiveGroupQuery, ActiveGroupQueryVariables>;
 export const GroupMembersDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GroupMembers"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"groupId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"groupMembers"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"groupId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"groupId"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"email"}},{"kind":"Field","name":{"kind":"Name","value":"joinedAt"}},{"kind":"Field","name":{"kind":"Name","value":"isOwner"}}]}}]}}]} as unknown as DocumentNode<GroupMembersQuery, GroupMembersQueryVariables>;
