@@ -11,6 +11,7 @@ import { FieldInput } from "../components/ui/FieldInput";
 import { toISODate } from "../lib/date";
 import { displayToAPI, formatCents } from "../lib/currency";
 import { Colors, Radius } from "../theme/tokens";
+import { CycleProposalCard, type ProposalValues } from "../modules/finance/components/CycleProposalCard";
 
 const today = new Date();
 const in30Days = new Date(today);
@@ -51,7 +52,7 @@ type FormValues = {
 export function CreatePeriodScreen() {
   const { refetch, setSelectedPeriod } = usePeriod();
 
-  const { control, handleSubmit, watch, setError, formState: { errors } } = useForm<FormValues>({
+  const { control, handleSubmit, watch, setError, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
       name: "",
@@ -81,6 +82,13 @@ export function CreatePeriodScreen() {
     },
     onError: (error) => setError("root", { message: error.message }),
   });
+
+  const handleUseProposal = (proposal: ProposalValues) => {
+    setValue("startDate", proposal.startDate);
+    setValue("endDate", proposal.endDate);
+    setValue("dailyLimit", formatCents(proposal.dailyLimitCents));
+    setValue("totalBudget", formatCents(proposal.totalBudgetCents));
+  };
 
   const onSubmit = (values: FormValues) => {
     const trimmedName = values.name.trim();
@@ -116,6 +124,7 @@ export function CreatePeriodScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 22 }}>
+        <CycleProposalCard onUse={handleUseProposal} />
         <Controller
           control={control}
           name="name"

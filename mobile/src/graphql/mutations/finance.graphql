@@ -99,3 +99,29 @@ mutation PayBill($billId: ID!, $month: String!, $amount: String!, $date: String!
 mutation UnpayBill($billId: ID!, $month: String!) {
   unpayBill(billId: $billId, month: $month)
 }
+
+mutation UpdateFinancialSettings($salaryAmount: String, $salaryBusinessDay: Int, $salaryAccountId: ID, $reserveGoal: String, $today: String) {
+  updateFinancialSettings(
+    salaryAmount: $salaryAmount
+    salaryBusinessDay: $salaryBusinessDay
+    salaryAccountId: $salaryAccountId
+    reserveGoal: $reserveGoal
+    today: $today
+  ) {
+    salaryAmount
+    salaryBusinessDay
+    salaryAccountId
+    reserveGoal
+  }
+}
+
+mutation SetSalaryDate($month: String!, $date: String) {
+  setSalaryDate(month: $month, date: $date)
+}
+
+mutation RegisterSalary($amount: String, $date: String!) {
+  registerSalary(amount: $amount, date: $date) {
+    id
+    amount
+  }
+}

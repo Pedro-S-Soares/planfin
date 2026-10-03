@@ -2,7 +2,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   require Ecto.Query
 
   alias PlanfinBackend.{Expenses, Finance}
-  alias PlanfinBackend.Finance.{Bills, Invoices, Panel}
+  alias PlanfinBackend.Finance.{Bills, Calendar, Invoices, Panel, Salary}
   alias PlanfinBackendWeb.Resolvers.Budget
 
   # ---- Queries ----
@@ -52,10 +52,32 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def panel(_parent, args, %{context: %{current_group: group}}) do
     today = today(args)
     horizon = horizon(group.id, today)
-    {:ok, group.id |> Panel.build(today, horizon) |> format_panel()}
+
+    panel =
+      group.id
+      |> Panel.build(today, horizon)
+      |> format_panel()
+      |> Map.put(:salary, format_salary_info(Salary.panel_info(group.id, today)))
+
+    {:ok, panel}
   end
 
   def panel(_parent, _args, context), do: access_error(context)
+
+  def get_settings(_parent, args, %{context: %{current_group: group}}) do
+    {:ok, format_settings(group.id, Salary.get_settings(group.id), today(args))}
+  end
+
+  def get_settings(_parent, _args, context), do: access_error(context)
+
+  def cycle_proposal(_parent, args, %{context: %{current_group: group}}) do
+    case Salary.proposal(group.id, today(args)) do
+      nil -> {:ok, nil}
+      p -> {:ok, format_proposal(p)}
+    end
+  end
+
+  def cycle_proposal(_parent, _args, context), do: access_error(context)
 
   def list_bills(_parent, _args, %{context: %{current_group: group}}) do
     {:ok, group.id |> Bills.list_bills() |> Enum.map(&format_bill/1)}
@@ -72,6 +94,60 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def bill_occurrences(_parent, _args, context), do: access_error(context)
 
   # ---- Mutations ----
+
+  def update_settings(_parent, args, %{context: %{current_group: group}}) do
+    with {:ok, attrs} <- settings_attrs(args),
+         {:ok, settings} <- Salary.update_settings(group.id, attrs) do
+      {:ok, format_settings(group.id, settings, today(args))}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, :account_not_found} -> {:error, "Account not found"}
+      {:error, msg} -> {:error, msg}
+    end
+  end
+
+  def update_settings(_parent, _args, context), do: access_error(context)
+
+  def set_salary_date(_parent, %{month: month} = args, %{context: %{current_group: group}}) do
+    with {:ok, month} <- parse_month(month) do
+      case args[:date] do
+        nil ->
+          :ok = Salary.clear_salary_date(group.id, month)
+          {:ok, true}
+
+        date ->
+          with {:ok, date} <- parse_date(date),
+               {:ok, _} <- Salary.set_salary_date(group.id, month, date) do
+            {:ok, true}
+          end
+      end
+    end
+  end
+
+  def set_salary_date(_parent, _args, context), do: access_error(context)
+
+  def register_salary(_parent, args, %{context: %{current_group: group, current_user: user}}) do
+    settings = Salary.get_settings(group.id)
+
+    amount_result =
+      case args[:amount] do
+        nil when is_nil(settings.salary_amount) -> {:error, "Salary amount not configured"}
+        nil -> {:ok, settings.salary_amount}
+        value -> parse_decimal(value)
+      end
+
+    with {:ok, amount} <- amount_result,
+         {:ok, date} <- parse_date(args.date),
+         {:ok, expense} <- Salary.register(group.id, user.id, amount, date) do
+      {:ok, Budget.format_expense(expense)}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, msg} when is_binary(msg) -> {:error, msg}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
+  end
+
+  def register_salary(_parent, _args, context), do: access_error(context)
 
   def create_bill(_parent, args, %{context: %{current_group: group}}) do
     with {:ok, amount} <- parse_decimal(args.amount),
@@ -297,7 +373,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   # ---- Formatting ----
 
   @doc false
-  def horizon(group_id, today), do: Panel.default_horizon(group_id, today)
+  def horizon(group_id, today), do: PlanfinBackend.Finance.Salary.horizon(group_id, today)
 
   defp format_panel(panel) do
     %{
@@ -317,6 +393,80 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
           }
         end)
     }
+  end
+
+  defp format_salary_info(info) do
+    %{
+      configured: info.configured,
+      amount: decimal_string(info.amount),
+      cycle_start_date: info.cycle_start_date && Date.to_iso8601(info.cycle_start_date),
+      next_salary_date: info.next_salary_date && Date.to_iso8601(info.next_salary_date),
+      pending: info.pending
+    }
+  end
+
+  defp format_settings(group_id, settings, today) do
+    upcoming =
+      for offset <- 0..2 do
+        month = Calendar.add_months({today.year, today.month}, offset)
+        date = Salary.salary_date(group_id, month, settings)
+
+        automatic =
+          Calendar.nth_labor_business_day(
+            elem(month, 0),
+            elem(month, 1),
+            settings.salary_business_day
+          )
+
+        %{
+          month: Invoices.format_month(month),
+          date: Date.to_iso8601(date),
+          is_manual: date != automatic
+        }
+      end
+
+    %{
+      salary_amount: decimal_string(settings.salary_amount),
+      salary_business_day: settings.salary_business_day,
+      salary_account_id: settings.salary_account_id,
+      reserve_goal: decimal_string(settings.reserve_goal),
+      upcoming_salary_dates: upcoming
+    }
+  end
+
+  defp format_proposal(p) do
+    %{
+      start_date: Date.to_iso8601(p.start_date),
+      end_date: Date.to_iso8601(p.end_date),
+      days: p.days,
+      salary: Decimal.to_string(p.salary),
+      account_bills: Decimal.to_string(p.account_bills),
+      card_bills: Decimal.to_string(p.card_bills),
+      installments: Decimal.to_string(p.installments),
+      available: Decimal.to_string(p.available)
+    }
+  end
+
+  defp settings_attrs(args) do
+    Enum.reduce_while(
+      [:salary_amount, :reserve_goal],
+      {:ok, Map.take(args, [:salary_business_day, :salary_account_id])},
+      fn key, {:ok, acc} ->
+        case Map.fetch(args, key) do
+          :error ->
+            {:cont, {:ok, acc}}
+
+          {:ok, nil} ->
+            {:cont, {:ok, Map.put(acc, key, nil)}}
+
+          {:ok, value} ->
+            case parse_decimal(value) do
+              {:ok, d} -> {:cont, {:ok, Map.put(acc, key, d)}}
+              error -> {:halt, error}
+            end
+        end
+      end
+    )
   end
 
   defp format_bill(bill) do

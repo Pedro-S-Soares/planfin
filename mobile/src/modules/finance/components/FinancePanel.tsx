@@ -10,6 +10,7 @@ import { Colors, Radius } from "../../../theme/tokens";
 import { formatMoney, formatShortDate, toNumber } from "../format";
 import { useFinancePanel } from "../use-finance-panel";
 import { CommitmentList } from "./CommitmentList";
+import { SalaryBanner } from "./SalaryBanner";
 import type { AppStackParamList, MainTabParamList } from "../../../../App";
 
 type Navigation = CompositeNavigationProp<
@@ -59,12 +60,16 @@ export function FinancePanel() {
 
   const free = toNumber(panel.free);
   const commitments = panel.commitments?.filter((c) => c !== null) ?? [];
+  const salary = panel.salary;
+  const horizonLabel = salary?.configured
+    ? `até o salário de ${formatShortDate(salary.nextSalaryDate)}`
+    : `até ${formatShortDate(panel.horizonDate)}`;
 
   return (
     <Card padding={16} style={{ marginBottom: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>DINHEIRO NA CONTA</Text>
-        <Text style={{ fontSize: 11, color: Colors.textTer }}>até {formatShortDate(panel.horizonDate)}</Text>
+        <Text style={{ fontSize: 11, color: Colors.textTer }}>{horizonLabel}</Text>
       </View>
       <View style={{ flexDirection: "row", gap: 10 }}>
         <Figure label="TENHO" value={formatMoney(panel.available, currency.symbol)} />
@@ -103,6 +108,14 @@ export function FinancePanel() {
             onOpenBills={(month) => navigation.navigate("Bills", { month })}
           />
         </View>
+      ) : null}
+      {salary?.pending && salary.cycleStartDate ? <SalaryBanner amount={salary.amount} date={salary.cycleStartDate} /> : null}
+      {salary && !salary.configured ? (
+        <TouchableOpacity onPress={() => navigation.navigate("SalarySettings")} activeOpacity={0.7} style={{ marginTop: 10 }}>
+          <Text style={{ fontSize: 12, color: Colors.textSec }}>
+            Cadastre seu salário para o app contar até o próximo pagamento e montar o ciclo sozinho. ›
+          </Text>
+        </TouchableOpacity>
       ) : null}
     </Card>
   );

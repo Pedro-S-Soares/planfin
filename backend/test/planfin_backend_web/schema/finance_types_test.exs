@@ -225,4 +225,68 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypesTest do
     assert resp["data"]["deleteRecurringBill"] == true
     assert gql(conn, "query { recurringBills { id } }")["data"]["recurringBills"] == []
   end
+
+  test "salary settings, proposal, panel info and register salary", %{conn: conn} do
+    {conn, _user, _group} = setup_conn(conn)
+    {_checking, _card} = create_accounts(conn)
+
+    resp =
+      gql(conn, """
+      mutation { updateFinancialSettings(salaryAmount: "6000.00", today: "#{@today}") {
+        salaryAmount salaryBusinessDay upcomingSalaryDates { month date isManual } } }
+      """)
+
+    settings = resp["data"]["updateFinancialSettings"]
+    assert settings["salaryAmount"] == "6000.00"
+    assert settings["salaryBusinessDay"] == 10
+
+    assert [%{"month" => "2026-10", "date" => "2026-10-13", "isManual" => false} | _] =
+             settings["upcomingSalaryDates"]
+
+    resp =
+      gql(conn, """
+      mutation { setSalaryDate(month: "2026-10", date: "2026-10-09") }
+      """)
+
+    assert resp["data"]["setSalaryDate"] == true
+
+    resp =
+      gql(
+        conn,
+        "query { financialSettings(today: \"#{@today}\") { upcomingSalaryDates { date isManual } } }"
+      )
+
+    assert [%{"date" => "2026-10-09", "isManual" => true} | _] =
+             resp["data"]["financialSettings"]["upcomingSalaryDates"]
+
+    resp =
+      gql(
+        conn,
+        "query { cycleProposal(today: \"#{@today}\") { startDate endDate days salary available } }"
+      )
+
+    assert %{"startDate" => "2026-10-09", "salary" => "6000.00"} = resp["data"]["cycleProposal"]
+
+    resp =
+      gql(conn, """
+      query { financePanel(today: "2026-10-10") { horizonDate salary { configured pending nextSalaryDate } } }
+      """)
+
+    assert %{"configured" => true, "pending" => true} = resp["data"]["financePanel"]["salary"]
+
+    resp =
+      gql(
+        conn,
+        "mutation { registerSalary(date: \"2026-10-09\") { amount type countsInBudget } }"
+      )
+
+    assert %{"amount" => "6000.00", "type" => "income", "countsInBudget" => false} =
+             resp["data"]["registerSalary"]
+
+    resp =
+      gql(conn, "query { financePanel(today: \"2026-10-10\") { available salary { pending } } }")
+
+    assert %{"available" => "7500.00", "salary" => %{"pending" => false}} =
+             resp["data"]["financePanel"]
+  end
 end
