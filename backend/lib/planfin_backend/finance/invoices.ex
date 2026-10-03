@@ -62,8 +62,10 @@ defmodule PlanfinBackend.Finance.Invoices do
     * `total` — purchases minus refunds (income entries on the card)
     * `paid` — payments tagged with this month
     * `remaining` — what is still owed (never negative)
-    * `status` — `open` (still accepting purchases), `closed` (to pay),
-      `partial`, `paid` or `overdue` (past due and not fully paid)
+    * `status` — `upcoming` (starts after today: only installments so far),
+      `open` (receiving purchases now), `closed` (to pay), `partial`, `paid`,
+      `overdue` (past due and not fully paid) or `empty` (closed with nothing
+      on it)
 
   With `with_entries: true` the invoice also carries its entries.
   """
@@ -90,7 +92,7 @@ defmodule PlanfinBackend.Finance.Invoices do
       total: total,
       paid: paid,
       remaining: remaining,
-      status: status(today, closing, due, total, paid)
+      status: status(today, start, closing, due, total, paid)
     }
 
     if Keyword.get(opts, :with_entries, false) do
@@ -106,10 +108,11 @@ defmodule PlanfinBackend.Finance.Invoices do
     end
   end
 
-  defp status(today, closing, due, total, paid) do
+  defp status(today, start, closing, due, total, paid) do
     cond do
+      Date.compare(today, start) == :lt -> "upcoming"
       Date.compare(today, closing) == :lt -> "open"
-      Decimal.compare(total, 0) != :gt -> "paid"
+      Decimal.compare(total, 0) != :gt -> "empty"
       Decimal.compare(paid, total) != :lt -> "paid"
       Date.compare(today, due) == :gt -> "overdue"
       Decimal.compare(paid, 0) == :gt -> "partial"

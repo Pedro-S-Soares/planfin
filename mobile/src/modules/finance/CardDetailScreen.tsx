@@ -12,7 +12,9 @@ import { alertWeb } from "../../lib/alert";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { Colors } from "../../theme/tokens";
+import { InvoiceHistory } from "./components/InvoiceHistory";
 import { InvoiceRow } from "./components/InvoiceRow";
+import { toNumber } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
 
@@ -37,7 +39,15 @@ export function CardDetailScreen() {
     onError: (e) => alertWeb("Erro", e.message),
   });
 
-  const invoices = [...(data?.invoices?.filter((i) => i !== null) ?? [])].reverse();
+  // Months before the card had any purchase only add noise.
+  const fetched = data?.invoices?.filter((i) => i !== null) ?? [];
+  const firstUsed = fetched.findIndex((i) => i.status !== "empty");
+  const allInvoices = firstUsed === -1 ? [] : fetched.slice(firstUsed);
+  const invoices = [...allInvoices].reverse();
+  const openIndex = allInvoices.findIndex((i) => i.status === "open");
+  const history = allInvoices
+    .slice(0, openIndex === -1 ? allInvoices.length : openIndex + 1)
+    .map((i) => ({ month: i.month ?? "", total: toNumber(i.total), status: i.status ?? "" }));
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
@@ -46,6 +56,8 @@ export function CardDetailScreen() {
           {card.name} · fecha dia {card.closingDay} · vence dia {card.dueDay}
         </Text>
       ) : null}
+
+      {history.length > 0 ? <InvoiceHistory cardId={params.cardId} goal={card?.invoiceGoal} invoices={history} /> : null}
 
       <Card padding={16} style={{ marginBottom: 12 }}>
         <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>FATURAS</Text>

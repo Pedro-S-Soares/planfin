@@ -15,6 +15,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :balance_date, :string
     field :closing_day, :integer
     field :due_day, :integer
+    @desc "Target for the card invoice"
+    field :invoice_goal, :string
     field :owner, :user
   end
 
@@ -147,7 +149,36 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :available, :string
   end
 
+  object :projected_invoice do
+    field :card_id, :id
+    field :card_name, :string
+    field :month, :string
+    field :due_date, :string
+    field :status, :string
+    @desc "Still owed on the invoice today"
+    field :amount, :string
+    @desc "Card bills that will still be charged on this invoice"
+    field :pending_bills, :string
+  end
+
+  @desc "What the next salary already has to cover"
+  object :salary_projection do
+    field :salary_date, :string
+    field :cycle_end_date, :string
+    field :salary, :string
+    field :invoices, list_of(:projected_invoice)
+    field :account_bills, :string
+    field :committed, :string
+    @desc "salary − committed"
+    field :left, :string
+  end
+
   object :finance_queries do
+    field :salary_projection, :salary_projection do
+      arg(:today, :string)
+      resolve(&Finance.salary_projection/3)
+    end
+
     field :finance_panel, :finance_panel do
       arg(:today, :string)
       resolve(&Finance.panel/3)
@@ -281,6 +312,7 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       arg(:closing_day, :integer)
       arg(:due_day, :integer)
       arg(:owner_user_id, :id)
+      arg(:invoice_goal, :string)
       resolve(&Finance.update_account/3)
     end
 

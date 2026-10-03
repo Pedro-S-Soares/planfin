@@ -2,7 +2,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   require Ecto.Query
 
   alias PlanfinBackend.{Expenses, Finance}
-  alias PlanfinBackend.Finance.{Bills, Calendar, Invoices, Panel, Salary}
+  alias PlanfinBackend.Finance.{Bills, Calendar, Invoices, Panel, Projection, Salary}
   alias PlanfinBackendWeb.Resolvers.Budget
 
   # ---- Queries ----
@@ -78,6 +78,15 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   end
 
   def cycle_proposal(_parent, _args, context), do: access_error(context)
+
+  def salary_projection(_parent, args, %{context: %{current_group: group}}) do
+    case Projection.build(group.id, today(args)) do
+      nil -> {:ok, nil}
+      p -> {:ok, format_projection(p)}
+    end
+  end
+
+  def salary_projection(_parent, _args, context), do: access_error(context)
 
   def list_bills(_parent, _args, %{context: %{current_group: group}}) do
     {:ok, group.id |> Bills.list_bills() |> Enum.map(&format_bill/1)}
@@ -254,7 +263,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
           else: a
       end)
 
-    with {:ok, account} <- fetch_account(group.id, id),
+    with {:ok, attrs} <- put_optional_decimal(attrs, :invoice_goal, args),
+         {:ok, account} <- fetch_account(group.id, id),
          :ok <- validate_owner(group.id, Map.get(attrs, :owner_user_id)),
          {:ok, account} <- Finance.update_account(account, attrs) do
       {:ok, format_account(account, Date.utc_today())}
@@ -434,6 +444,29 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
     }
   end
 
+  defp format_projection(p) do
+    %{
+      salary_date: Date.to_iso8601(p.salary_date),
+      cycle_end_date: Date.to_iso8601(p.cycle_end_date),
+      salary: Decimal.to_string(p.salary),
+      account_bills: Decimal.to_string(p.account_bills),
+      committed: Decimal.to_string(p.committed),
+      left: Decimal.to_string(p.left),
+      invoices:
+        Enum.map(p.invoices, fn i ->
+          %{
+            card_id: i.card_id,
+            card_name: i.card_name,
+            month: Invoices.format_month(i.month),
+            due_date: Date.to_iso8601(i.due_date),
+            status: i.status,
+            amount: Decimal.to_string(i.amount),
+            pending_bills: Decimal.to_string(i.pending_bills)
+          }
+        end)
+    }
+  end
+
   defp format_proposal(p) do
     %{
       start_date: Date.to_iso8601(p.start_date),
@@ -511,6 +544,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       balance_date: Date.to_iso8601(account.balance_date),
       closing_day: account.closing_day,
       due_day: account.due_day,
+      invoice_goal: decimal_string(account.invoice_goal),
       owner: format_owner(account.owner_user)
     }
   end
@@ -618,6 +652,15 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   end
 
   defp parse_decimal(_), do: {:error, "Invalid amount"}
+
+  # Absent → untouched; null or "" → cleared; value → parsed.
+  defp put_optional_decimal(attrs, key, args) do
+    case Map.fetch(args, key) do
+      :error -> {:ok, attrs}
+      {:ok, v} when v in [nil, ""] -> {:ok, Map.put(attrs, key, nil)}
+      {:ok, v} -> with {:ok, d} <- parse_decimal(v), do: {:ok, Map.put(attrs, key, d)}
+    end
+  end
 
   defp put_decimal(attrs, _key, nil), do: {:ok, attrs}
 

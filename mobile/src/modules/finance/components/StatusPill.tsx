@@ -3,6 +3,8 @@ import { Colors, Radius } from "../../../theme/tokens";
 import { INVOICE_STATUS_LABEL, type InvoiceStatus } from "../format";
 
 const TONE: Record<InvoiceStatus, { bg: string; fg: string }> = {
+  upcoming: { bg: Colors.bg, fg: Colors.textSec },
+  empty: { bg: Colors.bg, fg: Colors.textTer },
   open: { bg: Colors.primaryLight, fg: Colors.primaryText },
   closed: { bg: "#FFF4E5", fg: "#B25E00" },
   partial: { bg: "#FFF4E5", fg: "#B25E00" },

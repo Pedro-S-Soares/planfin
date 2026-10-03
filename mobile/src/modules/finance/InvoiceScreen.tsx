@@ -37,7 +37,7 @@ export function InvoiceScreen() {
 
   const invoice = data.invoice;
   const entries = invoice.entries?.filter((e) => e !== null) ?? [];
-  const canPay = invoice.status !== "open" && toNumber(invoice.remaining) > 0;
+  const canPay = invoice.status !== "open" && invoice.status !== "upcoming" && toNumber(invoice.remaining) > 0;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
