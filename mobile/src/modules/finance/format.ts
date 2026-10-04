@@ -96,3 +96,16 @@ export function addMonths(month: string, delta: number): string {
 export function monthOf(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
+
+/** Invoice month ("YYYY-MM") that receives a purchase on `dateISO`. */
+export function invoiceMonthFor(dateISO: string, closingDay: number): string {
+  const [y, m, d] = dateISO.split("-").map(Number);
+  const month = `${y}-${String(m).padStart(2, "0")}`;
+  return d < closingDay ? month : addMonths(month, 1);
+}
+
+/** Due date (ISO, without business-day adjustment) of an invoice month. */
+export function invoiceDueDate(month: string, closingDay: number, dueDay: number): string {
+  const dueMonth = dueDay > closingDay ? month : addMonths(month, 1);
+  return `${dueMonth}-${String(dueDay).padStart(2, "0")}`;
+}

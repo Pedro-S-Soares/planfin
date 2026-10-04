@@ -343,6 +343,7 @@ export function HomeScreen() {
                   categoryId: undefined,
                   accountId: item.account?.id ?? undefined,
                   countsInBudget: item.countsInBudget ?? undefined,
+                  installmentCount: item.installmentCount ?? undefined,
                 })}
                 authorLabel={authorLabel(item.createdBy, user?.id)}
               />

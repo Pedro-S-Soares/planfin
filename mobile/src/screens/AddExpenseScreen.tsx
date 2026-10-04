@@ -19,7 +19,8 @@ import { displayToAPI } from "../lib/currency";
 import { categoryColor, Colors, Radius } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { AccountPicker } from "../modules/finance/components/AccountPicker";
-import { InstallmentsPicker } from "../modules/finance/components/InstallmentsPicker";
+import { InstallmentPlan } from "../modules/finance/components/InstallmentPlan";
+import { invoiceMonthFor } from "../modules/finance/format";
 import { ToggleRow } from "../modules/finance/components/ToggleRow";
 import { defaultSpendingAccountId, useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import { parseCents } from "../lib/currency";
@@ -41,6 +42,9 @@ const schema = yup.object({
   // undefined = use the default account; null = no account
   accountId: yup.string().nullable().optional(),
   installments: yup.number().default(1),
+  amountPerInstallment: yup.boolean().default(false),
+  // undefined = invoice of the purchase date
+  firstInvoice: yup.string().optional(),
   countsInBudget: yup.boolean().default(true),
 });
 
@@ -54,7 +58,7 @@ export function AddExpenseScreen() {
   const { data: catData } = useCategoriesQuery({ variables: { type: "expense" } });
   const categories = catData?.categories ?? [];
 
-  const { control, handleSubmit, watch, setError, formState: { errors } } = useForm({
+  const { control, handleSubmit, watch, setValue, setError, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
       amount: "0,00",
@@ -62,6 +66,8 @@ export function AddExpenseScreen() {
       isExtra: false,
       accountId: params?.accountId,
       installments: 1,
+      amountPerInstallment: false,
+      firstInvoice: undefined,
       countsInBudget: !params?.outsideBudget,
       note: "",
       categoryId: "",
@@ -77,7 +83,12 @@ export function AddExpenseScreen() {
   // Allowance and reserve accounts never touch the household budget.
   // Allowance, reserve and meal voucher money is separate from the household budget.
   const isPrivateAccount = account?.kind === "allowance" || account?.kind === "reserve" || account?.kind === "benefit";
-  const countsInBudget = watch("countsInBudget") && !isPrivateAccount;
+  const installments = isCard ? watch("installments") ?? 1 : 1;
+  const defaultInvoice = isCard && account?.closingDay ? invoiceMonthFor(watch("date"), account.closingDay) : "";
+  const firstInvoice = watch("firstInvoice") || defaultInvoice;
+  // A purchase placed on another invoice never touches today's limit.
+  const isRetroactive = installments > 1 && firstInvoice !== defaultInvoice;
+  const countsInBudget = watch("countsInBudget") && !isPrivateAccount && !isRetroactive;
   const amountValue = parseCents(watch("amount")) / 100;
   const subcategories: NonNullable<Subcategory>[] =
     categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
@@ -105,7 +116,10 @@ export function AddExpenseScreen() {
         note: values.note || null,
         subcategoryId: values.subcategoryId || null,
         accountId,
-        installments: isCard ? values.installments : 1,
+        installments,
+        amountPerInstallment: installments > 1 ? values.amountPerInstallment : false,
+        firstInvoice: installments > 1 ? firstInvoice : null,
+        today: toISODate(new Date()),
         countsInBudget,
       },
     });
@@ -153,13 +167,18 @@ export function AddExpenseScreen() {
         )}
       />
 
-      {isCard ? (
-        <Controller
-          control={control}
-          name="installments"
-          render={({ field: { onChange, value } }) => (
-            <InstallmentsPicker value={value ?? 1} onChange={onChange} total={amountValue} />
-          )}
+      {isCard && account?.closingDay && account.dueDay ? (
+        <InstallmentPlan
+          count={installments}
+          onCountChange={(n) => setValue("installments", n)}
+          amount={amountValue}
+          perInstallment={watch("amountPerInstallment") ?? false}
+          onPerInstallmentChange={(v) => setValue("amountPerInstallment", v)}
+          firstInvoice={firstInvoice}
+          defaultInvoice={defaultInvoice}
+          onFirstInvoiceChange={(m) => setValue("firstInvoice", m === defaultInvoice ? undefined : m)}
+          closingDay={account.closingDay}
+          dueDay={account.dueDay}
         />
       ) : null}
 
@@ -209,7 +228,7 @@ export function AddExpenseScreen() {
         </>
       )}
 
-      {isPrivateAccount ? null : (
+      {isPrivateAccount || isRetroactive ? null : (
         <Controller
           control={control}
           name="countsInBudget"

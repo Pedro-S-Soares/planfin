@@ -106,6 +106,12 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       resolve(&Budget.expenses_in_range/3)
     end
 
+    @desc "All entries of the installment purchase the expense belongs to"
+    field :installments, list_of(:expense) do
+      arg(:expense_id, non_null(:id))
+      resolve(&Budget.list_installments/3)
+    end
+
     field :period_summary, :period_summary do
       arg(:period_id, non_null(:id))
       resolve(&Budget.period_summary/3)
@@ -145,9 +151,14 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:subcategory_id, :id)
       arg(:type, :string)
       arg(:account_id, :id)
-      @desc "Card installments; amount is the purchase total"
+      @desc "Card installments; amount is the purchase total unless amountPerInstallment"
       arg(:installments, :integer)
+      @desc "Invoice (YYYY-MM) of the 1st installment; defaults to the purchase date's invoice"
+      arg(:first_invoice, :string)
+      arg(:amount_per_installment, :boolean)
       arg(:counts_in_budget, :boolean)
+      @desc "Client's today, to skip installments whose invoice is already due"
+      arg(:today, :string)
       resolve(&Budget.create_expense/3)
     end
 
@@ -161,6 +172,14 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:type, :string)
       arg(:account_id, :id)
       resolve(&Budget.update_expense/3)
+    end
+
+    @desc "Replace the installments after this one by a single entry on its invoice"
+    field :anticipate_installments, :expense do
+      arg(:expense_id, non_null(:id))
+      @desc "Amount actually charged (defaults to the sum; smaller = discount)"
+      arg(:amount, :string)
+      resolve(&Budget.anticipate_installments/3)
     end
 
     field :delete_expense, :boolean do

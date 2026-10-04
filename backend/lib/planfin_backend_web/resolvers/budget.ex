@@ -192,6 +192,23 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   def update_period(_parent, _args, context), do: access_error(context)
 
   def create_expense(_parent, args, %{context: %{current_user: user, current_group: group}}) do
+    with {:ok, first_invoice} <- parse_first_invoice(args[:first_invoice]) do
+      do_create_expense(args, user, group, first_invoice)
+    end
+  end
+
+  def create_expense(_parent, _args, context), do: access_error(context)
+
+  defp parse_first_invoice(nil), do: {:ok, nil}
+
+  defp parse_first_invoice(month) do
+    case PlanfinBackend.Finance.Invoices.parse_month(month) do
+      {:ok, m} -> {:ok, m}
+      _ -> {:error, "Invalid month, expected YYYY-MM"}
+    end
+  end
+
+  defp do_create_expense(args, user, group, first_invoice) do
     attrs = %{
       amount: Decimal.new(args.amount),
       date: Date.from_iso8601!(args.date),
@@ -201,7 +218,10 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       type: Map.get(args, :type, "expense"),
       account_id: Map.get(args, :account_id),
       installments: Map.get(args, :installments, 1),
-      counts_in_budget: Map.get(args, :counts_in_budget, true)
+      counts_in_budget: Map.get(args, :counts_in_budget, true),
+      first_invoice: first_invoice,
+      amount_per_installment: Map.get(args, :amount_per_installment, false),
+      today: parse_today(args)
     }
 
     case Expenses.create_expense(group.id, user.id, attrs) do
@@ -223,12 +243,48 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       {:error, :invalid_installments} ->
         {:error, "Invalid number of installments"}
 
+      {:error, :all_installments_past} ->
+        {:error, "All installments are on invoices already due"}
+
       {:error, %Ecto.Changeset{} = changeset} ->
         {:error, format_errors(changeset)}
     end
   end
 
-  def create_expense(_parent, _args, context), do: access_error(context)
+  def list_installments(_parent, %{expense_id: id}, %{context: %{current_group: group}}) do
+    {:ok, group.id |> Expenses.list_installments(id) |> Enum.map(&format_expense/1)}
+  end
+
+  def list_installments(_parent, _args, context), do: access_error(context)
+
+  def anticipate_installments(_parent, %{expense_id: id} = args, %{
+        context: %{current_user: user, current_group: group}
+      }) do
+    amount_result =
+      case args[:amount] do
+        nil ->
+          {:ok, nil}
+
+        value ->
+          case Decimal.parse(value) do
+            {d, ""} -> {:ok, d}
+            _ -> {:error, "Invalid amount"}
+          end
+      end
+
+    with {:ok, amount} <- amount_result do
+      case Expenses.anticipate_installments(group.id, user.id, id, amount) do
+        {:ok, entry} -> {:ok, format_expense(entry)}
+        {:error, :not_found} -> {:error, "Expense not found"}
+        {:error, :not_an_installment} -> {:error, "Expense is not an installment"}
+        {:error, :nothing_to_anticipate} -> {:error, "No installments left to anticipate"}
+        {:error, :invalid_amount} -> {:error, "Invalid amount"}
+        {:error, %Ecto.Changeset{} = cs} -> {:error, format_errors(cs)}
+      end
+    end
+  end
+
+  def anticipate_installments(_parent, _args, context), do: access_error(context)
 
   def update_expense(_parent, %{id: id} = args, %{context: %{current_group: group}}) do
     attrs =

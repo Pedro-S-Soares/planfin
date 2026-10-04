@@ -37,14 +37,15 @@ defmodule PlanfinBackend.Expenses do
     with {:ok, account} <- fetch_account(group_id, Map.get(attrs, :account_id)),
          :ok <- validate_installments(installments, account) do
       counts_in_budget = counts_in_budget?(Map.get(attrs, :counts_in_budget, true), account)
+      options = Map.take(attrs, [:first_invoice, :amount_per_installment, :today])
 
       attrs =
         attrs
-        |> Map.drop([:installments])
+        |> Map.drop([:installments, :first_invoice, :amount_per_installment, :today])
         |> Map.put(:counts_in_budget, counts_in_budget)
 
       if installments > 1 do
-        create_installments(group_id, created_by_id, attrs, installments)
+        create_installments(group_id, created_by_id, attrs, installments, account, options)
       else
         create_single(group_id, created_by_id, attrs)
       end
@@ -70,39 +71,157 @@ defmodule PlanfinBackend.Expenses do
     end
   end
 
-  defp create_installments(group_id, created_by_id, attrs, count) do
-    total_cents =
-      attrs[:amount] |> Decimal.mult(100) |> Decimal.round(0) |> Decimal.to_integer()
+  # Card purchase in `count` parcels. Parcel k lands on the invoice
+  # `first_invoice + k - 1` (default: the invoice of the purchase date).
+  # Parcels on invoices already due before `today` were paid outside the app
+  # and are not created; the rest keep their real numbering (k/N).
+  # Only parcel 1 of a purchase made in the current invoice can count in the
+  # daily budget; a retroactive purchase stays entirely outside it.
+  defp create_installments(group_id, created_by_id, attrs, count, card, options) do
+    alias PlanfinBackend.Finance.{Calendar, Invoices}
 
-    base = div(total_cents, count)
-    remainder = rem(total_cents, count)
+    today = Map.get(options, :today) || Date.utc_today()
+    date_invoice = Invoices.month_for(card, attrs[:date])
+    first_invoice = Map.get(options, :first_invoice) || date_invoice
+    retroactive? = first_invoice != date_invoice
+
+    base_date =
+      if retroactive?, do: Invoices.start_date(card, first_invoice), else: attrs[:date]
+
+    amounts =
+      parcel_amounts(attrs[:amount], count, Map.get(options, :amount_per_installment, false))
+
     group_uuid = Ecto.UUID.generate()
 
-    Repo.transaction(fn ->
-      parcels =
-        for number <- 1..count do
-          cents = if number == 1, do: base + remainder, else: base
+    numbers =
+      Enum.filter(1..count, fn number ->
+        invoice = Calendar.add_months(first_invoice, number - 1)
+        Date.compare(Invoices.due_date(card, invoice), today) != :lt
+      end)
 
-          parcel_attrs =
-            attrs
-            |> Map.put(:amount, Decimal.div(Decimal.new(cents), 100) |> Decimal.round(2))
-            |> Map.put(
-              :date,
-              PlanfinBackend.Finance.Calendar.shift_date(attrs[:date], number - 1)
-            )
-            |> Map.put(:installment_group_id, group_uuid)
-            |> Map.put(:installment_number, number)
-            |> Map.put(:installment_count, count)
-            |> Map.put(:counts_in_budget, number == 1 and attrs[:counts_in_budget])
+    if numbers == [] do
+      {:error, :all_installments_past}
+    else
+      Repo.transaction(fn ->
+        parcels =
+          for number <- numbers do
+            parcel_attrs =
+              attrs
+              |> Map.put(:amount, Enum.at(amounts, number - 1))
+              |> Map.put(:date, Calendar.shift_date(base_date, number - 1))
+              |> Map.put(:installment_group_id, group_uuid)
+              |> Map.put(:installment_number, number)
+              |> Map.put(:installment_count, count)
+              |> Map.put(
+                :counts_in_budget,
+                number == 1 and not retroactive? and attrs[:counts_in_budget]
+              )
 
-          case create_single(group_id, created_by_id, parcel_attrs) do
-            {:ok, parcel} -> parcel
-            {:error, reason} -> Repo.rollback(reason)
+            case create_single(group_id, created_by_id, parcel_attrs) do
+              {:ok, parcel} -> parcel
+              {:error, reason} -> Repo.rollback(reason)
+            end
           end
-        end
 
-      hd(parcels)
-    end)
+        hd(parcels)
+      end)
+    end
+  end
+
+  # Equal parcels; when splitting a total the cent remainder goes to parcel 1.
+  defp parcel_amounts(amount, count, true = _per_installment),
+    do: List.duplicate(Decimal.round(amount, 2), count)
+
+  defp parcel_amounts(total, count, _per_installment) do
+    total_cents = total |> Decimal.mult(100) |> Decimal.round(0) |> Decimal.to_integer()
+    base = div(total_cents, count)
+    remainder = rem(total_cents, count)
+
+    for number <- 1..count do
+      cents = if number == 1, do: base + remainder, else: base
+      Decimal.div(Decimal.new(cents), 100) |> Decimal.round(2)
+    end
+  end
+
+  @doc """
+  Parcels of the installment purchase `expense` belongs to, ordered by number
+  (an anticipation entry, without number, comes last).
+  """
+  def list_installments(group_id, expense_id) do
+    with %Expense{installment_group_id: group_uuid} when not is_nil(group_uuid) <-
+           Repo.get_by(Expense, id: expense_id, group_id: group_id) do
+      Expense
+      |> where([e], e.group_id == ^group_id and e.installment_group_id == ^group_uuid)
+      |> order_by([e], asc_nulls_last: e.installment_number, asc: e.date)
+      |> preload([:created_by, :account, subcategory: :category])
+      |> Repo.all()
+    else
+      _ -> []
+    end
+  end
+
+  @doc """
+  Anticipates the parcels after `expense_id` (k/N): parcels k+1..N are replaced
+  by a single entry on the same date (same invoice) as parcel k. `amount`
+  defaults to their sum; a smaller one records the anticipation discount.
+  Returns `{:ok, entry}`.
+  """
+  def anticipate_installments(group_id, user_id, expense_id, amount \\ nil) do
+    with %Expense{installment_number: number, installment_group_id: group_uuid} = parcel
+         when is_integer(number) <- Repo.get_by(Expense, id: expense_id, group_id: group_id),
+         [_ | _] = later <- later_parcels(group_id, group_uuid, number),
+         sum = Enum.reduce(later, Decimal.new("0"), &Decimal.add(&2, &1.amount)),
+         amount = amount || sum,
+         :ok <- validate_anticipation(amount) do
+      last = List.last(later)
+      range = "#{number + 1}–#{last.installment_count}/#{last.installment_count}"
+
+      note =
+        Enum.join(
+          Enum.reject(["Antecipação das parcelas #{range}", parcel.note], &is_nil/1),
+          " · "
+        )
+
+      Repo.transaction(fn ->
+        later_ids = Enum.map(later, & &1.id)
+        Repo.delete_all(from(e in Expense, where: e.id in ^later_ids))
+
+        case insert_expense(group_id, user_id, nil, nil, %{
+               amount: amount,
+               date: parcel.date,
+               type: "expense",
+               note: note,
+               account_id: parcel.account_id,
+               subcategory_id: parcel.subcategory_id,
+               counts_in_budget: false,
+               installment_group_id: group_uuid,
+               source: "anticipation"
+             }) do
+          {:ok, entry} -> preload_entry(entry)
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+    else
+      nil -> {:error, :not_found}
+      %Expense{} -> {:error, :not_an_installment}
+      [] -> {:error, :nothing_to_anticipate}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp later_parcels(group_id, group_uuid, number) do
+    Expense
+    |> where(
+      [e],
+      e.group_id == ^group_id and e.installment_group_id == ^group_uuid and
+        e.installment_number > ^number
+    )
+    |> order_by([e], asc: e.installment_number)
+    |> Repo.all()
+  end
+
+  defp validate_anticipation(amount) do
+    if Decimal.compare(amount, 0) == :gt, do: :ok, else: {:error, :invalid_amount}
   end
 
   defp validate_installments(1, _account), do: :ok
