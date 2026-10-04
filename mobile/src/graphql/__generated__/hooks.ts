@@ -314,6 +314,8 @@ export type ReserveStatus = {
 
 export type RootMutationType = {
   __typename?: 'RootMutationType';
+  /** Replace the installments after this one by a single entry on its invoice */
+  anticipateInstallments?: Maybe<Expense>;
   archiveFinancialAccount?: Maybe<Scalars['Boolean']['output']>;
   /** Move the entries without account dated on/after fromDate to the account. Returns how many moved. */
   assignEntriesToAccount?: Maybe<Scalars['Int']['output']>;
@@ -370,6 +372,12 @@ export type RootMutationType = {
 };
 
 
+export type RootMutationTypeAnticipateInstallmentsArgs = {
+  amount?: InputMaybe<Scalars['String']['input']>;
+  expenseId: Scalars['ID']['input'];
+};
+
+
 export type RootMutationTypeArchiveFinancialAccountArgs = {
   id: Scalars['ID']['input'];
 };
@@ -391,12 +399,15 @@ export type RootMutationTypeCreateCategoryArgs = {
 export type RootMutationTypeCreateExpenseArgs = {
   accountId?: InputMaybe<Scalars['ID']['input']>;
   amount: Scalars['String']['input'];
+  amountPerInstallment?: InputMaybe<Scalars['Boolean']['input']>;
   countsInBudget?: InputMaybe<Scalars['Boolean']['input']>;
   date: Scalars['String']['input'];
+  firstInvoice?: InputMaybe<Scalars['String']['input']>;
   installments?: InputMaybe<Scalars['Int']['input']>;
   isExtra?: InputMaybe<Scalars['Boolean']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -691,6 +702,8 @@ export type RootQueryType = {
   groupInvites?: Maybe<Array<Maybe<GroupInvite>>>;
   groupMembers?: Maybe<Array<Maybe<GroupMember>>>;
   groupPeriods?: Maybe<Array<Maybe<Period>>>;
+  /** All entries of the installment purchase the expense belongs to */
+  installments?: Maybe<Array<Maybe<Expense>>>;
   invoice?: Maybe<Invoice>;
   /** Invoices of a card: closed ones before the current, the current and future ones with installments */
   invoices?: Maybe<Array<Maybe<Invoice>>>;
@@ -772,6 +785,11 @@ export type RootQueryTypeGroupInvitesArgs = {
 
 export type RootQueryTypeGroupMembersArgs = {
   groupId: Scalars['ID']['input'];
+};
+
+
+export type RootQueryTypeInstallmentsArgs = {
+  expenseId: Scalars['ID']['input'];
 };
 
 
@@ -968,7 +986,10 @@ export type CreateExpenseMutationVariables = Exact<{
   type?: InputMaybe<Scalars['String']['input']>;
   accountId?: InputMaybe<Scalars['ID']['input']>;
   installments?: InputMaybe<Scalars['Int']['input']>;
+  firstInvoice?: InputMaybe<Scalars['String']['input']>;
+  amountPerInstallment?: InputMaybe<Scalars['Boolean']['input']>;
   countsInBudget?: InputMaybe<Scalars['Boolean']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
@@ -1035,6 +1056,14 @@ export type DeleteSubcategoryMutationVariables = Exact<{
 
 
 export type DeleteSubcategoryMutation = { __typename?: 'RootMutationType', deleteSubcategory?: boolean | null };
+
+export type AnticipateInstallmentsMutationVariables = Exact<{
+  expenseId: Scalars['ID']['input'];
+  amount?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type AnticipateInstallmentsMutation = { __typename?: 'RootMutationType', anticipateInstallments?: { __typename?: 'Expense', id?: string | null, amount?: string | null, note?: string | null } | null };
 
 export type CreateFinancialAccountMutationVariables = Exact<{
   name: Scalars['String']['input'];
@@ -1309,6 +1338,13 @@ export type CategoriesQueryVariables = Exact<{
 
 
 export type CategoriesQuery = { __typename?: 'RootQueryType', categories?: Array<{ __typename?: 'Category', id?: string | null, name?: string | null, type?: string | null, icon?: string | null, subcategories?: Array<{ __typename?: 'Subcategory', id?: string | null, name?: string | null } | null> | null } | null> | null };
+
+export type InstallmentsQueryVariables = Exact<{
+  expenseId: Scalars['ID']['input'];
+}>;
+
+
+export type InstallmentsQuery = { __typename?: 'RootQueryType', installments?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, installmentNumber?: number | null, installmentCount?: number | null } | null> | null };
 
 export type DashboardDataQueryVariables = Exact<{
   from: Scalars['String']['input'];
@@ -1815,7 +1851,7 @@ export type UpdatePeriodMutationHookResult = ReturnType<typeof useUpdatePeriodMu
 export type UpdatePeriodMutationResult = Apollo.MutationResult<UpdatePeriodMutation>;
 export type UpdatePeriodMutationOptions = Apollo.BaseMutationOptions<UpdatePeriodMutation, UpdatePeriodMutationVariables>;
 export const CreateExpenseDocument = gql`
-    mutation CreateExpense($amount: String!, $date: String!, $note: String, $isExtra: Boolean, $subcategoryId: ID, $type: String, $accountId: ID, $installments: Int, $countsInBudget: Boolean) {
+    mutation CreateExpense($amount: String!, $date: String!, $note: String, $isExtra: Boolean, $subcategoryId: ID, $type: String, $accountId: ID, $installments: Int, $firstInvoice: String, $amountPerInstallment: Boolean, $countsInBudget: Boolean, $today: String) {
   createExpense(
     amount: $amount
     date: $date
@@ -1825,7 +1861,10 @@ export const CreateExpenseDocument = gql`
     type: $type
     accountId: $accountId
     installments: $installments
+    firstInvoice: $firstInvoice
+    amountPerInstallment: $amountPerInstallment
     countsInBudget: $countsInBudget
+    today: $today
   ) {
     id
     amount
@@ -1868,7 +1907,10 @@ export type CreateExpenseMutationFn = Apollo.MutationFunction<CreateExpenseMutat
  *      type: // value for 'type'
  *      accountId: // value for 'accountId'
  *      installments: // value for 'installments'
+ *      firstInvoice: // value for 'firstInvoice'
+ *      amountPerInstallment: // value for 'amountPerInstallment'
  *      countsInBudget: // value for 'countsInBudget'
+ *      today: // value for 'today'
  *   },
  * });
  */
@@ -2145,6 +2187,42 @@ export function useDeleteSubcategoryMutation(baseOptions?: Apollo.MutationHookOp
 export type DeleteSubcategoryMutationHookResult = ReturnType<typeof useDeleteSubcategoryMutation>;
 export type DeleteSubcategoryMutationResult = Apollo.MutationResult<DeleteSubcategoryMutation>;
 export type DeleteSubcategoryMutationOptions = Apollo.BaseMutationOptions<DeleteSubcategoryMutation, DeleteSubcategoryMutationVariables>;
+export const AnticipateInstallmentsDocument = gql`
+    mutation AnticipateInstallments($expenseId: ID!, $amount: String) {
+  anticipateInstallments(expenseId: $expenseId, amount: $amount) {
+    id
+    amount
+    note
+  }
+}
+    `;
+export type AnticipateInstallmentsMutationFn = Apollo.MutationFunction<AnticipateInstallmentsMutation, AnticipateInstallmentsMutationVariables>;
+
+/**
+ * __useAnticipateInstallmentsMutation__
+ *
+ * To run a mutation, you first call `useAnticipateInstallmentsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAnticipateInstallmentsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [anticipateInstallmentsMutation, { data, loading, error }] = useAnticipateInstallmentsMutation({
+ *   variables: {
+ *      expenseId: // value for 'expenseId'
+ *      amount: // value for 'amount'
+ *   },
+ * });
+ */
+export function useAnticipateInstallmentsMutation(baseOptions?: Apollo.MutationHookOptions<AnticipateInstallmentsMutation, AnticipateInstallmentsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AnticipateInstallmentsMutation, AnticipateInstallmentsMutationVariables>(AnticipateInstallmentsDocument, options);
+      }
+export type AnticipateInstallmentsMutationHookResult = ReturnType<typeof useAnticipateInstallmentsMutation>;
+export type AnticipateInstallmentsMutationResult = Apollo.MutationResult<AnticipateInstallmentsMutation>;
+export type AnticipateInstallmentsMutationOptions = Apollo.BaseMutationOptions<AnticipateInstallmentsMutation, AnticipateInstallmentsMutationVariables>;
 export const CreateFinancialAccountDocument = gql`
     mutation CreateFinancialAccount($name: String!, $kind: String!, $balance: String, $closingDay: Int, $dueDay: Int, $monthlyCredit: String, $creditDay: Int, $ownerUserId: ID, $today: String) {
   createFinancialAccount(
@@ -3420,6 +3498,54 @@ export type CategoriesQueryHookResult = ReturnType<typeof useCategoriesQuery>;
 export type CategoriesLazyQueryHookResult = ReturnType<typeof useCategoriesLazyQuery>;
 export type CategoriesSuspenseQueryHookResult = ReturnType<typeof useCategoriesSuspenseQuery>;
 export type CategoriesQueryResult = Apollo.QueryResult<CategoriesQuery, CategoriesQueryVariables>;
+export const InstallmentsDocument = gql`
+    query Installments($expenseId: ID!) {
+  installments(expenseId: $expenseId) {
+    id
+    amount
+    date
+    note
+    installmentNumber
+    installmentCount
+  }
+}
+    `;
+
+/**
+ * __useInstallmentsQuery__
+ *
+ * To run a query within a React component, call `useInstallmentsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useInstallmentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useInstallmentsQuery({
+ *   variables: {
+ *      expenseId: // value for 'expenseId'
+ *   },
+ * });
+ */
+export function useInstallmentsQuery(baseOptions: Apollo.QueryHookOptions<InstallmentsQuery, InstallmentsQueryVariables> & ({ variables: InstallmentsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<InstallmentsQuery, InstallmentsQueryVariables>(InstallmentsDocument, options);
+      }
+export function useInstallmentsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<InstallmentsQuery, InstallmentsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<InstallmentsQuery, InstallmentsQueryVariables>(InstallmentsDocument, options);
+        }
+// @ts-ignore
+export function useInstallmentsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<InstallmentsQuery, InstallmentsQueryVariables>): Apollo.UseSuspenseQueryResult<InstallmentsQuery, InstallmentsQueryVariables>;
+export function useInstallmentsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<InstallmentsQuery, InstallmentsQueryVariables>): Apollo.UseSuspenseQueryResult<InstallmentsQuery | undefined, InstallmentsQueryVariables>;
+export function useInstallmentsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<InstallmentsQuery, InstallmentsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<InstallmentsQuery, InstallmentsQueryVariables>(InstallmentsDocument, options);
+        }
+export type InstallmentsQueryHookResult = ReturnType<typeof useInstallmentsQuery>;
+export type InstallmentsLazyQueryHookResult = ReturnType<typeof useInstallmentsLazyQuery>;
+export type InstallmentsSuspenseQueryHookResult = ReturnType<typeof useInstallmentsSuspenseQuery>;
+export type InstallmentsQueryResult = Apollo.QueryResult<InstallmentsQuery, InstallmentsQueryVariables>;
 export const DashboardDataDocument = gql`
     query DashboardData($from: String!, $to: String!) {
   expensesInRange(from: $from, to: $to) {

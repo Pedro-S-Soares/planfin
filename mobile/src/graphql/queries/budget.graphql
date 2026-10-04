@@ -73,3 +73,14 @@ query Categories($type: String) {
     }
   }
 }
+
+query Installments($expenseId: ID!) {
+  installments(expenseId: $expenseId) {
+    id
+    amount
+    date
+    note
+    installmentNumber
+    installmentCount
+  }
+}

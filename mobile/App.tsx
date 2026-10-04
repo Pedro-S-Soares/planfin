@@ -91,6 +91,7 @@ export type AppStackParamList = {
     categoryId?: string;
     accountId?: string;
     countsInBudget?: boolean;
+    installmentCount?: number;
   };
   AddIncome: EntryFormParams;
   AccountForm: { accountId?: string; kind?: AccountKind };
@@ -121,6 +122,7 @@ export type AppStackParamList = {
     categoryId?: string;
     accountId?: string;
     countsInBudget?: boolean;
+    installmentCount?: number;
   };
 };
 

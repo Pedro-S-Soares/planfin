@@ -28,7 +28,10 @@ mutation CreateExpense(
   $type: String
   $accountId: ID
   $installments: Int
+  $firstInvoice: String
+  $amountPerInstallment: Boolean
   $countsInBudget: Boolean
+  $today: String
 ) {
   createExpense(
     amount: $amount
@@ -39,7 +42,10 @@ mutation CreateExpense(
     type: $type
     accountId: $accountId
     installments: $installments
+    firstInvoice: $firstInvoice
+    amountPerInstallment: $amountPerInstallment
     countsInBudget: $countsInBudget
+    today: $today
   ) {
     id
     amount
@@ -112,4 +118,12 @@ mutation CreateSubcategory($categoryId: ID!, $name: String!) {
 
 mutation DeleteSubcategory($id: ID!) {
   deleteSubcategory(id: $id)
+}
+
+mutation AnticipateInstallments($expenseId: ID!, $amount: String) {
+  anticipateInstallments(expenseId: $expenseId, amount: $amount) {
+    id
+    amount
+    note
+  }
 }

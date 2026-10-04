@@ -92,6 +92,7 @@ export function InvoiceScreen() {
                   categoryId: undefined,
                   accountId: item.account?.id ?? undefined,
                   countsInBudget: item.countsInBudget ?? undefined,
+                  installmentCount: item.installmentCount ?? undefined,
                 })
               }
             />

@@ -169,6 +169,7 @@ export function HistoryScreen() {
                       categoryId: undefined,
                   accountId: item.account?.id ?? undefined,
                   countsInBudget: item.countsInBudget ?? undefined,
+                  installmentCount: item.installmentCount ?? undefined,
                     };
                     if (item.type === "income") {
                       navigation.navigate("EditIncome", params);

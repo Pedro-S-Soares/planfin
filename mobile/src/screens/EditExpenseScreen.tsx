@@ -19,7 +19,9 @@ import { Chip } from "../components/ui/Chip";
 import { displayToAPI, formatCents } from "../lib/currency";
 import { categoryColor, Colors, Radius } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { confirm } from "../lib/alert";
 import { AccountPicker } from "../modules/finance/components/AccountPicker";
+import { InstallmentsSection } from "../modules/finance/components/InstallmentsSection";
 import { useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import type { AppStackParamList } from "../../App";
 
@@ -48,8 +50,18 @@ export function EditExpenseScreen() {
   usePageTitle("Planfin - Editar gasto");
   const navigation = useNavigation();
   const route = useRoute<NativeStackScreenProps<AppStackParamList, "EditExpense">["route"]>();
-  const { id, amount, date, note, isExtra, subcategoryId, categoryId, accountId: initialAccountId, countsInBudget } =
-    route.params;
+  const {
+    id,
+    amount,
+    date,
+    note,
+    isExtra,
+    subcategoryId,
+    categoryId,
+    accountId: initialAccountId,
+    countsInBudget,
+    installmentCount,
+  } = route.params;
   const { accounts } = useFinancialAccounts();
   const isBudgetEntry = countsInBudget !== false;
 
@@ -151,6 +163,8 @@ export function EditExpenseScreen() {
           />
         )}
       />
+
+      {installmentCount ? <InstallmentsSection expenseId={id} onAnticipated={() => navigation.goBack()} /> : null}
 
       <Controller
         control={control}
@@ -282,9 +296,21 @@ export function EditExpenseScreen() {
       <Btn label="Salvar alterações" onPress={handleSubmit(onSubmit)} loading={isLoading} />
       <View style={{ height: 12 }} />
       <Btn
-        label="Excluir gasto"
+        label={installmentCount ? "Excluir compra parcelada" : "Excluir gasto"}
         variant="danger"
-        onPress={() => deleteExpense({ variables: { id } })}
+        onPress={() =>
+          installmentCount
+            ? confirm(
+                {
+                  title: "Excluir compra parcelada",
+                  message: "Todas as parcelas desta compra serão apagadas, inclusive as de faturas futuras.",
+                  confirmLabel: "Excluir",
+                  destructive: true,
+                },
+                () => deleteExpense({ variables: { id } }),
+              )
+            : deleteExpense({ variables: { id } })
+        }
         loading={isLoading}
       />
     </ScrollView>
