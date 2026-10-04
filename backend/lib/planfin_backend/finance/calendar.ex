@@ -89,4 +89,9 @@ defmodule PlanfinBackend.Finance.Calendar do
     day = min(date.day, Calendar.ISO.days_in_month(y, m))
     Date.new!(y, m, day)
   end
+
+  @doc "\"04/10\"-style day/month."
+  def format_br(%Date{day: d, month: m}),
+    do:
+      "#{String.pad_leading(Integer.to_string(d), 2, "0")}/#{String.pad_leading(Integer.to_string(m), 2, "0")}"
 end

@@ -36,7 +36,7 @@ function SalaryForm({ initialAmount, initialDay, initialAccountId }: SalaryFormP
   const effectiveAccount = accountId === undefined ? primary?.id ?? null : accountId;
 
   const [save, { loading }] = useUpdateFinancialSettingsMutation({
-    refetchQueries: ["FinancialSettings", "FinancePanel", "CycleProposal"],
+    refetchQueries: ["FinancialSettings", "FinancePanel", "FreshPlan"],
     onCompleted: () => navigation.goBack(),
     onError: (e) => setError(e.message),
   });
@@ -77,7 +77,7 @@ function UpcomingDates({ dates }: { dates: { month: string; date: string; isManu
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [setSalaryDate, { loading }] = useSetSalaryDateMutation({
-    refetchQueries: ["FinancialSettings", "FinancePanel", "CycleProposal"],
+    refetchQueries: ["FinancialSettings", "FinancePanel", "FreshPlan"],
     onCompleted: () => setEditing(null),
   });
 

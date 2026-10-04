@@ -209,7 +209,40 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :total, :string
   end
 
+  object :plan_item do
+    field :label, :string
+    field :date, :string
+    field :amount, :string
+    field :card_id, :id
+    field :month, :string
+  end
+
+  @desc "Cash plan from today to the end of a salary cycle"
+  object :fresh_plan do
+    field :start_date, :string
+    field :end_date, :string
+    field :days, :integer
+    field :has_primary, :boolean
+    @desc "Primary account balance today"
+    field :balance, :string
+    field :salary_amount, :string
+    field :salary_date, :string
+    @desc "What unpaid invoices already hold"
+    field :cards, list_of(:plan_item)
+    @desc "Fixed bills paid from accounts until the end"
+    field :account_bills, list_of(:plan_item)
+    @desc "Fixed card bills still to be charged until the end"
+    field :card_bills, list_of(:plan_item)
+    @desc "balance + salary − cards − bills"
+    field :variable, :string
+  end
+
   object :finance_queries do
+    field :fresh_plan, :fresh_plan do
+      arg(:today, :string)
+      resolve(&Finance.fresh_plan/3)
+    end
+
     field :allowance_plan, :allowance_plan do
       arg(:today, :string)
       resolve(&Finance.allowance_plan/3)
@@ -279,6 +312,23 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
   end
 
   object :finance_mutations do
+    @desc "Set the invoice total to the bank's number; the difference becomes one adjustment entry"
+    field :set_invoice_total, :invoice do
+      arg(:card_id, non_null(:id))
+      arg(:month, non_null(:string))
+      arg(:total, non_null(:string))
+      arg(:today, :string)
+      resolve(&Finance.set_invoice_total/3)
+    end
+
+    @desc "Close the current period yesterday and start one from today with the fresh plan"
+    field :start_fresh_plan, :period do
+      arg(:gordura, :string)
+      arg(:name, :string)
+      arg(:today, :string)
+      resolve(&Finance.start_fresh_plan/3)
+    end
+
     @desc "Transfer the end-of-cycle left over to the allowance accounts in equal parts"
     field :distribute_allowance, :allowance_plan do
       arg(:amount, :string)

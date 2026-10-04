@@ -2,7 +2,18 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   require Ecto.Query
 
   alias PlanfinBackend.{Expenses, Finance}
-  alias PlanfinBackend.Finance.{Allowance, Bills, Calendar, Invoices, Panel, Projection, Salary}
+
+  alias PlanfinBackend.Finance.{
+    Allowance,
+    Bills,
+    Calendar,
+    FreshPlan,
+    Invoices,
+    Panel,
+    Projection,
+    Salary
+  }
+
   alias PlanfinBackendWeb.Resolvers.Budget
 
   # ---- Queries ----
@@ -129,6 +140,47 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   end
 
   def distribute_allowance(_parent, _args, context), do: access_error(context)
+
+  def fresh_plan(_parent, args, %{context: %{current_group: group}}) do
+    charge_card_bills(group.id, args)
+    {:ok, group.id |> FreshPlan.build(today(args)) |> format_fresh_plan()}
+  end
+
+  def fresh_plan(_parent, _args, context), do: access_error(context)
+
+  def set_invoice_total(_parent, args, %{context: %{current_group: group, current_user: user}}) do
+    with {:ok, card} <- fetch_card(group.id, args.card_id),
+         {:ok, month} <- parse_month(args.month),
+         {:ok, total} <- parse_decimal(args.total),
+         {:ok, invoice} <- Invoices.set_total(group.id, user.id, card, month, total, today(args)) do
+      {:ok, format_invoice(invoice)}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, msg} when is_binary(msg) -> {:error, msg}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
+  end
+
+  def set_invoice_total(_parent, _args, context), do: access_error(context)
+
+  def start_fresh_plan(_parent, args, %{context: %{current_group: group}}) do
+    gordura_result =
+      case args[:gordura] do
+        nil -> {:ok, Decimal.new("0")}
+        value -> parse_decimal(value)
+      end
+
+    with {:ok, gordura} <- gordura_result do
+      case FreshPlan.start(group.id, gordura, today(args), args[:name]) do
+        {:ok, period} -> {:ok, Budget.format_period(period, nil)}
+        {:error, :insufficient} -> {:error, "Not enough left for variable spending"}
+        {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+        {:error, reason} -> {:error, inspect(reason)}
+      end
+    end
+  end
+
+  def start_fresh_plan(_parent, _args, context), do: access_error(context)
 
   def list_bills(_parent, _args, %{context: %{current_group: group}}) do
     {:ok, group.id |> Bills.list_bills() |> Enum.map(&format_bill/1)}
@@ -537,6 +589,32 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
             pending_bills: Decimal.to_string(i.pending_bills)
           }
         end)
+    }
+  end
+
+  defp format_fresh_plan(plan) do
+    item = fn i ->
+      %{
+        label: i.label,
+        date: Date.to_iso8601(i.date),
+        amount: Decimal.to_string(i.amount),
+        card_id: i.card_id,
+        month: i.month && Invoices.format_month(i.month)
+      }
+    end
+
+    %{
+      start_date: Date.to_iso8601(plan.start_date),
+      end_date: Date.to_iso8601(plan.end_date),
+      days: plan.days,
+      has_primary: plan.has_primary,
+      balance: Decimal.to_string(plan.balance),
+      salary_amount: plan.salary && Decimal.to_string(plan.salary.amount),
+      salary_date: plan.salary && Date.to_iso8601(plan.salary.date),
+      cards: Enum.map(plan.cards, item),
+      account_bills: Enum.map(plan.account_bills, item),
+      card_bills: Enum.map(plan.card_bills, item),
+      variable: Decimal.to_string(plan.variable)
     }
   end
 

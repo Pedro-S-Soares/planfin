@@ -187,4 +187,55 @@ defmodule PlanfinBackend.Finance.Invoices do
   def last_closed(card, today) do
     build(card, Calendar.add_months(current_month(card, today), -1), today)
   end
+
+  @doc """
+  Sets the invoice of `month` to `target` without touching its purchases: the
+  difference becomes a single "Ajuste da fatura" entry (outside the budget),
+  replacing any previous adjustment of the same invoice. Lets the user start
+  from the bank's number instead of retyping every purchase.
+  """
+  def set_total(
+        group_id,
+        user_id,
+        %Account{kind: "credit_card"} = card,
+        month,
+        %Decimal{} = target,
+        today
+      ) do
+    start = start_date(card, month)
+    closing = closing_date(card, month)
+
+    Repo.transaction(fn ->
+      Expense
+      |> where(
+        [e],
+        e.account_id == ^card.id and e.source == "invoice_adjustment" and e.date >= ^start and
+          e.date < ^closing
+      )
+      |> Repo.delete_all()
+
+      current = build(card, month, today).total
+      diff = Decimal.sub(target, current)
+
+      if Decimal.compare(diff, 0) != :eq do
+        date = today |> max_date(start) |> min_date(Date.add(closing, -1))
+
+        {:ok, _} =
+          PlanfinBackend.Expenses.create_expense(group_id, user_id, %{
+            amount: Decimal.abs(diff),
+            type: if(Decimal.compare(diff, 0) == :gt, do: "expense", else: "income"),
+            date: date,
+            note: "Ajuste da fatura",
+            account_id: card.id,
+            counts_in_budget: false,
+            source: "invoice_adjustment"
+          })
+      end
+
+      build(card, month, today, with_entries: true)
+    end)
+  end
+
+  defp max_date(a, b), do: if(Date.compare(a, b) == :lt, do: b, else: a)
+  defp min_date(a, b), do: if(Date.compare(a, b) == :gt, do: b, else: a)
 end

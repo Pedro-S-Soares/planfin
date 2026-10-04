@@ -55,6 +55,7 @@ query Invoice($cardId: ID!, $month: String!, $today: String) {
       countsInBudget
       installmentNumber
       installmentCount
+      source
       account {
         id
         name
@@ -176,19 +177,6 @@ query FinancialSettings($today: String) {
   }
 }
 
-query CycleProposal($today: String) {
-  cycleProposal(today: $today) {
-    startDate
-    endDate
-    days
-    salary
-    accountBills
-    cardBills
-    installments
-    available
-  }
-}
-
 query SalaryProjection($today: String) {
   salaryProjection(today: $today) {
     salaryDate
@@ -231,5 +219,35 @@ query ReserveStatus($today: String) {
   reserveStatus(today: $today) {
     goal
     total
+  }
+}
+
+query FreshPlan($today: String) {
+  freshPlan(today: $today) {
+    startDate
+    endDate
+    days
+    hasPrimary
+    balance
+    salaryAmount
+    salaryDate
+    variable
+    cards {
+      label
+      date
+      amount
+      cardId
+      month
+    }
+    accountBills {
+      label
+      date
+      amount
+    }
+    cardBills {
+      label
+      date
+      amount
+    }
   }
 }

@@ -168,3 +168,22 @@ mutation SetReserveGoal($reserveGoal: String) {
     reserveGoal
   }
 }
+
+mutation SetInvoiceTotal($cardId: ID!, $month: String!, $total: String!, $today: String) {
+  setInvoiceTotal(cardId: $cardId, month: $month, total: $total, today: $today) {
+    month
+    total
+    remaining
+    status
+  }
+}
+
+mutation StartFreshPlan($gordura: String, $name: String, $today: String) {
+  startFreshPlan(gordura: $gordura, name: $name, today: $today) {
+    id
+    startDate
+    endDate
+    dailyLimit
+    totalBudget
+  }
+}
