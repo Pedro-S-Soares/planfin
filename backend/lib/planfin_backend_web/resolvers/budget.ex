@@ -475,7 +475,8 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   defp parse_today(_args), do: Date.utc_today()
 
-  defp format_period(period, today) do
+  @doc false
+  def format_period(period, today) do
     remaining_total = BudgetDays.compute_remaining_total(period)
     available_balance = BudgetDays.compute_today_balance(period)
     extra = BudgetDays.compute_extra(period)
@@ -529,7 +530,8 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       counts_in_budget: expense.counts_in_budget,
       installment_group_id: expense.installment_group_id,
       installment_number: expense.installment_number,
-      installment_count: expense.installment_count
+      installment_count: expense.installment_count,
+      source: expense.source
     }
   end
 

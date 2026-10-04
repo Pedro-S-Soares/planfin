@@ -15,6 +15,7 @@ interface ExpenseItem {
   note?: string | null;
   createdBy?: { id?: string | null; email?: string | null } | null;
   countsInBudget?: boolean | null;
+  source?: string | null;
   installmentNumber?: number | null;
   installmentCount?: number | null;
   account?: { name?: string | null; kind?: string | null } | null;
@@ -73,7 +74,7 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.text }} numberOfLines={1}>
-            {item.subcategory?.name ?? "Sem categoria"}
+            {item.source === "invoice_adjustment" ? "Ajuste da fatura" : item.subcategory?.name ?? "Sem categoria"}
           </Text>
           {isIncome && (
             <View style={{

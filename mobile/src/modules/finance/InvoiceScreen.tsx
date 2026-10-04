@@ -10,6 +10,7 @@ import { useInvoiceQuery } from "../../graphql/__generated__/hooks";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { Colors } from "../../theme/tokens";
+import { AdjustInvoiceTotal } from "./components/AdjustInvoiceTotal";
 import { StatusPill } from "./components/StatusPill";
 import { formatMoney, formatMonth, formatShortDate, isInvoiceStatus, toNumber } from "./format";
 import type { AppStackParamList } from "../../../App";
@@ -57,6 +58,9 @@ export function InvoiceScreen() {
           <Text style={{ fontSize: 13, color: Colors.successText, marginTop: 8 }}>
             Pago {formatMoney(invoice.paid, currency.symbol)} · falta {formatMoney(invoice.remaining, currency.symbol)}
           </Text>
+        ) : null}
+        {invoice.status !== "paid" ? (
+          <AdjustInvoiceTotal cardId={params.cardId} month={params.month} currentTotal={invoice.total} />
         ) : null}
         {canPay ? (
           <View style={{ marginTop: 14 }}>

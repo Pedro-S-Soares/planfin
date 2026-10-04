@@ -11,7 +11,10 @@ import { FieldInput } from "../components/ui/FieldInput";
 import { toISODate } from "../lib/date";
 import { displayToAPI, formatCents } from "../lib/currency";
 import { Colors, Radius } from "../theme/tokens";
-import { CycleProposalCard, type ProposalValues } from "../modules/finance/components/CycleProposalCard";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { TouchableOpacity } from "react-native";
+import type { AppStackParamList } from "../../App";
 
 const today = new Date();
 const in30Days = new Date(today);
@@ -52,7 +55,8 @@ type FormValues = {
 export function CreatePeriodScreen() {
   const { refetch, setSelectedPeriod } = usePeriod();
 
-  const { control, handleSubmit, watch, setError, setValue, formState: { errors } } = useForm<FormValues>({
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
+  const { control, handleSubmit, watch, setError, formState: { errors } } = useForm<FormValues>({
     resolver: yupResolver(schema),
     defaultValues: {
       name: "",
@@ -83,12 +87,7 @@ export function CreatePeriodScreen() {
     onError: (error) => setError("root", { message: error.message }),
   });
 
-  const handleUseProposal = (proposal: ProposalValues) => {
-    setValue("startDate", proposal.startDate);
-    setValue("endDate", proposal.endDate);
-    setValue("dailyLimit", formatCents(proposal.dailyLimitCents));
-    setValue("totalBudget", formatCents(proposal.totalBudgetCents));
-  };
+
 
   const onSubmit = (values: FormValues) => {
     const trimmedName = values.name.trim();
@@ -124,7 +123,16 @@ export function CreatePeriodScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 22 }}>
-        <CycleProposalCard onUse={handleUseProposal} />
+        <TouchableOpacity
+          onPress={() => navigation.navigate("FreshPlan")}
+          activeOpacity={0.85}
+          style={{ borderWidth: 1.5, borderColor: Colors.primary, borderRadius: Radius.lg, padding: 16, marginBottom: 20 }}
+        >
+          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>Planejar a partir de hoje (recomendado)</Text>
+          <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4, lineHeight: 18 }}>
+            O app soma o saldo da conta e o salário, tira as faturas e as despesas fixas e calcula o limite diário. ›
+          </Text>
+        </TouchableOpacity>
         <Controller
           control={control}
           name="name"

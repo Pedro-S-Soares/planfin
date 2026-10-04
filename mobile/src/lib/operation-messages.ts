@@ -15,6 +15,8 @@ const SUCCESS: Record<string, SuccessMessage> = {
   },
   UpdateExpense: (v) => (v.type === "income" ? "Receita atualizada" : "Lançamento atualizado"),
   DeleteExpense: "Lançamento excluído",
+  SetInvoiceTotal: "Fatura ajustada",
+  StartFreshPlan: "Planejamento iniciado a partir de hoje",
   AnticipateInstallments: "Parcelas antecipadas na fatura desta parcela",
   CreatePeriod: "Planejamento criado",
   UpdatePeriod: "Planejamento atualizado",
@@ -67,6 +69,7 @@ const SUCCESS: Record<string, SuccessMessage> = {
 const SILENT = new Set(["Login", "Logout", "RegisterUser"]);
 
 const ERRORS: [RegExp, string][] = [
+  [/not enough left for variable spending/i, "Não sobra dinheiro para gastos variáveis com essa gordura."],
   [/no active period/i, "Não há planejamento ativo. Crie um período antes."],
   [/out of the period range/i, "A data está fora do período. Ative \"Conta no orçamento\" só para datas do período."],
   [/installments require a credit card/i, "Parcelamento só no cartão de crédito."],

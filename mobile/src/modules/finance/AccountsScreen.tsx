@@ -83,6 +83,8 @@ export function AccountsScreen() {
             <View style={{ height: 10 }} />
             <Btn label="💼 Salário e ciclo" variant="secondary" onPress={() => navigation.navigate("SalarySettings")} />
             <View style={{ height: 10 }} />
+            <Btn label="🧮 Planejar a partir de hoje" variant="secondary" onPress={() => navigation.navigate("FreshPlan")} />
+            <View style={{ height: 10 }} />
             {accounts.some((a) => a.kind === "reserve") ? <ReserveCard /> : null}
             {moneyAccounts.length > 0 ? (
               <Btn

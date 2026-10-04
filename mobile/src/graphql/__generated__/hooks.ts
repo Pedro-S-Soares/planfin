@@ -141,6 +141,8 @@ export type Expense = {
   installmentNumber?: Maybe<Scalars['Int']['output']>;
   isExtra?: Maybe<Scalars['Boolean']['output']>;
   note?: Maybe<Scalars['String']['output']>;
+  /** What produced the entry: salary | bill | benefit_credit | invoice_adjustment | anticipation | null */
+  source?: Maybe<Scalars['String']['output']>;
   subcategory?: Maybe<Subcategory>;
   type?: Maybe<Scalars['String']['output']>;
 };
@@ -205,6 +207,27 @@ export type FinancialSettings = {
   salaryBusinessDay?: Maybe<Scalars['Int']['output']>;
   /** Next salary dates (with manual overrides applied) */
   upcomingSalaryDates?: Maybe<Array<Maybe<SalaryDate>>>;
+};
+
+/** Cash plan from today to the end of a salary cycle */
+export type FreshPlan = {
+  __typename?: 'FreshPlan';
+  /** Fixed bills paid from accounts until the end */
+  accountBills?: Maybe<Array<Maybe<PlanItem>>>;
+  /** Primary account balance today */
+  balance?: Maybe<Scalars['String']['output']>;
+  /** Fixed card bills still to be charged until the end */
+  cardBills?: Maybe<Array<Maybe<PlanItem>>>;
+  /** What unpaid invoices already hold */
+  cards?: Maybe<Array<Maybe<PlanItem>>>;
+  days?: Maybe<Scalars['Int']['output']>;
+  endDate?: Maybe<Scalars['String']['output']>;
+  hasPrimary?: Maybe<Scalars['Boolean']['output']>;
+  salaryAmount?: Maybe<Scalars['String']['output']>;
+  salaryDate?: Maybe<Scalars['String']['output']>;
+  startDate?: Maybe<Scalars['String']['output']>;
+  /** balance + salary − cards − bills */
+  variable?: Maybe<Scalars['String']['output']>;
 };
 
 export type Group = {
@@ -274,6 +297,15 @@ export type PeriodSummary = {
   difference?: Maybe<Scalars['String']['output']>;
   totalBudgeted?: Maybe<Scalars['String']['output']>;
   totalSpent?: Maybe<Scalars['String']['output']>;
+};
+
+export type PlanItem = {
+  __typename?: 'PlanItem';
+  amount?: Maybe<Scalars['String']['output']>;
+  cardId?: Maybe<Scalars['ID']['output']>;
+  date?: Maybe<Scalars['String']['output']>;
+  label?: Maybe<Scalars['String']['output']>;
+  month?: Maybe<Scalars['String']['output']>;
 };
 
 export type ProjectedInvoice = {
@@ -357,8 +389,12 @@ export type RootMutationType = {
   revokeInviteCode?: Maybe<Scalars['Boolean']['output']>;
   /** Reconcile the account with the bank: its balance today becomes `balance` */
   setAccountBalance?: Maybe<FinancialAccount>;
+  /** Set the invoice total to the bank's number; the difference becomes one adjustment entry */
+  setInvoiceTotal?: Maybe<Invoice>;
   /** Manual salary date for a month (null date restores the automatic one) */
   setSalaryDate?: Maybe<Scalars['Boolean']['output']>;
+  /** Close the current period yesterday and start one from today with the fresh plan */
+  startFreshPlan?: Maybe<Period>;
   switchActiveGroup?: Maybe<Group>;
   unpayBill?: Maybe<Scalars['Boolean']['output']>;
   updateCategory?: Maybe<Category>;
@@ -600,9 +636,24 @@ export type RootMutationTypeSetAccountBalanceArgs = {
 };
 
 
+export type RootMutationTypeSetInvoiceTotalArgs = {
+  cardId: Scalars['ID']['input'];
+  month: Scalars['String']['input'];
+  today?: InputMaybe<Scalars['String']['input']>;
+  total: Scalars['String']['input'];
+};
+
+
 export type RootMutationTypeSetSalaryDateArgs = {
   date?: InputMaybe<Scalars['String']['input']>;
   month: Scalars['String']['input'];
+};
+
+
+export type RootMutationTypeStartFreshPlanArgs = {
+  gordura?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -699,6 +750,7 @@ export type RootQueryType = {
   financePanel?: Maybe<FinancePanel>;
   financialAccounts?: Maybe<Array<Maybe<FinancialAccount>>>;
   financialSettings?: Maybe<FinancialSettings>;
+  freshPlan?: Maybe<FreshPlan>;
   groupInvites?: Maybe<Array<Maybe<GroupInvite>>>;
   groupMembers?: Maybe<Array<Maybe<GroupMember>>>;
   groupPeriods?: Maybe<Array<Maybe<Period>>>;
@@ -774,6 +826,11 @@ export type RootQueryTypeFinancialAccountsArgs = {
 
 
 export type RootQueryTypeFinancialSettingsArgs = {
+  today?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type RootQueryTypeFreshPlanArgs = {
   today?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -1245,6 +1302,25 @@ export type SetReserveGoalMutationVariables = Exact<{
 
 export type SetReserveGoalMutation = { __typename?: 'RootMutationType', updateFinancialSettings?: { __typename?: 'FinancialSettings', reserveGoal?: string | null } | null };
 
+export type SetInvoiceTotalMutationVariables = Exact<{
+  cardId: Scalars['ID']['input'];
+  month: Scalars['String']['input'];
+  total: Scalars['String']['input'];
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type SetInvoiceTotalMutation = { __typename?: 'RootMutationType', setInvoiceTotal?: { __typename?: 'Invoice', month?: string | null, total?: string | null, remaining?: string | null, status?: string | null } | null };
+
+export type StartFreshPlanMutationVariables = Exact<{
+  gordura?: InputMaybe<Scalars['String']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type StartFreshPlanMutation = { __typename?: 'RootMutationType', startFreshPlan?: { __typename?: 'Period', id?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null, totalBudget?: string | null } | null };
+
 export type CreateGroupMutationVariables = Exact<{
   name: Scalars['String']['input'];
 }>;
@@ -1377,7 +1453,7 @@ export type InvoiceQueryVariables = Exact<{
 }>;
 
 
-export type InvoiceQuery = { __typename?: 'RootQueryType', invoice?: { __typename?: 'Invoice', cardId?: string | null, month?: string | null, startDate?: string | null, closingDate?: string | null, dueDate?: string | null, total?: string | null, paid?: string | null, remaining?: string | null, status?: string | null, entries?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, type?: string | null, isExtra?: boolean | null, countsInBudget?: boolean | null, installmentNumber?: number | null, installmentCount?: number | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, category?: { __typename?: 'SubcategoryCategory', id?: string | null, name?: string | null, icon?: string | null } | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null> | null } | null };
+export type InvoiceQuery = { __typename?: 'RootQueryType', invoice?: { __typename?: 'Invoice', cardId?: string | null, month?: string | null, startDate?: string | null, closingDate?: string | null, dueDate?: string | null, total?: string | null, paid?: string | null, remaining?: string | null, status?: string | null, entries?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, type?: string | null, isExtra?: boolean | null, countsInBudget?: boolean | null, installmentNumber?: number | null, installmentCount?: number | null, source?: string | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, category?: { __typename?: 'SubcategoryCategory', id?: string | null, name?: string | null, icon?: string | null } | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null> | null } | null };
 
 export type AccountMovementsQueryVariables = Exact<{
   accountId: Scalars['ID']['input'];
@@ -1414,13 +1490,6 @@ export type FinancialSettingsQueryVariables = Exact<{
 
 export type FinancialSettingsQuery = { __typename?: 'RootQueryType', financialSettings?: { __typename?: 'FinancialSettings', salaryAmount?: string | null, salaryBusinessDay?: number | null, salaryAccountId?: string | null, reserveGoal?: string | null, upcomingSalaryDates?: Array<{ __typename?: 'SalaryDate', month?: string | null, date?: string | null, isManual?: boolean | null } | null> | null } | null };
 
-export type CycleProposalQueryVariables = Exact<{
-  today?: InputMaybe<Scalars['String']['input']>;
-}>;
-
-
-export type CycleProposalQuery = { __typename?: 'RootQueryType', cycleProposal?: { __typename?: 'CycleProposal', startDate?: string | null, endDate?: string | null, days?: number | null, salary?: string | null, accountBills?: string | null, cardBills?: string | null, installments?: string | null, available?: string | null } | null };
-
 export type SalaryProjectionQueryVariables = Exact<{
   today?: InputMaybe<Scalars['String']['input']>;
 }>;
@@ -1441,6 +1510,13 @@ export type ReserveStatusQueryVariables = Exact<{
 
 
 export type ReserveStatusQuery = { __typename?: 'RootQueryType', reserveStatus?: { __typename?: 'ReserveStatus', goal?: string | null, total?: string | null } | null };
+
+export type FreshPlanQueryVariables = Exact<{
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type FreshPlanQuery = { __typename?: 'RootQueryType', freshPlan?: { __typename?: 'FreshPlan', startDate?: string | null, endDate?: string | null, days?: number | null, hasPrimary?: boolean | null, balance?: string | null, salaryAmount?: string | null, salaryDate?: string | null, variable?: string | null, cards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null, cardId?: string | null, month?: string | null } | null> | null, accountBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null } | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -2962,6 +3038,84 @@ export function useSetReserveGoalMutation(baseOptions?: Apollo.MutationHookOptio
 export type SetReserveGoalMutationHookResult = ReturnType<typeof useSetReserveGoalMutation>;
 export type SetReserveGoalMutationResult = Apollo.MutationResult<SetReserveGoalMutation>;
 export type SetReserveGoalMutationOptions = Apollo.BaseMutationOptions<SetReserveGoalMutation, SetReserveGoalMutationVariables>;
+export const SetInvoiceTotalDocument = gql`
+    mutation SetInvoiceTotal($cardId: ID!, $month: String!, $total: String!, $today: String) {
+  setInvoiceTotal(cardId: $cardId, month: $month, total: $total, today: $today) {
+    month
+    total
+    remaining
+    status
+  }
+}
+    `;
+export type SetInvoiceTotalMutationFn = Apollo.MutationFunction<SetInvoiceTotalMutation, SetInvoiceTotalMutationVariables>;
+
+/**
+ * __useSetInvoiceTotalMutation__
+ *
+ * To run a mutation, you first call `useSetInvoiceTotalMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetInvoiceTotalMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setInvoiceTotalMutation, { data, loading, error }] = useSetInvoiceTotalMutation({
+ *   variables: {
+ *      cardId: // value for 'cardId'
+ *      month: // value for 'month'
+ *      total: // value for 'total'
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useSetInvoiceTotalMutation(baseOptions?: Apollo.MutationHookOptions<SetInvoiceTotalMutation, SetInvoiceTotalMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetInvoiceTotalMutation, SetInvoiceTotalMutationVariables>(SetInvoiceTotalDocument, options);
+      }
+export type SetInvoiceTotalMutationHookResult = ReturnType<typeof useSetInvoiceTotalMutation>;
+export type SetInvoiceTotalMutationResult = Apollo.MutationResult<SetInvoiceTotalMutation>;
+export type SetInvoiceTotalMutationOptions = Apollo.BaseMutationOptions<SetInvoiceTotalMutation, SetInvoiceTotalMutationVariables>;
+export const StartFreshPlanDocument = gql`
+    mutation StartFreshPlan($gordura: String, $name: String, $today: String) {
+  startFreshPlan(gordura: $gordura, name: $name, today: $today) {
+    id
+    startDate
+    endDate
+    dailyLimit
+    totalBudget
+  }
+}
+    `;
+export type StartFreshPlanMutationFn = Apollo.MutationFunction<StartFreshPlanMutation, StartFreshPlanMutationVariables>;
+
+/**
+ * __useStartFreshPlanMutation__
+ *
+ * To run a mutation, you first call `useStartFreshPlanMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useStartFreshPlanMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [startFreshPlanMutation, { data, loading, error }] = useStartFreshPlanMutation({
+ *   variables: {
+ *      gordura: // value for 'gordura'
+ *      name: // value for 'name'
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useStartFreshPlanMutation(baseOptions?: Apollo.MutationHookOptions<StartFreshPlanMutation, StartFreshPlanMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<StartFreshPlanMutation, StartFreshPlanMutationVariables>(StartFreshPlanDocument, options);
+      }
+export type StartFreshPlanMutationHookResult = ReturnType<typeof useStartFreshPlanMutation>;
+export type StartFreshPlanMutationResult = Apollo.MutationResult<StartFreshPlanMutation>;
+export type StartFreshPlanMutationOptions = Apollo.BaseMutationOptions<StartFreshPlanMutation, StartFreshPlanMutationVariables>;
 export const CreateGroupDocument = gql`
     mutation CreateGroup($name: String!) {
   createGroup(name: $name) {
@@ -3745,6 +3899,7 @@ export const InvoiceDocument = gql`
       countsInBudget
       installmentNumber
       installmentCount
+      source
       account {
         id
         name
@@ -4090,56 +4245,6 @@ export type FinancialSettingsQueryHookResult = ReturnType<typeof useFinancialSet
 export type FinancialSettingsLazyQueryHookResult = ReturnType<typeof useFinancialSettingsLazyQuery>;
 export type FinancialSettingsSuspenseQueryHookResult = ReturnType<typeof useFinancialSettingsSuspenseQuery>;
 export type FinancialSettingsQueryResult = Apollo.QueryResult<FinancialSettingsQuery, FinancialSettingsQueryVariables>;
-export const CycleProposalDocument = gql`
-    query CycleProposal($today: String) {
-  cycleProposal(today: $today) {
-    startDate
-    endDate
-    days
-    salary
-    accountBills
-    cardBills
-    installments
-    available
-  }
-}
-    `;
-
-/**
- * __useCycleProposalQuery__
- *
- * To run a query within a React component, call `useCycleProposalQuery` and pass it any options that fit your needs.
- * When your component renders, `useCycleProposalQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useCycleProposalQuery({
- *   variables: {
- *      today: // value for 'today'
- *   },
- * });
- */
-export function useCycleProposalQuery(baseOptions?: Apollo.QueryHookOptions<CycleProposalQuery, CycleProposalQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<CycleProposalQuery, CycleProposalQueryVariables>(CycleProposalDocument, options);
-      }
-export function useCycleProposalLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CycleProposalQuery, CycleProposalQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<CycleProposalQuery, CycleProposalQueryVariables>(CycleProposalDocument, options);
-        }
-// @ts-ignore
-export function useCycleProposalSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CycleProposalQuery, CycleProposalQueryVariables>): Apollo.UseSuspenseQueryResult<CycleProposalQuery, CycleProposalQueryVariables>;
-export function useCycleProposalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CycleProposalQuery, CycleProposalQueryVariables>): Apollo.UseSuspenseQueryResult<CycleProposalQuery | undefined, CycleProposalQueryVariables>;
-export function useCycleProposalSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CycleProposalQuery, CycleProposalQueryVariables>) {
-          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
-          return Apollo.useSuspenseQuery<CycleProposalQuery, CycleProposalQueryVariables>(CycleProposalDocument, options);
-        }
-export type CycleProposalQueryHookResult = ReturnType<typeof useCycleProposalQuery>;
-export type CycleProposalLazyQueryHookResult = ReturnType<typeof useCycleProposalLazyQuery>;
-export type CycleProposalSuspenseQueryHookResult = ReturnType<typeof useCycleProposalSuspenseQuery>;
-export type CycleProposalQueryResult = Apollo.QueryResult<CycleProposalQuery, CycleProposalQueryVariables>;
 export const SalaryProjectionDocument = gql`
     query SalaryProjection($today: String) {
   salaryProjection(today: $today) {
@@ -4296,6 +4401,73 @@ export type ReserveStatusQueryHookResult = ReturnType<typeof useReserveStatusQue
 export type ReserveStatusLazyQueryHookResult = ReturnType<typeof useReserveStatusLazyQuery>;
 export type ReserveStatusSuspenseQueryHookResult = ReturnType<typeof useReserveStatusSuspenseQuery>;
 export type ReserveStatusQueryResult = Apollo.QueryResult<ReserveStatusQuery, ReserveStatusQueryVariables>;
+export const FreshPlanDocument = gql`
+    query FreshPlan($today: String) {
+  freshPlan(today: $today) {
+    startDate
+    endDate
+    days
+    hasPrimary
+    balance
+    salaryAmount
+    salaryDate
+    variable
+    cards {
+      label
+      date
+      amount
+      cardId
+      month
+    }
+    accountBills {
+      label
+      date
+      amount
+    }
+    cardBills {
+      label
+      date
+      amount
+    }
+  }
+}
+    `;
+
+/**
+ * __useFreshPlanQuery__
+ *
+ * To run a query within a React component, call `useFreshPlanQuery` and pass it any options that fit your needs.
+ * When your component renders, `useFreshPlanQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useFreshPlanQuery({
+ *   variables: {
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useFreshPlanQuery(baseOptions?: Apollo.QueryHookOptions<FreshPlanQuery, FreshPlanQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<FreshPlanQuery, FreshPlanQueryVariables>(FreshPlanDocument, options);
+      }
+export function useFreshPlanLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<FreshPlanQuery, FreshPlanQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<FreshPlanQuery, FreshPlanQueryVariables>(FreshPlanDocument, options);
+        }
+// @ts-ignore
+export function useFreshPlanSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<FreshPlanQuery, FreshPlanQueryVariables>): Apollo.UseSuspenseQueryResult<FreshPlanQuery, FreshPlanQueryVariables>;
+export function useFreshPlanSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<FreshPlanQuery, FreshPlanQueryVariables>): Apollo.UseSuspenseQueryResult<FreshPlanQuery | undefined, FreshPlanQueryVariables>;
+export function useFreshPlanSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<FreshPlanQuery, FreshPlanQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<FreshPlanQuery, FreshPlanQueryVariables>(FreshPlanDocument, options);
+        }
+export type FreshPlanQueryHookResult = ReturnType<typeof useFreshPlanQuery>;
+export type FreshPlanLazyQueryHookResult = ReturnType<typeof useFreshPlanLazyQuery>;
+export type FreshPlanSuspenseQueryHookResult = ReturnType<typeof useFreshPlanSuspenseQuery>;
+export type FreshPlanQueryResult = Apollo.QueryResult<FreshPlanQuery, FreshPlanQueryVariables>;
 export const MyGroupsDocument = gql`
     query MyGroups {
   myGroups {
