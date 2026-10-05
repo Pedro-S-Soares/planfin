@@ -79,11 +79,11 @@ export function AccountsScreen() {
                 onPay={(month, remaining) => navigation.navigate("PayInvoice", { cardId: card.id, month, remaining })}
               />
             ))}
-            <Btn label="🧾 Despesas fixas" variant="secondary" onPress={() => navigation.navigate("Bills", {})} />
+            <Btn label="🧾 Fixas, avulsas e entradas" variant="secondary" onPress={() => navigation.navigate("Bills", {})} />
             <View style={{ height: 10 }} />
             <Btn label="💼 Salário e ciclo" variant="secondary" onPress={() => navigation.navigate("SalarySettings")} />
             <View style={{ height: 10 }} />
-            <Btn label="🧮 Planejar a partir de hoje" variant="secondary" onPress={() => navigation.navigate("FreshPlan")} />
+            <Btn label="🧮 Planejamento do mês" variant="secondary" onPress={() => navigation.navigate("MonthPlan")} />
             <View style={{ height: 10 }} />
             {accounts.some((a) => a.kind === "reserve") ? <ReserveCard /> : null}
             {moneyAccounts.length > 0 ? (

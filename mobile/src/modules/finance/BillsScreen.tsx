@@ -19,7 +19,7 @@ type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
 
 export function BillsScreen() {
-  usePageTitle("Planfin - Despesas fixas");
+  usePageTitle("Planfin - Fixas, avulsas e entradas");
   const navigation = useNavigation<Navigation>();
   const { params } = useRoute<RouteProp<AppStackParamList, "Bills">>();
   const { currency } = useCurrency();
@@ -38,7 +38,7 @@ export function BillsScreen() {
   );
 
   const items = data?.billOccurrences?.filter((o) => o !== null) ?? [];
-  const active = items.filter((o) => o.status !== "skipped");
+  const active = items.filter((o) => o.status !== "skipped" && o.bill?.direction !== "income");
   const total = active.reduce((acc, o) => acc + toNumber(o.amount), 0);
   const paid = active.filter((o) => o.status === "paid").reduce((acc, o) => acc + toNumber(o.amount), 0);
 
@@ -88,7 +88,14 @@ export function BillsScreen() {
                 occurrence={o}
                 onEdit={() => navigation.navigate("BillForm", { billId })}
                 onPay={() =>
-                  navigation.navigate("PayBill", { billId, month, amount: o.amount ?? "0", name: bill.name ?? "", isCard })
+                  navigation.navigate("PayBill", {
+                    billId,
+                    month,
+                    amount: o.amount ?? "0",
+                    name: bill.name ?? "",
+                    isCard,
+                    isIncome: bill.direction === "income",
+                  })
                 }
                 onUndo={() =>
                   confirm(
@@ -118,7 +125,7 @@ export function BillsScreen() {
         Toque no nome para editar ou excluir. As despesas no cartão entram sozinhas na fatura no dia; as da conta
         você marca como pagas.
       </Text>
-      <Btn label="+ Nova despesa fixa" onPress={() => navigation.navigate("BillForm", {})} />
+      <Btn label="+ Novo item" onPress={() => navigation.navigate("BillForm", {})} />
     </ScrollView>
   );
 }

@@ -17,7 +17,8 @@ defmodule PlanfinBackend.Expenses do
   Optional attrs beyond the expense fields:
 
     * `:account_id` — account/card the money moved through. Entries on an
-      `allowance`, `reserve` or `benefit` account never count in the budget.
+      `allowance` or `reserve` account never count in the budget. Meal
+      voucher (`benefit`) spending does: the voucher feeds the variable budget.
     * `:installments` — number of card installments (requires a credit card).
       The amount is the purchase total; it is split in equal parcels (the cent
       remainder goes to the first). Only the first parcel follows
@@ -235,7 +236,7 @@ defmodule PlanfinBackend.Expenses do
   defp validate_installments(_n, _account), do: {:error, :invalid_installments}
 
   defp counts_in_budget?(_requested, %{kind: kind})
-       when kind in ["allowance", "reserve", "benefit"],
+       when kind in ["allowance", "reserve"],
        do: false
 
   defp counts_in_budget?(false, _account), do: false
@@ -300,7 +301,7 @@ defmodule PlanfinBackend.Expenses do
     new_date = Map.get(attrs, :date, expense.date)
 
     cond do
-      match?(%{kind: kind} when kind in ["allowance", "reserve", "benefit"], account) ->
+      match?(%{kind: kind} when kind in ["allowance", "reserve"], account) ->
         {:ok, Map.merge(attrs, %{counts_in_budget: false, period_id: nil, budget_day_id: nil})}
 
       is_nil(expense.period) ->

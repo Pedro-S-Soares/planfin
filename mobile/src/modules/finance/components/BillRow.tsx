@@ -2,7 +2,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { useCurrency } from "../../../context/CurrencyContext";
 import type { BillOccurrencesQuery } from "../../../graphql/__generated__/hooks";
 import { Colors, Radius } from "../../../theme/tokens";
-import { formatMoney, formatShortDate } from "../format";
+import { formatMoney, formatMonth, formatShortDate } from "../format";
 
 export type BillOccurrence = NonNullable<NonNullable<BillOccurrencesQuery["billOccurrences"]>[number]>;
 
@@ -20,9 +20,16 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) 
   const isPaid = o.status === "paid";
   const isSkipped = o.status === "skipped";
   const isOverdue = o.status === "overdue";
+  const isIncome = o.bill?.direction === "income";
+  const recurrence = o.bill?.onceMonth ? `só em ${formatMonth(o.bill.onceMonth)}` : `todo dia ${o.bill?.dueDay}`;
 
-  const statusText = isPaid
-    ? `${isCard ? "✓ Na fatura" : "✓ Paga"} em ${formatShortDate(o.paidOn)} · próxima ${formatShortDate(o.nextDueDate)}`
+  const next = o.bill?.onceMonth ? "" : ` · próxima ${formatShortDate(o.nextDueDate)}`;
+  const statusText = isIncome
+    ? isPaid
+      ? `✓ Recebida em ${formatShortDate(o.paidOn)}${next}`
+      : `A receber em ${formatShortDate(o.dueDate)}`
+    : isPaid
+    ? `${isCard ? "✓ Na fatura" : "✓ Paga"} em ${formatShortDate(o.paidOn)}${next}`
     : isSkipped
       ? `Fora da fatura deste mês · próxima ${formatShortDate(o.nextDueDate)}`
       : isOverdue
@@ -32,7 +39,7 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) 
           : `A pagar até ${formatShortDate(o.dueDate)}`;
 
   const statusColor = isPaid ? Colors.successText : isOverdue ? Colors.danger : Colors.textSec;
-  const actionLabel = isPaid ? (isCard ? "Tirar" : "Desfazer") : isCard ? "Lançar" : "Pagar";
+  const actionLabel = isPaid ? (isCard ? "Tirar" : "Desfazer") : isIncome ? "Receber" : isCard ? "Lançar" : "Pagar";
 
   return (
     <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
@@ -40,10 +47,13 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) 
         <TouchableOpacity onPress={onEdit} activeOpacity={0.7} style={{ flex: 1 }}>
           <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>{o.bill?.name}</Text>
           <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 1 }}>
-            {isCard ? "💳" : "🏦"} {o.bill?.account?.name} · todo dia {o.bill?.dueDay}
+            {isIncome ? "⬇️" : isCard ? "💳" : "🏦"} {o.bill?.account?.name} · {recurrence}
           </Text>
         </TouchableOpacity>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>{formatMoney(o.amount, currency.symbol)}</Text>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: isIncome ? Colors.successText : Colors.text }}>
+          {isIncome ? "+" : ""}
+          {formatMoney(o.amount, currency.symbol)}
+        </Text>
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 10 }}>
         <Text style={{ flex: 1, fontSize: 12, fontWeight: "600", color: statusColor }}>{statusText}</Text>

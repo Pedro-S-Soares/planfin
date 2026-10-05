@@ -22,7 +22,7 @@ export function PayBillScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [payBill, { loading }] = usePayBillMutation({
-    refetchQueries: ["BillOccurrences", "FinancePanel", "FinancialAccounts", "Invoices", "Invoice", "AccountMovements"],
+    refetchQueries: ["BillOccurrences", "FinancePanel", "FinancialAccounts", "Invoices", "Invoice", "AccountMovements", "MonthPlan"],
     onCompleted: () => navigation.goBack(),
     onError: (e) => setError(e.message),
   });
@@ -37,14 +37,19 @@ export function PayBillScreen() {
       <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>{params.name}</Text>
       <Text style={{ fontSize: 13, color: Colors.textSec, marginBottom: 18 }}>
         {formatMonth(params.month)} ·{" "}
-        {params.isCard ? "vai para a fatura do cartão" : "sai do saldo da conta"} · não mexe no limite diário
+        {params.isIncome ? "entra no saldo da conta" : params.isCard ? "vai para a fatura do cartão" : "sai do saldo da conta"} · não
+        mexe no limite diário
       </Text>
       <FormLabel>Valor real</FormLabel>
       <CurrencyInput value={amount} onChange={setAmount} autoFocus />
-      <FormLabel>{params.isCard ? "Data da cobrança" : "Data do pagamento"}</FormLabel>
+      <FormLabel>{params.isIncome ? "Data em que entrou" : params.isCard ? "Data da cobrança" : "Data do pagamento"}</FormLabel>
       <DatePickerField value={date} onChange={setDate} />
       {error ? <Text style={{ color: Colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
-      <Btn label={params.isCard ? "Lançar na fatura agora" : "Registrar pagamento"} onPress={handlePay} loading={loading} />
+      <Btn
+        label={params.isIncome ? "Registrar recebimento" : params.isCard ? "Lançar na fatura agora" : "Registrar pagamento"}
+        onPress={handlePay}
+        loading={loading}
+      />
     </ScrollView>
   );
 }

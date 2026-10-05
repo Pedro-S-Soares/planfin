@@ -17,7 +17,7 @@ defmodule PlanfinBackend.Finance.Account do
   @kinds ~w(checking credit_card allowance reserve benefit)
 
   @doc "Kinds whose money is separate from the household budget."
-  def outside_budget_kinds, do: ~w(allowance reserve benefit)
+  def outside_budget_kinds, do: ~w(allowance reserve)
 
   schema "financial_accounts" do
     field :name, :string

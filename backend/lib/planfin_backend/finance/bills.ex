@@ -38,7 +38,7 @@ defmodule PlanfinBackend.Finance.Bills do
   end
 
   def create_bill(group_id, attrs) do
-    with :ok <- validate_account(group_id, attrs[:account_id]) do
+    with :ok <- validate_account(group_id, attrs[:account_id], attrs[:direction]) do
       %RecurringBill{}
       |> RecurringBill.changeset(Map.put(attrs, :group_id, group_id))
       |> Repo.insert()
@@ -47,7 +47,12 @@ defmodule PlanfinBackend.Finance.Bills do
   end
 
   def update_bill(%RecurringBill{} = bill, attrs) do
-    with :ok <- validate_account(bill.group_id, Map.get(attrs, :account_id, bill.account_id)) do
+    with :ok <-
+           validate_account(
+             bill.group_id,
+             Map.get(attrs, :account_id, bill.account_id),
+             Map.get(attrs, :direction, bill.direction)
+           ) do
       bill
       |> RecurringBill.changeset(Map.drop(attrs, [:group_id]))
       |> Repo.update()
@@ -59,12 +64,14 @@ defmodule PlanfinBackend.Finance.Bills do
     bill |> Ecto.Changeset.change(active: false) |> Repo.update()
   end
 
-  defp validate_account(_group_id, nil), do: {:error, :account_not_found}
+  defp validate_account(_group_id, nil, _direction), do: {:error, :account_not_found}
 
-  defp validate_account(group_id, account_id) do
-    if Repo.get_by(Account, id: account_id, group_id: group_id),
-      do: :ok,
-      else: {:error, :account_not_found}
+  defp validate_account(group_id, account_id, direction) do
+    case Repo.get_by(Account, id: account_id, group_id: group_id) do
+      nil -> {:error, :account_not_found}
+      %Account{kind: "credit_card"} when direction == "income" -> {:error, :income_on_card}
+      _ -> :ok
+    end
   end
 
   defp preload_bill({:ok, bill}),
@@ -104,7 +111,11 @@ defmodule PlanfinBackend.Finance.Bills do
         {horizon.year, horizon.month}
       )
 
-    bills = group_id |> list_bills() |> Enum.filter(&(&1.account.kind in account_kinds))
+    bills =
+      group_id
+      |> list_bills()
+      |> Enum.filter(&(&1.direction == "expense" and &1.account.kind in account_kinds))
+
     payments = payments_for(group_id, months)
 
     for month <- months,
@@ -117,13 +128,24 @@ defmodule PlanfinBackend.Finance.Bills do
     end
   end
 
-  @doc "Estimated amount of the active bills paid from `account_kinds` in a month."
+  @doc "Estimated amount of the recurring bills paid from `account_kinds` in a month."
   def monthly_total(group_id, account_kinds) do
     group_id
-    |> list_bills()
-    |> Enum.filter(&(&1.account.kind in account_kinds))
+    |> recurring_expenses(account_kinds)
     |> Enum.reduce(Decimal.new("0"), &Decimal.add(&2, &1.amount))
   end
+
+  @doc "Active recurring (every month) expense bills paid from `account_kinds`."
+  def recurring_expenses(group_id, account_kinds) do
+    group_id
+    |> list_bills()
+    |> Enum.filter(fn b ->
+      b.direction == "expense" and is_nil(b.once_month) and b.account.kind in account_kinds
+    end)
+  end
+
+  defp exists_in?(%RecurringBill{once_month: %Date{} = once}, month),
+    do: {once.year, once.month} == month
 
   defp exists_in?(%RecurringBill{inserted_at: inserted_at}, month),
     do: {inserted_at.year, inserted_at.month} <= month
@@ -158,7 +180,9 @@ defmodule PlanfinBackend.Finance.Bills do
     }
   end
 
-  defp card?(%RecurringBill{account: %Account{kind: "credit_card"}}), do: true
+  defp card?(%RecurringBill{direction: "expense", account: %Account{kind: "credit_card"}}),
+    do: true
+
   defp card?(_bill), do: false
 
   @doc """
@@ -217,6 +241,7 @@ defmodule PlanfinBackend.Finance.Bills do
              Expenses.create_expense(group_id, user_id, %{
                amount: amount,
                date: date,
+               type: if(bill.direction == "income", do: "income", else: "expense"),
                note: bill.name,
                account_id: bill.account_id,
                subcategory_id: bill.subcategory_id,

@@ -81,8 +81,8 @@ export function AddExpenseScreen() {
   const account = accounts.find((a) => a.id === accountId) ?? null;
   const isCard = account?.kind === "credit_card";
   // Allowance and reserve accounts never touch the household budget.
-  // Allowance, reserve and meal voucher money is separate from the household budget.
-  const isPrivateAccount = account?.kind === "allowance" || account?.kind === "reserve" || account?.kind === "benefit";
+  // Allowance and reserve money is separate from the household budget.
+  const isPrivateAccount = account?.kind === "allowance" || account?.kind === "reserve";
   const installments = isCard ? watch("installments") ?? 1 : 1;
   const defaultInvoice = isCard && account?.closingDay ? invoiceMonthFor(watch("date"), account.closingDay) : "";
   const firstInvoice = watch("firstInvoice") || defaultInvoice;

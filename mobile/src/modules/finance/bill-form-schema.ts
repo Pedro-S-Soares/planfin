@@ -13,4 +13,7 @@ export const billFormSchema = yup.object({
   accountId: yup.string().nullable().optional(),
   categoryId: yup.string().optional(),
   subcategoryId: yup.string().optional(),
+  direction: yup.mixed<"expense" | "income">().oneOf(["expense", "income"]).default("expense"),
+  // "" = every month; "YYYY-MM" = only in that month
+  onceMonth: yup.string().default(""),
 });

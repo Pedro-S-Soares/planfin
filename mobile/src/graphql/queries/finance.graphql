@@ -122,6 +122,8 @@ query RecurringBills {
     name
     amount
     dueDay
+    direction
+    onceMonth
     account {
       id
       name
@@ -149,6 +151,8 @@ query BillOccurrences($month: String!, $today: String) {
       name
       amount
       dueDay
+      direction
+      onceMonth
       account {
         id
         name
@@ -173,26 +177,6 @@ query FinancialSettings($today: String) {
       month
       date
       isManual
-    }
-  }
-}
-
-query SalaryProjection($today: String) {
-  salaryProjection(today: $today) {
-    salaryDate
-    cycleEndDate
-    salary
-    accountBills
-    committed
-    left
-    invoices {
-      cardId
-      cardName
-      month
-      dueDate
-      status
-      amount
-      pendingBills
     }
   }
 }
@@ -222,32 +206,30 @@ query ReserveStatus($today: String) {
   }
 }
 
-query FreshPlan($today: String) {
-  freshPlan(today: $today) {
-    startDate
-    endDate
-    days
-    hasPrimary
-    balance
-    salaryAmount
-    salaryDate
-    variable
-    cards {
-      label
-      date
-      amount
-      cardId
-      month
+
+query MonthPlan($today: String) {
+  monthPlan(today: $today) {
+    current {
+      endDate
+      hasPrimary
+      balance
+      salaries { label date amount }
+      incomes { label date amount }
+      invoices { label date amount }
+      afterInvoices
+      fixedBills { label date amount }
+      oneOffBills { label date amount }
+      leftover
     }
-    accountBills {
-      label
-      date
-      amount
-    }
-    cardBills {
-      label
-      date
-      amount
+    next {
+      startDate
+      endDate
+      days
+      salary { label date amount }
+      benefits { label date amount }
+      fixedBills { label date amount }
+      installments { label date amount }
+      remaining
     }
   }
 }

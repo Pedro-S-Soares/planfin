@@ -2,9 +2,10 @@ defmodule PlanfinBackend.Finance.Benefits do
   @moduledoc """
   Meal voucher accounts (`kind: "benefit"`).
 
-  They work like an account with its own balance, receive `monthly_credit` on
-  `credit_day` every month (clamped to the month's last day) and their
-  spending stays outside the household budget.
+  They work like an account with its own balance and receive `monthly_credit`
+  on `credit_day` every month (clamped to the month's last day). The voucher
+  balance feeds the variable budget of the month plan, so spending on it
+  counts in the daily limit; the credit itself does not.
 
   The credit is recorded lazily, like card bills: before reads, every credit
   date that has arrived since the account's reconciliation becomes an income
