@@ -201,4 +201,61 @@ defmodule PlanfinBackend.Finance.MonthPlanTest do
     {_user, group} = user_with_group_fixture()
     assert {:error, :salary_not_configured} = MonthPlan.build(group.id, @today)
   end
+
+  test "the goal period can end on a chosen date, and its dates can be edited later" do
+    ctx = paper_setup()
+
+    {:ok, period} = MonthPlan.apply_goal(ctx.group.id, Decimal.new("100"), @today, ~D[2026-10-12])
+    assert period.end_date == ~D[2026-10-12]
+    assert Decimal.equal?(period.total_budget, Decimal.new("900"))
+
+    assert {:error, :invalid_end_date} =
+             MonthPlan.apply_goal(ctx.group.id, Decimal.new("100"), @today, @today)
+
+    # Extending keeps the daily limit and recomputes the total (no extra here)
+    {:ok, longer} = Periods.update_period(period, %{end_date: ~D[2026-10-20]}, @today)
+    assert longer.end_date == ~D[2026-10-20]
+    assert Decimal.equal?(longer.total_budget, Decimal.new("1700"))
+
+    # Shortening drops the budget days beyond the new end
+    {:ok, shorter} =
+      Periods.update_period(
+        longer,
+        %{start_date: ~D[2026-10-02], end_date: ~D[2026-10-03]},
+        @today
+      )
+
+    days =
+      Repo.all(
+        from bd in PlanfinBackend.Periods.BudgetDay,
+          where: bd.period_id == ^shorter.id,
+          select: bd.date
+      )
+
+    assert Enum.sort(days, Date) == [~D[2026-10-02], ~D[2026-10-03]]
+    assert Decimal.equal?(shorter.total_budget, Decimal.new("200"))
+
+    assert {:error, %Ecto.Changeset{}} =
+             Periods.update_period(shorter, %{end_date: ~D[2026-10-01]}, @today)
+  end
+
+  test "editing dates keeps the period's extra" do
+    {_user, group} = user_with_group_fixture()
+
+    {:ok, period} =
+      Periods.create_period(
+        group.id,
+        %{
+          start_date: ~D[2026-10-01],
+          end_date: ~D[2026-10-10],
+          daily_limit: Decimal.new("50"),
+          total_budget: Decimal.new("800")
+        },
+        @today
+      )
+
+    {:ok, updated} = Periods.update_period(period, %{end_date: ~D[2026-10-20]}, @today)
+    # extra 300 kept: 50 × 20 + 300
+    assert Decimal.equal?(updated.total_budget, Decimal.new("1300"))
+  end
 end

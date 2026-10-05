@@ -213,8 +213,8 @@ mutation SetInvoiceTotal($cardId: ID!, $month: String!, $total: String!, $today:
 }
 
 
-mutation ApplyDailyGoal($daily: String!, $today: String) {
-  applyDailyGoal(daily: $daily, today: $today) {
+mutation ApplyDailyGoal($daily: String!, $endDate: String, $today: String) {
+  applyDailyGoal(daily: $daily, endDate: $endDate, today: $today) {
     id
     startDate
     endDate

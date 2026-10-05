@@ -3,6 +3,7 @@ import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "rea
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CurrencyInput } from "../../components/CurrencyInput";
+import { DatePickerField } from "../../components/DatePickerField";
 import { Btn } from "../../components/ui/Btn";
 import { Card } from "../../components/ui/Card";
 import { InlineError } from "../../components/ui/InlineError";
@@ -34,6 +35,8 @@ export function MonthPlanScreen() {
   const today = toISODate(new Date());
   const { data, loading, error, refetch } = useMonthPlanQuery({ variables: { today }, fetchPolicy: "cache-and-network" });
   const [goal, setGoal] = useState<string | null>(null);
+  // Last day of the period the goal creates; null = the plan's default.
+  const [goalEnd, setGoalEnd] = useState<string | null>(null);
   const [applyGoal, { loading: applying }] = useApplyDailyGoalMutation({
     refetchQueries: ["GroupPeriods", "FinancePanel", "AllowancePlan", "MonthPlan"],
     onCompleted: async (d) => {
@@ -94,15 +97,17 @@ export function MonthPlanScreen() {
   const expectedSpending = (goalCents / 100) * days;
   const expectedAllowance = remaining - expectedSpending;
   const currentGoal = period?.dailyLimit ? toNumber(period.dailyLimit) : null;
+  const periodEnd = goalEnd ?? c.endDate ?? today;
+  const isEndValid = periodEnd > today;
 
   const handleApply = () =>
     confirm(
       {
         title: "Usar meta diária",
-        message: `O limite passa a ser ${money(goalCents / 100)} por dia, de hoje até ${formatShortDate(c.endDate)}. O planejamento atual termina ontem.`,
+        message: `O limite passa a ser ${money(goalCents / 100)} por dia, de hoje até ${formatShortDate(periodEnd)}. O planejamento atual termina ontem.`,
         confirmLabel: "Usar",
       },
-      () => applyGoal({ variables: { daily: displayToAPI(goalValue), today } }),
+      () => applyGoal({ variables: { daily: displayToAPI(goalValue), endDate: periodEnd, today } }),
     );
 
   return (
@@ -180,7 +185,22 @@ export function MonthPlanScreen() {
               <Text style={{ fontSize: 12, color: Colors.textTer }}>Limite em uso hoje: {money(currentGoal)}/dia</Text>
             ) : null}
           </View>
-          <Btn label={`Usar ${money(goalCents / 100)}/dia a partir de hoje`} onPress={handleApply} loading={applying} disabled={goalCents <= 0} />
+          <FormLabel>Usar a meta de hoje até</FormLabel>
+          <DatePickerField
+            value={periodEnd}
+            onChange={setGoalEnd}
+            minDate={today}
+            error={isEndValid ? undefined : "Escolha uma data depois de hoje"}
+          />
+          <Btn
+            label={`Usar ${money(goalCents / 100)}/dia até ${formatShortDate(periodEnd)}`}
+            onPress={handleApply}
+            loading={applying}
+            disabled={goalCents <= 0 || !isEndValid}
+          />
+          <Text style={{ fontSize: 12, color: Colors.textTer, marginTop: 8 }}>
+            Depois dá para mudar as datas em Perfil › Editar período, ou tocando no período na tela Hoje.
+          </Text>
         </View>
       </Card>
     </ScrollView>

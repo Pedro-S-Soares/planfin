@@ -88,6 +88,8 @@ const ERRORS: [RegExp, string][] = [
   [/owner must be a member/i, "O dono da mesada precisa ser do grupo."],
   [/only a checking account can be primary/i, "Só conta corrente pode ser a principal."],
   [/invalid amount/i, "Valor inválido."],
+  [/end date must be after today/i, "A data final precisa ser depois de hoje."],
+  [/end_date: must be after start_date/i, "A data final precisa ser depois da inicial."],
   [/invalid date/i, "Data inválida."],
   [/invalid month/i, "Mês inválido."],
   [/must be at least daily_limit/i, "O orçamento total precisa cobrir o limite diário de todos os dias."],

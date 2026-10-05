@@ -172,24 +172,48 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
   def create_period(_parent, _args, context), do: access_error(context)
 
   def update_period(_parent, args, %{context: %{current_group: group}}) do
-    case Periods.get_active_period(group.id) do
+    period_result =
+      case args[:id] do
+        nil -> Periods.get_active_period(group.id)
+        id -> Periods.get_period(group.id, id)
+      end
+
+    case period_result do
       {:ok, nil} ->
         {:error, "No active period"}
 
-      {:ok, period} ->
-        attrs =
-          %{}
-          |> maybe_put(:daily_limit, args[:daily_limit], &Decimal.new/1)
-          |> maybe_put(:total_budget, args[:total_budget], &Decimal.new/1)
+      {:error, :not_found} ->
+        {:error, "Period not found"}
 
-        case Periods.update_period(period, attrs) do
-          {:ok, updated} -> {:ok, format_period(updated, nil)}
-          {:error, changeset} -> {:error, format_errors(changeset)}
+      {:ok, period} ->
+        with {:ok, start_date} <- parse_optional_date(args[:start_date]),
+             {:ok, end_date} <- parse_optional_date(args[:end_date]) do
+          attrs =
+            %{}
+            |> maybe_put(:daily_limit, args[:daily_limit], &Decimal.new/1)
+            |> maybe_put(:total_budget, args[:total_budget], &Decimal.new/1)
+            |> maybe_put(:start_date, start_date, & &1)
+            |> maybe_put(:end_date, end_date, & &1)
+
+          case Periods.update_period(period, attrs, parse_today(args)) do
+            {:ok, updated} -> {:ok, format_period(updated, nil)}
+            {:error, %Ecto.Changeset{} = changeset} -> {:error, format_errors(changeset)}
+            {:error, reason} -> {:error, inspect(reason)}
+          end
         end
     end
   end
 
   def update_period(_parent, _args, context), do: access_error(context)
+
+  defp parse_optional_date(nil), do: {:ok, nil}
+
+  defp parse_optional_date(value) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> {:ok, date}
+      _ -> {:error, "Invalid date"}
+    end
+  end
 
   def create_expense(_parent, args, %{context: %{current_user: user, current_group: group}}) do
     with {:ok, first_invoice} <- parse_first_invoice(args[:first_invoice]) do

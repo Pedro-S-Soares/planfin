@@ -156,11 +156,13 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def set_invoice_total(_parent, _args, context), do: access_error(context)
 
   def apply_daily_goal(_parent, %{daily: daily} = args, %{context: %{current_group: group}}) do
-    with {:ok, daily} <- parse_decimal(daily) do
-      case MonthPlan.apply_goal(group.id, daily, today(args)) do
+    with {:ok, daily} <- parse_decimal(daily),
+         {:ok, end_date} <- parse_optional_date(args[:end_date]) do
+      case MonthPlan.apply_goal(group.id, daily, today(args), end_date) do
         {:ok, period} -> {:ok, Budget.format_period(period, nil)}
         {:error, :salary_not_configured} -> {:error, "Salary amount not configured"}
         {:error, :invalid_goal} -> {:error, "Invalid amount"}
+        {:error, :invalid_end_date} -> {:error, "End date must be after today"}
         {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
         {:error, reason} -> {:error, inspect(reason)}
       end
@@ -850,6 +852,9 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       _ -> {:error, "Invalid date"}
     end
   end
+
+  defp parse_optional_date(nil), do: {:ok, nil}
+  defp parse_optional_date(value), do: parse_date(value)
 
   defp parse_int(nil), do: nil
   defp parse_int(v) when is_integer(v), do: v

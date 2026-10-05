@@ -141,7 +141,12 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     end
 
     field :update_period, :period do
+      @desc "Period to update; defaults to the latest active period"
+      arg(:id, :id)
+      arg(:start_date, :string)
+      arg(:end_date, :string)
       arg(:daily_limit, :string)
+      @desc "When omitted and dates/limit change, recomputed keeping the extra"
       arg(:total_budget, :string)
       resolve(&Budget.update_period/3)
     end
