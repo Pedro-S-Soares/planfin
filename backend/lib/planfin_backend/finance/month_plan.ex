@@ -245,12 +245,13 @@ defmodule PlanfinBackend.Finance.MonthPlan do
   @doc """
   Applies a daily goal from today: active periods end yesterday (or are
   abandoned when they start today or later) and a new period runs from today
-  to the end of this month's window.
+  to `end_date` (default: the end of this month's window).
   """
-  def apply_goal(group_id, %Decimal{} = daily, %Date{} = today) do
+  def apply_goal(group_id, %Decimal{} = daily, %Date{} = today, end_date \\ nil) do
     with {:ok, plan} <- build(group_id, today),
-         :ok <- validate_goal(daily) do
-      end_date = plan.current.end_date
+         :ok <- validate_goal(daily),
+         end_date = end_date || plan.current.end_date,
+         :ok <- validate_end(end_date, today) do
       days = Date.diff(end_date, today) + 1
       daily = Decimal.round(daily, 2)
 
@@ -271,6 +272,10 @@ defmodule PlanfinBackend.Finance.MonthPlan do
         end
       end)
     end
+  end
+
+  defp validate_end(end_date, today) do
+    if Date.compare(end_date, today) == :gt, do: :ok, else: {:error, :invalid_end_date}
   end
 
   defp validate_goal(daily) do

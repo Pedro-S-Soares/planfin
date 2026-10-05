@@ -323,6 +323,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     @desc "Use a daily goal from today until the eve of next month's salary"
     field :apply_daily_goal, :period do
       arg(:daily, non_null(:string))
+      @desc "Last day of the new period; defaults to the eve of next month's salary"
+      arg(:end_date, :string)
       arg(:today, :string)
       resolve(&Finance.apply_daily_goal/3)
     end

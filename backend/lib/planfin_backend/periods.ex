@@ -164,14 +164,64 @@ defmodule PlanfinBackend.Periods do
   end
 
   @doc """
-  Updates daily_limit and/or total_budget of an active period.
+  Updates the dates, daily_limit and/or total_budget of a period.
+
+  When the dates or the daily limit change and no `total_budget` is given, the
+  total is recomputed keeping the period's extra (gordura): the part of the
+  old total beyond `daily_limit × days`. Budget days outside the new range
+  are removed and the missing ones up to `today` are generated.
 
   Returns `{:ok, period}` or `{:error, changeset}`.
   """
-  def update_period(%Period{} = period, attrs) do
-    period
-    |> Period.update_changeset(attrs)
-    |> Repo.update()
+  def update_period(%Period{} = period, attrs, today \\ Date.utc_today()) do
+    attrs = keep_extra_when_reshaped(period, attrs)
+
+    Repo.transaction(fn ->
+      case period |> Period.update_changeset(attrs) |> Repo.update() do
+        {:ok, updated} ->
+          BudgetDay
+          |> where(
+            [bd],
+            bd.period_id == ^updated.id and
+              (bd.date < ^updated.start_date or bd.date > ^updated.end_date)
+          )
+          |> Repo.delete_all()
+
+          case generate_budget_days(updated, today) do
+            :ok -> updated
+            {:error, reason} -> Repo.rollback(reason)
+          end
+
+        {:error, changeset} ->
+          Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  defp keep_extra_when_reshaped(period, attrs) do
+    reshaped? = Enum.any?([:start_date, :end_date, :daily_limit], &Map.has_key?(attrs, &1))
+
+    if reshaped? and not Map.has_key?(attrs, :total_budget) do
+      old_days = Date.diff(period.end_date, period.start_date) + 1
+      old_base = Decimal.mult(period.daily_limit, Decimal.new(old_days))
+      extra = Decimal.max(Decimal.sub(period.total_budget, old_base), Decimal.new("0"))
+
+      start_date = Map.get(attrs, :start_date, period.start_date)
+      end_date = Map.get(attrs, :end_date, period.end_date)
+      daily = Map.get(attrs, :daily_limit, period.daily_limit)
+      days = Date.diff(end_date, start_date) + 1
+
+      if days >= 1,
+        do:
+          Map.put(
+            attrs,
+            :total_budget,
+            Decimal.add(Decimal.mult(daily, Decimal.new(days)), extra)
+          ),
+        else: attrs
+    else
+      attrs
+    end
   end
 
   @doc """

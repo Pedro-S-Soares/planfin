@@ -48,11 +48,13 @@ defmodule PlanfinBackend.Periods.Period do
   end
 
   @doc """
-  Changeset for updating daily_limit and/or total_budget of an active period.
+  Changeset for updating the dates, daily_limit and/or total_budget of a period.
   """
   def update_changeset(period, attrs) do
     period
-    |> cast(attrs, [:daily_limit, :total_budget])
+    |> cast(attrs, [:daily_limit, :total_budget, :start_date, :end_date])
+    |> validate_required([:start_date, :end_date])
+    |> validate_end_date_after_start_date()
     |> validate_daily_limit_positive()
     |> validate_total_budget_gte_daily_total()
   end

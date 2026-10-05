@@ -9,9 +9,11 @@ mutation CreatePeriod($name: String, $startDate: String!, $endDate: String!, $da
   }
 }
 
-mutation UpdatePeriod($dailyLimit: String, $totalBudget: String) {
-  updatePeriod(dailyLimit: $dailyLimit, totalBudget: $totalBudget) {
+mutation UpdatePeriod($id: ID, $startDate: String, $endDate: String, $dailyLimit: String, $totalBudget: String) {
+  updatePeriod(id: $id, startDate: $startDate, endDate: $endDate, dailyLimit: $dailyLimit, totalBudget: $totalBudget) {
     id
+    startDate
+    endDate
     dailyLimit
     totalBudget
     remainingTotal

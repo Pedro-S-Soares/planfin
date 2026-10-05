@@ -431,6 +431,7 @@ export type RootMutationTypeAnticipateInstallmentsArgs = {
 
 export type RootMutationTypeApplyDailyGoalArgs = {
   daily: Scalars['String']['input'];
+  endDate?: InputMaybe<Scalars['String']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -727,6 +728,9 @@ export type RootMutationTypeUpdateFinancialSettingsArgs = {
 
 export type RootMutationTypeUpdatePeriodArgs = {
   dailyLimit?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
+  id?: InputMaybe<Scalars['ID']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
   totalBudget?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -1027,12 +1031,15 @@ export type CreatePeriodMutationVariables = Exact<{
 export type CreatePeriodMutation = { __typename?: 'RootMutationType', createPeriod?: { __typename?: 'Period', id?: string | null, name?: string | null, status?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null } | null };
 
 export type UpdatePeriodMutationVariables = Exact<{
+  id?: InputMaybe<Scalars['ID']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
+  endDate?: InputMaybe<Scalars['String']['input']>;
   dailyLimit?: InputMaybe<Scalars['String']['input']>;
   totalBudget?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type UpdatePeriodMutation = { __typename?: 'RootMutationType', updatePeriod?: { __typename?: 'Period', id?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null, status?: string | null } | null };
+export type UpdatePeriodMutation = { __typename?: 'RootMutationType', updatePeriod?: { __typename?: 'Period', id?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null, totalBudget?: string | null, remainingTotal?: string | null, status?: string | null } | null };
 
 export type CreateExpenseMutationVariables = Exact<{
   amount: Scalars['String']['input'];
@@ -1318,6 +1325,7 @@ export type SetInvoiceTotalMutation = { __typename?: 'RootMutationType', setInvo
 
 export type ApplyDailyGoalMutationVariables = Exact<{
   daily: Scalars['String']['input'];
+  endDate?: InputMaybe<Scalars['String']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
 }>;
 
@@ -1885,9 +1893,17 @@ export type CreatePeriodMutationHookResult = ReturnType<typeof useCreatePeriodMu
 export type CreatePeriodMutationResult = Apollo.MutationResult<CreatePeriodMutation>;
 export type CreatePeriodMutationOptions = Apollo.BaseMutationOptions<CreatePeriodMutation, CreatePeriodMutationVariables>;
 export const UpdatePeriodDocument = gql`
-    mutation UpdatePeriod($dailyLimit: String, $totalBudget: String) {
-  updatePeriod(dailyLimit: $dailyLimit, totalBudget: $totalBudget) {
+    mutation UpdatePeriod($id: ID, $startDate: String, $endDate: String, $dailyLimit: String, $totalBudget: String) {
+  updatePeriod(
+    id: $id
+    startDate: $startDate
+    endDate: $endDate
+    dailyLimit: $dailyLimit
+    totalBudget: $totalBudget
+  ) {
     id
+    startDate
+    endDate
     dailyLimit
     totalBudget
     remainingTotal
@@ -1910,6 +1926,9 @@ export type UpdatePeriodMutationFn = Apollo.MutationFunction<UpdatePeriodMutatio
  * @example
  * const [updatePeriodMutation, { data, loading, error }] = useUpdatePeriodMutation({
  *   variables: {
+ *      id: // value for 'id'
+ *      startDate: // value for 'startDate'
+ *      endDate: // value for 'endDate'
  *      dailyLimit: // value for 'dailyLimit'
  *      totalBudget: // value for 'totalBudget'
  *   },
@@ -3082,8 +3101,8 @@ export type SetInvoiceTotalMutationHookResult = ReturnType<typeof useSetInvoiceT
 export type SetInvoiceTotalMutationResult = Apollo.MutationResult<SetInvoiceTotalMutation>;
 export type SetInvoiceTotalMutationOptions = Apollo.BaseMutationOptions<SetInvoiceTotalMutation, SetInvoiceTotalMutationVariables>;
 export const ApplyDailyGoalDocument = gql`
-    mutation ApplyDailyGoal($daily: String!, $today: String) {
-  applyDailyGoal(daily: $daily, today: $today) {
+    mutation ApplyDailyGoal($daily: String!, $endDate: String, $today: String) {
+  applyDailyGoal(daily: $daily, endDate: $endDate, today: $today) {
     id
     startDate
     endDate
@@ -3107,6 +3126,7 @@ export type ApplyDailyGoalMutationFn = Apollo.MutationFunction<ApplyDailyGoalMut
  * const [applyDailyGoalMutation, { data, loading, error }] = useApplyDailyGoalMutation({
  *   variables: {
  *      daily: // value for 'daily'
+ *      endDate: // value for 'endDate'
  *      today: // value for 'today'
  *   },
  * });

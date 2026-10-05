@@ -300,9 +300,17 @@ export function HomeScreen() {
 
         {/* Period info strip */}
         {period && (
-          <View style={styles.periodInfoRow}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("EditPeriod")}
+            activeOpacity={0.8}
+            style={styles.periodInfoRow}
+            accessibilityLabel="Editar período"
+          >
             {[
-              { label: "Período", val: `${period.startDate?.slice(5, 7)}/` + `${period.startDate?.slice(0, 4)} – ${period.endDate?.slice(5, 7)}/${period.endDate?.slice(0, 4)}` },
+              {
+                label: "Período · editar",
+                val: `${period.startDate?.slice(8, 10)}/${period.startDate?.slice(5, 7)} – ${period.endDate?.slice(8, 10)}/${period.endDate?.slice(5, 7)}`,
+              },
               { label: "Dias restantes", val: daysLeft !== null ? `${daysLeft} dias` : "—" },
             ].map(({ label, val }) => (
               <Card key={label} padding={12} style={styles.periodInfoCard}>
@@ -310,7 +318,7 @@ export function HomeScreen() {
                 <Text style={styles.periodInfoValue}>{val}</Text>
               </Card>
             ))}
-          </View>
+          </TouchableOpacity>
         )}
 
         <MonthPlanCard />
