@@ -262,6 +262,7 @@ export type MonthPlan = {
 /** This month: today until the eve of next month's salary */
 export type MonthPlanCurrent = {
   __typename?: 'MonthPlanCurrent';
+  /** Money in the account on the invoice due date, after paying it */
   afterInvoices?: Maybe<Scalars['String']['output']>;
   /** Primary account balance today */
   balance?: Maybe<Scalars['String']['output']>;
@@ -271,6 +272,8 @@ export type MonthPlanCurrent = {
   hasPrimary?: Maybe<Scalars['Boolean']['output']>;
   /** Expected incomes still to come */
   incomes?: Maybe<Array<Maybe<PlanItem>>>;
+  /** Latest due date of the invoices in the window; inflows up to it count before the 'resto' */
+  invoiceDueDate?: Maybe<Scalars['String']['output']>;
   /** Card invoices due in the window */
   invoices?: Maybe<Array<Maybe<PlanItem>>>;
   /** What is left at the month closing (allowance when positive) */
@@ -1509,7 +1512,7 @@ export type MonthPlanQueryVariables = Exact<{
 }>;
 
 
-export type MonthPlanQuery = { __typename?: 'RootQueryType', monthPlan?: { __typename?: 'MonthPlan', current?: { __typename?: 'MonthPlanCurrent', endDate?: string | null, hasPrimary?: boolean | null, balance?: string | null, afterInvoices?: string | null, leftover?: string | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoices?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null } | null, next?: { __typename?: 'MonthPlanNext', startDate?: string | null, endDate?: string | null, days?: number | null, remaining?: string | null, salary?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null } | null } | null };
+export type MonthPlanQuery = { __typename?: 'RootQueryType', monthPlan?: { __typename?: 'MonthPlan', current?: { __typename?: 'MonthPlanCurrent', endDate?: string | null, hasPrimary?: boolean | null, balance?: string | null, invoiceDueDate?: string | null, afterInvoices?: string | null, leftover?: string | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoices?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null } | null, next?: { __typename?: 'MonthPlanNext', startDate?: string | null, endDate?: string | null, days?: number | null, remaining?: string | null, salary?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null } | null } | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -4369,6 +4372,7 @@ export const MonthPlanDocument = gql`
         date
         amount
       }
+      invoiceDueDate
       afterInvoices
       fixedBills {
         label

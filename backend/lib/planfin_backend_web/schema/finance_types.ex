@@ -207,6 +207,10 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :incomes, list_of(:plan_item)
     @desc "Card invoices due in the window"
     field :invoices, list_of(:plan_item)
+
+    @desc "Latest due date of the invoices in the window; inflows up to it count before the 'resto'"
+    field :invoice_due_date, :string
+    @desc "Money in the account on the invoice due date, after paying it"
     field :after_invoices, :string
     @desc "Recurring bills paid from accounts"
     field :fixed_bills, list_of(:plan_item)

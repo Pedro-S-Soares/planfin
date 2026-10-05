@@ -92,7 +92,10 @@ defmodule PlanfinBackend.Finance.MonthPlanTest do
     assert Decimal.equal?(c.balance, Decimal.new("4433.67"))
     assert [%{date: ~D[2026-10-13]}] = c.salaries
     assert Decimal.equal?(sum(c.invoices), Decimal.new("13108.27"))
-    assert Decimal.equal?(c.after_invoices, Decimal.new("4632.40"))
+    # Only money arriving by the invoice due date (Oct 15): the Dri income on
+    # Oct 30 comes after it.
+    assert c.invoice_due_date == ~D[2026-10-15]
+    assert Decimal.equal?(c.after_invoices, Decimal.new("1932.40"))
     assert Decimal.equal?(sum(c.fixed_bills), Decimal.new("3129.12"))
     assert Decimal.equal?(sum(c.one_off_bills), Decimal.new("1510"))
     assert Decimal.equal?(sum(c.incomes), Decimal.new("2700"))
@@ -106,6 +109,24 @@ defmodule PlanfinBackend.Finance.MonthPlanTest do
     assert Decimal.equal?(sum(n.fixed_bills), Decimal.new("7826.18"))
     # 10607 + 818.57 − 7826.18
     assert Decimal.equal?(n.remaining, Decimal.new("3599.39"))
+  end
+
+  test "an expected income before the invoice due date counts in the resto" do
+    ctx = paper_setup()
+
+    {:ok, _} =
+      Bills.create_bill(ctx.group.id, %{
+        name: "Reembolso",
+        amount: Decimal.new("500"),
+        due_day: 10,
+        account_id: ctx.bb.id,
+        direction: "income",
+        once_month: ~D[2026-10-01]
+      })
+
+    {:ok, plan} = MonthPlan.build(ctx.group.id, @today)
+    assert Decimal.equal?(plan.current.after_invoices, Decimal.new("2432.40"))
+    assert Decimal.equal?(plan.current.leftover, Decimal.new("493.28"))
   end
 
   test "a one-off bill exists only in its month" do

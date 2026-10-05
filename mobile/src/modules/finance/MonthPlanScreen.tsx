@@ -76,6 +76,15 @@ export function MonthPlanScreen() {
 
   const c = plan.current;
   const n = plan.next;
+  // Inflows up to the invoice due date pay the invoice; later ones only count for the month's leftover.
+  const cutoff = c.invoiceDueDate ?? null;
+  const beforeDue = (items: PlanLine[]) => items.filter((i) => !cutoff || (i.date ?? "") <= cutoff);
+  const afterDue = (items: PlanLine[]) => items.filter((i) => !!cutoff && (i.date ?? "") > cutoff);
+  const salariesBefore = beforeDue(lines(c.salaries));
+  const salariesAfter = afterDue(lines(c.salaries));
+  const incomesBefore = beforeDue(lines(c.incomes));
+  const incomesAfter = afterDue(lines(c.incomes));
+  const dueLabel = cutoff ? formatShortDate(cutoff) : null;
   const leftover = toNumber(c.leftover);
   const remaining = toNumber(n.remaining);
   const days = n.days ?? 30;
@@ -104,12 +113,21 @@ export function MonthPlanScreen() {
         </Text>
         <Text style={{ fontSize: 12, color: Colors.textTer, marginBottom: 6 }}>Até a véspera do salário do mês que vem</Text>
         <PlanSection sign="+" title="Saldo na conta" items={[{ label: "Conta principal", date: today, amount: c.balance }]} />
-        {lines(c.salaries).length > 0 ? <PlanSection sign="+" title="Salário a receber" items={lines(c.salaries)} /> : null}
-        <PlanSection sign="−" title="Fatura do cartão" items={lines(c.invoices)} emptyText="—" />
-        <PlanTotal label="Resto após pagar a fatura" value={money(c.afterInvoices)} />
+        {salariesBefore.length > 0 ? <PlanSection sign="+" title="Salário a receber" items={salariesBefore} /> : null}
+        {dueLabel && incomesBefore.length > 0 ? (
+          <PlanSection sign="+" title={`Entradas até ${dueLabel}`} items={incomesBefore} />
+        ) : null}
+        <PlanSection sign="−" title={dueLabel ? `Fatura do cartão · vence ${dueLabel}` : "Fatura do cartão"} items={lines(c.invoices)} emptyText="—" />
+        <PlanTotal label={dueLabel ? `Resto após pagar a fatura em ${dueLabel}` : "Resto após pagar a fatura"} value={money(c.afterInvoices)} />
         <PlanSection sign="−" title="Fixas no boleto" items={lines(c.fixedBills)} emptyText="—" />
         <PlanSection sign="−" title="Gastos avulsos no boleto" items={lines(c.oneOffBills)} emptyText="—" />
-        <PlanSection sign="+" title="Entradas previstas" items={lines(c.incomes)} emptyText="—" />
+        {salariesAfter.length > 0 ? <PlanSection sign="+" title={`Salário depois de ${dueLabel}`} items={salariesAfter} /> : null}
+        <PlanSection
+          sign="+"
+          title={dueLabel ? `Entradas depois de ${dueLabel}` : "Entradas previstas"}
+          items={dueLabel ? incomesAfter : incomesBefore}
+          emptyText="—"
+        />
         <View style={{ marginTop: 10, borderRadius: Radius.md, padding: 12, backgroundColor: leftover >= 0 ? Colors.successLight : Colors.dangerLight }}>
           <Text style={{ fontSize: 11, fontWeight: "700", color: leftover >= 0 ? Colors.successText : Colors.danger, letterSpacing: 0.6 }}>
             SOBRA DO MÊS
