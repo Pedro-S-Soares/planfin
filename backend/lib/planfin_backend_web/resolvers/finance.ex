@@ -576,6 +576,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
         salaries: items.(c.salaries),
         incomes: items.(c.incomes),
         invoices: items.(c.invoices),
+        invoice_due_date: c.invoice_due_date && Date.to_iso8601(c.invoice_due_date),
         after_invoices: Decimal.to_string(c.after_invoices),
         fixed_bills: items.(c.fixed_bills),
         one_off_bills: items.(c.one_off_bills),

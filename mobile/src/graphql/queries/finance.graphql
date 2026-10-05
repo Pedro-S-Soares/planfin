@@ -216,6 +216,7 @@ query MonthPlan($today: String) {
       salaries { label date amount }
       incomes { label date amount }
       invoices { label date amount }
+      invoiceDueDate
       afterInvoices
       fixedBills { label date amount }
       oneOffBills { label date amount }

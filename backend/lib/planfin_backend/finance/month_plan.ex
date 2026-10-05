@@ -5,14 +5,17 @@ defmodule PlanfinBackend.Finance.MonthPlan do
   **This month** — from today to the eve of next month's salary:
 
         saldo da conta principal
-      + salários que ainda vão cair nesse intervalo (não registrados nem
-        já contidos no saldo)
-      + entradas previstas (ex.: renda variável) ainda não recebidas
+      + salários e entradas previstas que caem até o vencimento da fatura
       − faturas do cartão que vencem até lá
-      = resto após pagar a fatura
+      = resto após pagar a fatura (dinheiro na conta no dia do vencimento)
       − despesas fixas no boleto (recorrentes, da conta) até lá
       − gastos avulsos no boleto (despesas de um mês só) até lá
+      + salários e entradas previstas depois do vencimento
       = sobra do mês → mesada (quando positiva)
+
+  Salaries counted are the ones still to come in the window (not registered
+  nor already inside the balance); expected incomes, the ones not received.
+  Without invoices in the window every inflow counts before the "resto".
 
   **Next month** — the salary cycle opened by next month's salary:
 
@@ -78,18 +81,29 @@ defmodule PlanfinBackend.Finance.MonthPlan do
         |> Enum.map(&item/1)
     }
 
+    invoice_due_date =
+      current.invoices |> Enum.map(& &1.date) |> Enum.max(Date, fn -> nil end)
+
+    inflows = current.salaries ++ current.incomes
+    {before_due, after_due} = Enum.split_with(inflows, &on_or_before?(&1.date, invoice_due_date))
+
     after_invoices =
       current.balance
-      |> Decimal.add(sum(current.salaries))
-      |> Decimal.add(sum(current.incomes))
+      |> Decimal.add(sum(before_due))
       |> Decimal.sub(sum(current.invoices))
 
     leftover =
       after_invoices
       |> Decimal.sub(sum(current.fixed_bills))
       |> Decimal.sub(sum(current.one_off_bills))
+      |> Decimal.add(sum(after_due))
 
-    current = Map.merge(current, %{after_invoices: after_invoices, leftover: leftover})
+    current =
+      Map.merge(current, %{
+        invoice_due_date: invoice_due_date,
+        after_invoices: after_invoices,
+        leftover: leftover
+      })
 
     benefits =
       accounts
@@ -215,6 +229,9 @@ defmodule PlanfinBackend.Finance.MonthPlan do
       occ.status in ["pending", "overdue"] and Date.compare(occ.due_date, a_end) != :gt
     end)
   end
+
+  defp on_or_before?(_date, nil), do: true
+  defp on_or_before?(date, cutoff), do: Date.compare(date, cutoff) != :gt
 
   defp boleto?(occ),
     do: occ.bill.direction == "expense" and occ.bill.account.kind != "credit_card"
