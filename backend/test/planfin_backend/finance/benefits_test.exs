@@ -41,7 +41,7 @@ defmodule PlanfinBackend.Finance.BenefitsTest do
     assert Benefits.next_credit_date(ctx.va, ~D[2026-10-31]) == ~D[2026-11-01]
   end
 
-  test "spending on the voucher never counts in the daily budget" do
+  test "spending on the voucher counts in the daily budget; the credit does not" do
     ctx = setup_group()
 
     {:ok, _} =
@@ -63,8 +63,13 @@ defmodule PlanfinBackend.Finance.BenefitsTest do
         account_id: ctx.va.id
       })
 
-    refute entry.counts_in_budget
+    assert entry.counts_in_budget
     assert Decimal.equal?(Finance.account_balance(ctx.va, ~D[2026-10-03]), Decimal.new("90.00"))
+
+    assert Decimal.equal?(
+             PlanfinBackend.BudgetDays.get_total_spent_for_day(ctx.group.id, ~D[2026-10-03]),
+             Decimal.new("230.00")
+           )
   end
 
   test "credit day clamps to the end of the month and requires both fields" do

@@ -7,10 +7,9 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
     Allowance,
     Bills,
     Calendar,
-    FreshPlan,
+    MonthPlan,
     Invoices,
     Panel,
-    Projection,
     Salary
   }
 
@@ -96,17 +95,6 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def cycle_proposal(_parent, _args, context), do: access_error(context)
 
-  def salary_projection(_parent, args, %{context: %{current_group: group}}) do
-    charge_card_bills(group.id, args)
-
-    case Projection.build(group.id, today(args)) do
-      nil -> {:ok, nil}
-      p -> {:ok, format_projection(p)}
-    end
-  end
-
-  def salary_projection(_parent, _args, context), do: access_error(context)
-
   def allowance_plan(_parent, args, %{context: %{current_group: group}}) do
     charge_card_bills(group.id, args)
     {:ok, group.id |> Allowance.build(today(args)) |> format_allowance()}
@@ -141,12 +129,16 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def distribute_allowance(_parent, _args, context), do: access_error(context)
 
-  def fresh_plan(_parent, args, %{context: %{current_group: group}}) do
+  def month_plan(_parent, args, %{context: %{current_group: group}}) do
     charge_card_bills(group.id, args)
-    {:ok, group.id |> FreshPlan.build(today(args)) |> format_fresh_plan()}
+
+    case MonthPlan.build(group.id, today(args)) do
+      {:ok, plan} -> {:ok, format_month_plan(plan)}
+      {:error, :salary_not_configured} -> {:ok, nil}
+    end
   end
 
-  def fresh_plan(_parent, _args, context), do: access_error(context)
+  def month_plan(_parent, _args, context), do: access_error(context)
 
   def set_invoice_total(_parent, args, %{context: %{current_group: group, current_user: user}}) do
     with {:ok, card} <- fetch_card(group.id, args.card_id),
@@ -163,24 +155,19 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def set_invoice_total(_parent, _args, context), do: access_error(context)
 
-  def start_fresh_plan(_parent, args, %{context: %{current_group: group}}) do
-    gordura_result =
-      case args[:gordura] do
-        nil -> {:ok, Decimal.new("0")}
-        value -> parse_decimal(value)
-      end
-
-    with {:ok, gordura} <- gordura_result do
-      case FreshPlan.start(group.id, gordura, today(args), args[:name]) do
+  def apply_daily_goal(_parent, %{daily: daily} = args, %{context: %{current_group: group}}) do
+    with {:ok, daily} <- parse_decimal(daily) do
+      case MonthPlan.apply_goal(group.id, daily, today(args)) do
         {:ok, period} -> {:ok, Budget.format_period(period, nil)}
-        {:error, :insufficient} -> {:error, "Not enough left for variable spending"}
+        {:error, :salary_not_configured} -> {:error, "Salary amount not configured"}
+        {:error, :invalid_goal} -> {:error, "Invalid amount"}
         {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
         {:error, reason} -> {:error, inspect(reason)}
       end
     end
   end
 
-  def start_fresh_plan(_parent, _args, context), do: access_error(context)
+  def apply_daily_goal(_parent, _args, context), do: access_error(context)
 
   def list_bills(_parent, _args, %{context: %{current_group: group}}) do
     {:ok, group.id |> Bills.list_bills() |> Enum.map(&format_bill/1)}
@@ -256,13 +243,16 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def create_bill(_parent, args, %{context: %{current_group: group}}) do
     with {:ok, amount} <- parse_decimal(args.amount),
+         {:ok, once_month} <- parse_once_month(args[:once_month]),
          {:ok, bill} <-
            Bills.create_bill(group.id, %{
              name: args.name,
              amount: amount,
              due_day: args.due_day,
              account_id: args.account_id,
-             subcategory_id: args[:subcategory_id]
+             subcategory_id: args[:subcategory_id],
+             direction: args[:direction] || "expense",
+             once_month: once_month
            }) do
       {:ok, format_bill(bill)}
     else
@@ -569,52 +559,38 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
     }
   end
 
-  defp format_projection(p) do
-    %{
-      salary_date: Date.to_iso8601(p.salary_date),
-      cycle_end_date: Date.to_iso8601(p.cycle_end_date),
-      salary: Decimal.to_string(p.salary),
-      account_bills: Decimal.to_string(p.account_bills),
-      committed: Decimal.to_string(p.committed),
-      left: Decimal.to_string(p.left),
-      invoices:
-        Enum.map(p.invoices, fn i ->
-          %{
-            card_id: i.card_id,
-            card_name: i.card_name,
-            month: Invoices.format_month(i.month),
-            due_date: Date.to_iso8601(i.due_date),
-            status: i.status,
-            amount: Decimal.to_string(i.amount),
-            pending_bills: Decimal.to_string(i.pending_bills)
-          }
-        end)
-    }
-  end
-
-  defp format_fresh_plan(plan) do
+  defp format_month_plan(plan) do
     item = fn i ->
-      %{
-        label: i.label,
-        date: Date.to_iso8601(i.date),
-        amount: Decimal.to_string(i.amount),
-        card_id: i.card_id,
-        month: i.month && Invoices.format_month(i.month)
-      }
+      %{label: i.label, date: Date.to_iso8601(i.date), amount: Decimal.to_string(i.amount)}
     end
 
+    items = fn list -> Enum.map(list, item) end
+    c = plan.current
+    n = plan.next
+
     %{
-      start_date: Date.to_iso8601(plan.start_date),
-      end_date: Date.to_iso8601(plan.end_date),
-      days: plan.days,
-      has_primary: plan.has_primary,
-      balance: Decimal.to_string(plan.balance),
-      salary_amount: plan.salary && Decimal.to_string(plan.salary.amount),
-      salary_date: plan.salary && Date.to_iso8601(plan.salary.date),
-      cards: Enum.map(plan.cards, item),
-      account_bills: Enum.map(plan.account_bills, item),
-      card_bills: Enum.map(plan.card_bills, item),
-      variable: Decimal.to_string(plan.variable)
+      current: %{
+        end_date: Date.to_iso8601(c.end_date),
+        has_primary: c.has_primary,
+        balance: Decimal.to_string(c.balance),
+        salaries: items.(c.salaries),
+        incomes: items.(c.incomes),
+        invoices: items.(c.invoices),
+        after_invoices: Decimal.to_string(c.after_invoices),
+        fixed_bills: items.(c.fixed_bills),
+        one_off_bills: items.(c.one_off_bills),
+        leftover: Decimal.to_string(c.leftover)
+      },
+      next: %{
+        start_date: Date.to_iso8601(n.start_date),
+        end_date: Date.to_iso8601(n.end_date),
+        days: n.days,
+        salary: item.(n.salary),
+        benefits: items.(n.benefits),
+        fixed_bills: items.(n.fixed_bills),
+        installments: items.(n.installments),
+        remaining: Decimal.to_string(n.remaining)
+      }
     }
   end
 
@@ -656,6 +632,9 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   defp format_bill(bill) do
     %{
       id: bill.id,
+      direction: bill.direction,
+      once_month:
+        bill.once_month && Invoices.format_month({bill.once_month.year, bill.once_month.month}),
       name: bill.name,
       amount: Decimal.to_string(bill.amount),
       due_day: bill.due_day,
@@ -773,16 +752,43 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   end
 
   defp bill_attrs(args) do
-    base = Map.take(args, [:name, :due_day, :account_id, :subcategory_id])
+    base = Map.take(args, [:name, :due_day, :account_id, :subcategory_id, :direction])
 
-    case args[:amount] do
-      nil -> {:ok, base}
-      amount -> with {:ok, d} <- parse_decimal(amount), do: {:ok, Map.put(base, :amount, d)}
+    with {:ok, base} <- put_once_month(base, args) do
+      case args[:amount] do
+        nil -> {:ok, base}
+        amount -> with {:ok, d} <- parse_decimal(amount), do: {:ok, Map.put(base, :amount, d)}
+      end
+    end
+  end
+
+  defp put_once_month(attrs, args) do
+    case Map.fetch(args, :once_month) do
+      :error ->
+        {:ok, attrs}
+
+      {:ok, value} ->
+        with {:ok, m} <- parse_once_month(value), do: {:ok, Map.put(attrs, :once_month, m)}
+    end
+  end
+
+  defp parse_once_month(nil), do: {:ok, nil}
+  defp parse_once_month(""), do: {:ok, nil}
+
+  defp parse_once_month(value) do
+    case Invoices.parse_month(value) do
+      {:ok, month} -> {:ok, Invoices.month_date(month)}
+      _ -> {:error, :invalid_month}
     end
   end
 
   defp bill_error({:error, %Ecto.Changeset{} = cs}), do: {:error, Budget.format_errors(cs)}
   defp bill_error({:error, :account_not_found}), do: {:error, "Account not found"}
+
+  defp bill_error({:error, :income_on_card}),
+    do: {:error, "Expected income must go to an account"}
+
+  defp bill_error({:error, :invalid_month}), do: {:error, "Invalid month, expected YYYY-MM"}
   defp bill_error({:error, msg}) when is_binary(msg), do: {:error, msg}
 
   defp fetch_card(group_id, id) do

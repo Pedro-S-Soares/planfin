@@ -102,14 +102,48 @@ mutation AssignEntriesToAccount($accountId: ID!, $fromDate: String!) {
   assignEntriesToAccount(accountId: $accountId, fromDate: $fromDate)
 }
 
-mutation CreateRecurringBill($name: String!, $amount: String!, $dueDay: Int!, $accountId: ID!, $subcategoryId: ID) {
-  createRecurringBill(name: $name, amount: $amount, dueDay: $dueDay, accountId: $accountId, subcategoryId: $subcategoryId) {
+mutation CreateRecurringBill(
+  $name: String!
+  $amount: String!
+  $dueDay: Int!
+  $accountId: ID!
+  $subcategoryId: ID
+  $direction: String
+  $onceMonth: String
+) {
+  createRecurringBill(
+    name: $name
+    amount: $amount
+    dueDay: $dueDay
+    accountId: $accountId
+    subcategoryId: $subcategoryId
+    direction: $direction
+    onceMonth: $onceMonth
+  ) {
     id
   }
 }
 
-mutation UpdateRecurringBill($id: ID!, $name: String, $amount: String, $dueDay: Int, $accountId: ID, $subcategoryId: ID) {
-  updateRecurringBill(id: $id, name: $name, amount: $amount, dueDay: $dueDay, accountId: $accountId, subcategoryId: $subcategoryId) {
+mutation UpdateRecurringBill(
+  $id: ID!
+  $name: String
+  $amount: String
+  $dueDay: Int
+  $accountId: ID
+  $subcategoryId: ID
+  $direction: String
+  $onceMonth: String
+) {
+  updateRecurringBill(
+    id: $id
+    name: $name
+    amount: $amount
+    dueDay: $dueDay
+    accountId: $accountId
+    subcategoryId: $subcategoryId
+    direction: $direction
+    onceMonth: $onceMonth
+  ) {
     id
   }
 }
@@ -178,12 +212,12 @@ mutation SetInvoiceTotal($cardId: ID!, $month: String!, $total: String!, $today:
   }
 }
 
-mutation StartFreshPlan($gordura: String, $name: String, $today: String) {
-  startFreshPlan(gordura: $gordura, name: $name, today: $today) {
+
+mutation ApplyDailyGoal($daily: String!, $today: String) {
+  applyDailyGoal(daily: $daily, today: $today) {
     id
     startDate
     endDate
     dailyLimit
-    totalBudget
   }
 }

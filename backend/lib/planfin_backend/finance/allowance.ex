@@ -2,42 +2,44 @@ defmodule PlanfinBackend.Finance.Allowance do
   @moduledoc """
   Monthly allowance for the couple.
 
-  What is left at the end of the cycle is split equally between the allowance
-  accounts (one per person) and moved there by transfers out of the primary
-  account. There is no mandatory reserve: the floor is only what is already
-  committed.
-
-      left over = Posso gastar (panel.free)
-                  − what the next salary cannot cover of what is already on it
-
-  The second term protects the next cycle: if the card already ate more than
-  the next salary, that gap must stay in the account. Distribution is only
-  offered in the last 3 days of the cycle (the month closing).
+  The allowance is the month's left over from `MonthPlan` (balance + salary
+  still to come + expected income − invoices − boletos until the eve of next
+  month's salary), capped by what is in the primary account right now: money
+  that has not arrived yet can't be transferred. When positive it is split
+  equally between the allowance accounts and moved there out of the primary
+  account. There is no mandatory reserve. Distribution is offered in the last
+  3 days before the next salary (the month closing); a negative left over is
+  shown as the shortfall.
   """
 
   import Ecto.Query, warn: false
 
   alias PlanfinBackend.{Finance, Repo}
-  alias PlanfinBackend.Finance.{Panel, Projection, Salary, Transfer}
+  alias PlanfinBackend.Finance.{MonthPlan, Salary, Transfer}
 
   @closing_days 3
 
   def build(group_id, today) do
-    {cycle_start, cycle_end} = cycle_bounds(group_id, today)
-    horizon = Salary.horizon(group_id, today)
-    panel = Panel.build(group_id, today, horizon)
+    primary = Finance.get_primary_account(group_id)
+    balance = if primary, do: Finance.account_balance(primary, today), else: Decimal.new("0")
 
-    shortfall =
-      case Projection.build(group_id, today) do
-        %{left: left} -> Decimal.max(Decimal.negate(left), Decimal.new("0"))
-        nil -> Decimal.new("0")
+    {leftover, cycle_start, cycle_end} =
+      case MonthPlan.build(group_id, today) do
+        {:ok, plan} ->
+          cycle = Salary.cycle(group_id, today)
+          {plan.current.leftover, cycle.start_date, cycle.end_date}
+
+        {:error, _} ->
+          {Decimal.new("0"), Date.beginning_of_month(today), Date.end_of_month(today)}
       end
 
-    free = panel.free || Decimal.new("0")
-
     amount =
-      Decimal.max(Decimal.sub(free, shortfall), Decimal.new("0")) |> Decimal.round(2, :down)
+      leftover
+      |> Decimal.min(balance)
+      |> Decimal.max(Decimal.new("0"))
+      |> Decimal.round(2, :down)
 
+    shortfall = leftover |> Decimal.negate() |> Decimal.max(Decimal.new("0"))
     accounts = allowance_accounts(group_id)
     shares = split(amount, length(accounts))
     distributable_from = Date.add(cycle_end, -(@closing_days - 1))
@@ -45,14 +47,14 @@ defmodule PlanfinBackend.Finance.Allowance do
     %{
       cycle_end_date: cycle_end,
       opens_on: distributable_from,
-      free: free,
+      free: leftover,
       shortfall: shortfall,
       amount: amount,
       can_distribute:
-        accounts != [] and panel.primary_account_id != nil and Decimal.compare(amount, 0) == :gt and
+        accounts != [] and primary != nil and Decimal.compare(amount, 0) == :gt and
           Date.compare(today, distributable_from) != :lt,
       distributed: distributed_between(group_id, cycle_start, cycle_end),
-      primary_account_id: panel.primary_account_id,
+      primary_account_id: primary && primary.id,
       shares:
         Enum.zip_with(accounts, shares, fn account, share ->
           %{account: account, amount: share}
@@ -130,18 +132,6 @@ defmodule PlanfinBackend.Finance.Allowance do
 
     for i <- 0..(n - 1) do
       Decimal.div(Decimal.new(base + if(i < extra, do: 1, else: 0)), 100) |> Decimal.round(2)
-    end
-  end
-
-  defp cycle_bounds(group_id, today) do
-    if Salary.configured?(Salary.get_settings(group_id)) do
-      c = Salary.cycle(group_id, today)
-      {c.start_date, c.end_date}
-    else
-      case PlanfinBackend.Periods.get_active_period(group_id) do
-        {:ok, %{start_date: s, end_date: e}} -> {s, e}
-        _ -> {Date.beginning_of_month(today), Date.end_of_month(today)}
-      end
     end
   end
 

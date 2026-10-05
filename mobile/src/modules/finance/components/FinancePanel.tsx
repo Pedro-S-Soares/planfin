@@ -109,9 +109,7 @@ export function FinancePanel() {
           />
         </View>
       ) : null}
-      <TouchableOpacity onPress={() => navigation.navigate("FreshPlan")} activeOpacity={0.7} style={{ marginTop: 10 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>Planejar a partir de hoje ›</Text>
-      </TouchableOpacity>
+
       {salary?.pending && salary.cycleStartDate ? <SalaryBanner amount={salary.amount} date={salary.cycleStartDate} /> : null}
       {salary && !salary.configured ? (
         <TouchableOpacity onPress={() => navigation.navigate("SalarySettings")} activeOpacity={0.7} style={{ marginTop: 10 }}>

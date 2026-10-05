@@ -7,6 +7,7 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
   alias PlanfinBackend.Finance.{Allowance, Salary}
 
   # Cycle Sep 12 – Oct 12 (next salary Oct 13). Closing window: Oct 10–12.
+  # Month window: today until Nov 12 (eve of the November salary).
   @mid ~D[2026-10-03]
   @closing ~D[2026-10-11]
 
@@ -68,26 +69,29 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
     assert Decimal.equal?(Finance.account_balance(ctx.checking, @closing), Decimal.new("0.00"))
   end
 
-  test "keeps what the next salary can't cover" do
+  test "never distributes money that has not arrived yet" do
+    ctx = setup_group()
+    plan = Allowance.build(ctx.group.id, @mid)
+    # Month left over includes the Oct 13 salary (8000), but only 3000 is in the account
+    assert Decimal.equal?(plan.free, Decimal.new("8000.00"))
+    assert Decimal.equal?(plan.amount, Decimal.new("3000.00"))
+  end
+
+  test "an invoice bigger than the money leaves a shortfall and no allowance" do
     ctx = setup_group()
 
-    # 5800 already on the invoice due Nov 16 (paid by the Nov 13 salary of 5000)
     {:ok, _} =
       Expenses.create_expense(ctx.group.id, ctx.user.id, %{
-        amount: Decimal.new("5800.00"),
-        date: ~D[2026-10-20],
+        amount: Decimal.new("9000.00"),
+        date: ~D[2026-09-20],
         account_id: ctx.card.id,
         counts_in_budget: false
       })
 
-    # Oct 13 salary not counted yet: as of Oct 11 the next salary is Oct 13 and
-    # its cycle pays the October invoice (empty), so no shortfall.
-    assert Decimal.equal?(Allowance.build(ctx.group.id, @closing).shortfall, Decimal.new("0"))
-
-    # On Nov 10 (closing of the next cycle) the Nov 16 invoice is 5800 > 5000.
-    plan = Allowance.build(ctx.group.id, ~D[2026-11-10])
-    assert Decimal.equal?(plan.shortfall, Decimal.new("800.00"))
-    assert Decimal.equal?(plan.amount, Decimal.new("2200.00"))
+    plan = Allowance.build(ctx.group.id, @closing)
+    assert Decimal.equal?(plan.amount, Decimal.new("0"))
+    assert Decimal.equal?(plan.shortfall, Decimal.new("1000.00"))
+    refute plan.can_distribute
   end
 
   test "tight month: nothing to distribute" do
@@ -96,7 +100,7 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
     {:ok, _} =
       PlanfinBackend.Finance.Bills.create_bill(ctx.group.id, %{
         name: "Aluguel",
-        amount: Decimal.new("1500.00"),
+        amount: Decimal.new("4000.00"),
         due_day: 12,
         account_id: ctx.checking.id
       })

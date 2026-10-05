@@ -50,7 +50,7 @@ import { BillsScreen } from "./src/modules/finance/BillsScreen";
 import { BillFormScreen } from "./src/modules/finance/BillFormScreen";
 import { PayBillScreen } from "./src/modules/finance/PayBillScreen";
 import { SalarySettingsScreen } from "./src/modules/finance/SalarySettingsScreen";
-import { FreshPlanScreen } from "./src/modules/finance/FreshPlanScreen";
+import { MonthPlanScreen } from "./src/modules/finance/MonthPlanScreen";
 import type { AccountKind } from "./src/modules/finance/format";
 
 enableScreens();
@@ -102,10 +102,10 @@ export type AppStackParamList = {
   Invoice: { cardId: string; month: string };
   PayInvoice: { cardId: string; month: string; remaining: string };
   Bills: { month?: string } | undefined;
-  BillForm: { billId?: string };
-  PayBill: { billId: string; month: string; amount: string; name: string; isCard: boolean };
+  BillForm: { billId?: string; direction?: "expense" | "income"; once?: boolean };
+  PayBill: { billId: string; month: string; amount: string; name: string; isCard: boolean; isIncome?: boolean };
   SalarySettings: undefined;
-  FreshPlan: undefined;
+  MonthPlan: undefined;
   Transfer: {
     fromAccountId?: string;
     toAccountId?: string;
@@ -244,7 +244,8 @@ function AppNavigator() {
       {!hasActivePeriod ? (
         <>
           <AppStack.Screen name="CreatePeriod" component={CreatePeriodScreen} />
-          <AppStack.Screen name="FreshPlan" component={FreshPlanScreen} options={pushOptions("Planejar a partir de hoje")} />
+          <AppStack.Screen name="MonthPlan" component={MonthPlanScreen} options={pushOptions("Planejamento")} />
+          <AppStack.Screen name="SalarySettings" component={SalarySettingsScreen} options={pushOptions("Salário e ciclo")} />
         </>
       ) : (
         <>
@@ -353,11 +354,11 @@ function AppNavigator() {
           <AppStack.Screen name="Invoice" component={InvoiceScreen} options={pushOptions("Fatura")} />
           <AppStack.Screen name="PayInvoice" component={PayInvoiceScreen} options={modalOptions("Pagar fatura")} />
           <AppStack.Screen name="Transfer" component={TransferScreen} options={modalOptions("Transferir")} />
-          <AppStack.Screen name="Bills" component={BillsScreen} options={pushOptions("Despesas fixas")} />
-          <AppStack.Screen name="BillForm" component={BillFormScreen} options={modalOptions("Despesa fixa")} />
+          <AppStack.Screen name="Bills" component={BillsScreen} options={pushOptions("Fixas, avulsas e entradas")} />
+          <AppStack.Screen name="BillForm" component={BillFormScreen} options={modalOptions("Item planejado")} />
           <AppStack.Screen name="PayBill" component={PayBillScreen} options={modalOptions("Pagar despesa fixa")} />
           <AppStack.Screen name="SalarySettings" component={SalarySettingsScreen} options={pushOptions("Salário e ciclo")} />
-          <AppStack.Screen name="FreshPlan" component={FreshPlanScreen} options={pushOptions("Planejar a partir de hoje")} />
+          <AppStack.Screen name="MonthPlan" component={MonthPlanScreen} options={pushOptions("Planejamento")} />
           <AppStack.Screen
             name="EditIncome"
             component={EditIncomeScreen}

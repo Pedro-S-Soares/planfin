@@ -23,7 +23,7 @@ export function InstallmentsSection({ expenseId, onAnticipated }: InstallmentsSe
   const [anticipating, setAnticipating] = useState(false);
   const [amount, setAmount] = useState<string | null>(null);
   const [anticipate, { loading: saving }] = useAnticipateInstallmentsMutation({
-    refetchQueries: ["Installments", "Invoices", "Invoice", "ExpenseHistoryWithAuthors", "FinancePanel", "SalaryProjection"],
+    refetchQueries: ["Installments", "Invoices", "Invoice", "ExpenseHistoryWithAuthors", "FinancePanel", "MonthPlan"],
     onCompleted: onAnticipated,
     onError: () => undefined, // o toast global avisa o erro
   });

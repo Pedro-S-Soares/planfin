@@ -124,13 +124,14 @@ export function CreatePeriodScreen() {
 
       <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 22 }}>
         <TouchableOpacity
-          onPress={() => navigation.navigate("FreshPlan")}
+          onPress={() => navigation.navigate("MonthPlan")}
           activeOpacity={0.85}
           style={{ borderWidth: 1.5, borderColor: Colors.primary, borderRadius: Radius.lg, padding: 16, marginBottom: 20 }}
         >
-          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>Planejar a partir de hoje (recomendado)</Text>
+          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>Planejamento do mês (recomendado)</Text>
           <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4, lineHeight: 18 }}>
-            O app soma o saldo da conta e o salário, tira as faturas e as despesas fixas e calcula o limite diário. ›
+            Fecha o mês atual com saldo, salário, fatura e boletos, mostra quanto sobra para variáveis no mês seguinte e
+            aplica a meta diária. ›
           </Text>
         </TouchableOpacity>
         <Controller

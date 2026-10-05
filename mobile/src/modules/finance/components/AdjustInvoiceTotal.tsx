@@ -19,7 +19,7 @@ export function AdjustInvoiceTotal({ cardId, month, currentTotal }: AdjustInvoic
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("0,00");
   const [setTotal, { loading }] = useSetInvoiceTotalMutation({
-    refetchQueries: ["Invoice", "Invoices", "FinancePanel", "SalaryProjection", "FreshPlan", "ExpenseHistoryWithAuthors"],
+    refetchQueries: ["Invoice", "Invoices", "FinancePanel", "MonthPlan", "ExpenseHistoryWithAuthors"],
     onCompleted: () => setEditing(false),
     onError: () => undefined, // o toast global avisa o erro
   });

@@ -64,6 +64,10 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
 
   object :recurring_bill do
     field :id, :id
+    @desc "expense | income"
+    field :direction, :string
+    @desc "YYYY-MM when it happens only in that month"
+    field :once_month, :string
     field :name, :string
     @desc "Estimated monthly amount"
     field :amount, :string
@@ -158,30 +162,6 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :available, :string
   end
 
-  object :projected_invoice do
-    field :card_id, :id
-    field :card_name, :string
-    field :month, :string
-    field :due_date, :string
-    field :status, :string
-    @desc "Still owed on the invoice today"
-    field :amount, :string
-    @desc "Card bills that will still be charged on this invoice"
-    field :pending_bills, :string
-  end
-
-  @desc "What the next salary already has to cover"
-  object :salary_projection do
-    field :salary_date, :string
-    field :cycle_end_date, :string
-    field :salary, :string
-    field :invoices, list_of(:projected_invoice)
-    field :account_bills, :string
-    field :committed, :string
-    @desc "salary − committed"
-    field :left, :string
-  end
-
   object :allowance_share do
     field :account_id, :id
     field :account_name, :string
@@ -213,34 +193,54 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :label, :string
     field :date, :string
     field :amount, :string
-    field :card_id, :id
-    field :month, :string
   end
 
-  @desc "Cash plan from today to the end of a salary cycle"
-  object :fresh_plan do
-    field :start_date, :string
+  @desc "This month: today until the eve of next month's salary"
+  object :month_plan_current do
     field :end_date, :string
-    field :days, :integer
     field :has_primary, :boolean
     @desc "Primary account balance today"
     field :balance, :string
-    field :salary_amount, :string
-    field :salary_date, :string
-    @desc "What unpaid invoices already hold"
-    field :cards, list_of(:plan_item)
-    @desc "Fixed bills paid from accounts until the end"
-    field :account_bills, list_of(:plan_item)
-    @desc "Fixed card bills still to be charged until the end"
-    field :card_bills, list_of(:plan_item)
-    @desc "balance + salary − cards − bills"
-    field :variable, :string
+    @desc "Salaries still to come in the window"
+    field :salaries, list_of(:plan_item)
+    @desc "Expected incomes still to come"
+    field :incomes, list_of(:plan_item)
+    @desc "Card invoices due in the window"
+    field :invoices, list_of(:plan_item)
+    field :after_invoices, :string
+    @desc "Recurring bills paid from accounts"
+    field :fixed_bills, list_of(:plan_item)
+    @desc "One-off bills paid from accounts"
+    field :one_off_bills, list_of(:plan_item)
+    @desc "What is left at the month closing (allowance when positive)"
+    field :leftover, :string
+  end
+
+  @desc "Next month: the cycle opened by next month's salary"
+  object :month_plan_next do
+    field :start_date, :string
+    field :end_date, :string
+    field :days, :integer
+    field :salary, :plan_item
+    @desc "Meal voucher balances"
+    field :benefits, list_of(:plan_item)
+    @desc "Every recurring bill (accounts and cards)"
+    field :fixed_bills, list_of(:plan_item)
+    field :installments, list_of(:plan_item)
+    @desc "Left for variable spending"
+    field :remaining, :string
+  end
+
+  object :month_plan do
+    field :current, :month_plan_current
+    field :next, :month_plan_next
   end
 
   object :finance_queries do
-    field :fresh_plan, :fresh_plan do
+    @desc "The monthly plan; null when the salary is not configured"
+    field :month_plan, :month_plan do
       arg(:today, :string)
-      resolve(&Finance.fresh_plan/3)
+      resolve(&Finance.month_plan/3)
     end
 
     field :allowance_plan, :allowance_plan do
@@ -251,11 +251,6 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :reserve_status, :reserve_status do
       arg(:today, :string)
       resolve(&Finance.reserve_status/3)
-    end
-
-    field :salary_projection, :salary_projection do
-      arg(:today, :string)
-      resolve(&Finance.salary_projection/3)
     end
 
     field :finance_panel, :finance_panel do
@@ -321,12 +316,11 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       resolve(&Finance.set_invoice_total/3)
     end
 
-    @desc "Close the current period yesterday and start one from today with the fresh plan"
-    field :start_fresh_plan, :period do
-      arg(:gordura, :string)
-      arg(:name, :string)
+    @desc "Use a daily goal from today until the eve of next month's salary"
+    field :apply_daily_goal, :period do
+      arg(:daily, non_null(:string))
       arg(:today, :string)
-      resolve(&Finance.start_fresh_plan/3)
+      resolve(&Finance.apply_daily_goal/3)
     end
 
     @desc "Transfer the end-of-cycle left over to the allowance accounts in equal parts"
@@ -360,6 +354,9 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     end
 
     field :create_recurring_bill, :recurring_bill do
+      arg(:direction, :string)
+      @desc "YYYY-MM to make it a one-month item; empty string clears"
+      arg(:once_month, :string)
       arg(:name, non_null(:string))
       arg(:amount, non_null(:string))
       arg(:due_day, non_null(:integer))
@@ -369,6 +366,9 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     end
 
     field :update_recurring_bill, :recurring_bill do
+      arg(:direction, :string)
+      @desc "YYYY-MM to make it a one-month item; empty string clears"
+      arg(:once_month, :string)
       arg(:id, non_null(:id))
       arg(:name, :string)
       arg(:amount, :string)

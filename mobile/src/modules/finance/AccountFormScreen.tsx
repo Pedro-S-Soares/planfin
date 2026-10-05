@@ -30,7 +30,7 @@ const KIND_HINT: Record<AccountKind, string> = {
   credit_card: "As compras viram fatura; ela é paga com a conta.",
   allowance: "Conta pessoal de um de vocês. Gastos aqui não entram no orçamento da casa.",
   reserve: "Reserva de emergência ou investimento. Fica fora do orçamento.",
-  benefit: "Vale alimentação ou refeição: saldo próprio que recebe um crédito todo mês. Fica fora do limite diário.",
+  benefit: "Vale alimentação ou refeição: saldo próprio que recebe um crédito todo mês. Entra no dinheiro dos gastos variáveis.",
 };
 
 export function AccountFormScreen() {
