@@ -132,4 +132,86 @@ defmodule PlanfinBackend.Finance.SalaryTest do
     assert Decimal.equal?(p.available, Decimal.new("4144.10"))
     assert Repo.aggregate(PlanfinBackend.Expenses.Expense, :count) == 3
   end
+
+  describe "salary of a month" do
+    test "paid early and with a different amount: credits the account and moves the cycle start" do
+      ctx = setup_group()
+      today = ~D[2026-10-10]
+
+      assert [%{month: {2026, 10}, date: ~D[2026-10-13], paid: false, amount: expected} | _] =
+               Salary.upcoming(ctx.group.id, today)
+
+      assert Decimal.equal?(expected, Decimal.new("6000.00"))
+
+      {:ok, entry} =
+        Salary.register(
+          ctx.group.id,
+          ctx.user.id,
+          Decimal.new("6200.00"),
+          ~D[2026-10-09],
+          {2026, 10}
+        )
+
+      assert entry.date == ~D[2026-10-09]
+      refute entry.counts_in_budget
+
+      assert [%{date: ~D[2026-10-09], paid: true, paid_on: ~D[2026-10-09], paid_amount: paid} | _] =
+               Salary.upcoming(ctx.group.id, today)
+
+      assert Decimal.equal?(paid, Decimal.new("6200.00"))
+      assert Decimal.equal?(Finance.account_balance(ctx.checking, today), Decimal.new("6700.00"))
+      # The cycle now starts on the day the money arrived
+      assert Salary.cycle(ctx.group.id, today).start_date == ~D[2026-10-09]
+
+      assert {:error, :already_registered} =
+               Salary.register(
+                 ctx.group.id,
+                 ctx.user.id,
+                 Decimal.new("1"),
+                 ~D[2026-10-10],
+                 {2026, 10}
+               )
+
+      # The month plan stops expecting it
+      {:ok, plan} = PlanfinBackend.Finance.MonthPlan.build(ctx.group.id, today)
+      assert plan.current.salaries == []
+
+      :ok = Salary.unregister(ctx.group.id, {2026, 10})
+      assert [%{date: ~D[2026-10-13], paid: false} | _] = Salary.upcoming(ctx.group.id, today)
+      assert Decimal.equal?(Finance.account_balance(ctx.checking, today), Decimal.new("500.00"))
+      assert {:error, :not_found} = Salary.unregister(ctx.group.id, {2026, 10})
+    end
+
+    test "a month can have its own expected amount, used by the plan" do
+      ctx = setup_group()
+      {:ok, _} = Salary.set_month(ctx.group.id, {2026, 10}, %{amount: Decimal.new("6200.00")})
+
+      assert Decimal.equal?(
+               Salary.salary_amount(ctx.group.id, {2026, 10}),
+               Decimal.new("6200.00")
+             )
+
+      assert Decimal.equal?(
+               Salary.salary_amount(ctx.group.id, {2026, 11}),
+               Decimal.new("6000.00")
+             )
+
+      # the date stays automatic
+      assert Salary.salary_date(ctx.group.id, {2026, 10}) == ~D[2026-10-13]
+
+      {:ok, plan} = PlanfinBackend.Finance.MonthPlan.build(ctx.group.id, ~D[2026-10-03])
+      assert [%{amount: amount, date: ~D[2026-10-13]}] = plan.current.salaries
+      assert Decimal.equal?(amount, Decimal.new("6200.00"))
+
+      # clearing the manual date keeps the amount
+      {:ok, _} = Salary.set_salary_date(ctx.group.id, {2026, 10}, ~D[2026-10-09])
+      :ok = Salary.clear_salary_date(ctx.group.id, {2026, 10})
+      assert Salary.salary_date(ctx.group.id, {2026, 10}) == ~D[2026-10-13]
+
+      assert Decimal.equal?(
+               Salary.salary_amount(ctx.group.id, {2026, 10}),
+               Decimal.new("6200.00")
+             )
+    end
+  end
 end

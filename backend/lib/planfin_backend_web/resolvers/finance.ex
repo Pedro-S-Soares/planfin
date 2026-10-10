@@ -6,7 +6,6 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   alias PlanfinBackend.Finance.{
     Allowance,
     Bills,
-    Calendar,
     MonthPlan,
     Invoices,
     Panel,
@@ -203,38 +202,26 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def update_settings(_parent, _args, context), do: access_error(context)
 
   def set_salary_date(_parent, %{month: month} = args, %{context: %{current_group: group}}) do
-    with {:ok, month} <- parse_month(month) do
-      case args[:date] do
-        nil ->
-          :ok = Salary.clear_salary_date(group.id, month)
-          {:ok, true}
-
-        date ->
-          with {:ok, date} <- parse_date(date),
-               {:ok, _} <- Salary.set_salary_date(group.id, month, date) do
-            {:ok, true}
-          end
-      end
+    with {:ok, month} <- parse_month(month),
+         :ok <- put_month_amount(group.id, month, args),
+         :ok <- put_month_date(group.id, month, args) do
+      {:ok, true}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, msg} -> {:error, msg}
     end
   end
 
   def set_salary_date(_parent, _args, context), do: access_error(context)
 
   def register_salary(_parent, args, %{context: %{current_group: group, current_user: user}}) do
-    settings = Salary.get_settings(group.id)
-
-    amount_result =
-      case args[:amount] do
-        nil when is_nil(settings.salary_amount) -> {:error, "Salary amount not configured"}
-        nil -> {:ok, settings.salary_amount}
-        value -> parse_decimal(value)
-      end
-
-    with {:ok, amount} <- amount_result,
-         {:ok, date} <- parse_date(args.date),
-         {:ok, expense} <- Salary.register(group.id, user.id, amount, date) do
+    with {:ok, date} <- parse_date(args.date),
+         {:ok, month} <- parse_salary_month(args[:month], date),
+         {:ok, amount} <- salary_amount_arg(group.id, month, args[:amount]),
+         {:ok, expense} <- Salary.register(group.id, user.id, amount, date, month) do
       {:ok, Budget.format_expense(expense)}
     else
+      {:error, :already_registered} -> {:error, "This month's salary is already registered"}
       {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
       {:error, msg} when is_binary(msg) -> {:error, msg}
       {:error, reason} -> {:error, inspect(reason)}
@@ -242,6 +229,59 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   end
 
   def register_salary(_parent, _args, context), do: access_error(context)
+
+  def unregister_salary(_parent, %{month: month}, %{context: %{current_group: group}}) do
+    with {:ok, month} <- parse_month(month) do
+      case Salary.unregister(group.id, month) do
+        :ok -> {:ok, true}
+        {:error, :not_found} -> {:error, "This month's salary is not registered"}
+      end
+    end
+  end
+
+  def unregister_salary(_parent, _args, context), do: access_error(context)
+
+  defp put_month_amount(group_id, month, args) do
+    case Map.fetch(args, :amount) do
+      :error ->
+        :ok
+
+      {:ok, value} when value in [nil, ""] ->
+        with {:ok, _} <- Salary.set_month(group_id, month, %{amount: nil}), do: :ok
+
+      {:ok, value} ->
+        with {:ok, amount} <- parse_decimal(value),
+             {:ok, _} <- Salary.set_month(group_id, month, %{amount: amount}),
+             do: :ok
+    end
+  end
+
+  defp put_month_date(group_id, month, args) do
+    case Map.fetch(args, :date) do
+      :error ->
+        :ok
+
+      {:ok, nil} ->
+        Salary.clear_salary_date(group_id, month)
+
+      {:ok, value} ->
+        with {:ok, date} <- parse_date(value),
+             {:ok, _} <- Salary.set_salary_date(group_id, month, date),
+             do: :ok
+    end
+  end
+
+  defp parse_salary_month(nil, date), do: {:ok, {date.year, date.month}}
+  defp parse_salary_month(month, _date), do: parse_month(month)
+
+  defp salary_amount_arg(group_id, month, nil) do
+    case Salary.salary_amount(group_id, month) do
+      nil -> {:error, "Salary amount not configured"}
+      amount -> {:ok, amount}
+    end
+  end
+
+  defp salary_amount_arg(_group_id, _month, value), do: parse_decimal(value)
 
   def create_bill(_parent, args, %{context: %{current_group: group}}) do
     with {:ok, amount} <- parse_decimal(args.amount),
@@ -511,22 +551,22 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   defp format_settings(group_id, settings, today) do
     upcoming =
-      for offset <- 0..2 do
-        month = Calendar.add_months({today.year, today.month}, offset)
-        date = Salary.salary_date(group_id, month, settings)
-
-        automatic =
-          Calendar.nth_labor_business_day(
-            elem(month, 0),
-            elem(month, 1),
-            settings.salary_business_day
-          )
-
-        %{
-          month: Invoices.format_month(month),
-          date: Date.to_iso8601(date),
-          is_manual: date != automatic
-        }
+      if Salary.configured?(settings) do
+        group_id
+        |> Salary.upcoming(today)
+        |> Enum.map(fn u ->
+          %{
+            month: Invoices.format_month(u.month),
+            date: Date.to_iso8601(u.date),
+            is_manual: u.is_manual,
+            amount: decimal_string(u.amount),
+            paid: u.paid,
+            paid_amount: decimal_string(u.paid_amount),
+            paid_on: u.paid_on && Date.to_iso8601(u.paid_on)
+          }
+        end)
+      else
+        []
       end
 
     %{

@@ -177,6 +177,10 @@ query FinancialSettings($today: String) {
       month
       date
       isManual
+      amount
+      paid
+      paidAmount
+      paidOn
     }
   }
 }

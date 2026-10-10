@@ -1,23 +1,22 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { CurrencyInput } from "../../components/CurrencyInput";
-import { DatePickerField } from "../../components/DatePickerField";
 import { Btn } from "../../components/ui/Btn";
 import { Card } from "../../components/ui/Card";
 import { FieldInput } from "../../components/ui/FieldInput";
 import {
   useFinancialSettingsQuery,
-  useSetSalaryDateMutation,
   useUpdateFinancialSettingsMutation,
 } from "../../graphql/__generated__/hooks";
 import { displayToAPI, formatCents, parseCents } from "../../lib/currency";
-import { formatDateBR, toISODate } from "../../lib/date";
+import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors, Radius } from "../../theme/tokens";
+import { Colors } from "../../theme/tokens";
 import { AccountPicker } from "./components/AccountPicker";
 import { FormLabel } from "./components/FormLabel";
-import { formatMonth, toNumber } from "./format";
+import { SalaryMonthRow, type SalaryMonth } from "./components/SalaryMonthRow";
+import { toNumber } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
 
 type SalaryFormProps = {
@@ -73,60 +72,6 @@ function SalaryForm({ initialAmount, initialDay, initialAccountId }: SalaryFormP
   );
 }
 
-function UpcomingDates({ dates }: { dates: { month: string; date: string; isManual: boolean }[] }) {
-  const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-  const [setSalaryDate, { loading }] = useSetSalaryDateMutation({
-    refetchQueries: ["FinancialSettings", "FinancePanel", "MonthPlan"],
-    onCompleted: () => setEditing(null),
-  });
-
-  return (
-    <Card padding={16} style={{ marginTop: 16 }}>
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7, marginBottom: 6 }}>
-        PRÓXIMOS SALÁRIOS
-      </Text>
-      {dates.map((d) => (
-        <View key={d.month} style={{ paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.text }}>{formatMonth(d.month)}</Text>
-              <Text style={{ fontSize: 12, color: Colors.textSec }}>
-                {formatDateBR(d.date)}
-                {d.isManual ? " · data ajustada" : ""}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => {
-                setEditing(d.month);
-                setDraft(d.date);
-              }}
-              style={{ backgroundColor: Colors.bg, borderRadius: Radius.full, paddingHorizontal: 12, paddingVertical: 6 }}
-            >
-              <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primaryText }}>Alterar</Text>
-            </TouchableOpacity>
-          </View>
-          {editing === d.month ? (
-            <View style={{ marginTop: 10 }}>
-              <DatePickerField value={draft} onChange={setDraft} />
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <Btn label="Usar esta data" size="sm" loading={loading} onPress={() => setSalaryDate({ variables: { month: d.month, date: draft } })} />
-                </View>
-                {d.isManual ? (
-                  <View style={{ flex: 1 }}>
-                    <Btn label="Automática" size="sm" variant="ghost" onPress={() => setSalaryDate({ variables: { month: d.month, date: null } })} />
-                  </View>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
-        </View>
-      ))}
-    </Card>
-  );
-}
-
 export function SalarySettingsScreen() {
   usePageTitle("Planfin - Salário e ciclo");
   const { data, loading } = useFinancialSettingsQuery({
@@ -134,8 +79,20 @@ export function SalarySettingsScreen() {
     fetchPolicy: "cache-and-network",
   });
   const settings = data?.financialSettings;
-  const dates = (settings?.upcomingSalaryDates ?? []).flatMap((d) =>
-    d?.month && d.date ? [{ month: d.month, date: d.date, isManual: d.isManual ?? false }] : [],
+  const salaries: SalaryMonth[] = (settings?.upcomingSalaryDates ?? []).flatMap((d) =>
+    d?.month && d.date
+      ? [
+          {
+            month: d.month,
+            date: d.date,
+            isManual: d.isManual ?? false,
+            amount: d.amount ?? null,
+            paid: d.paid ?? false,
+            paidAmount: d.paidAmount ?? null,
+            paidOn: d.paidOn ?? null,
+          },
+        ]
+      : [],
   );
 
   return (
@@ -154,7 +111,17 @@ export function SalarySettingsScreen() {
           initialAccountId={settings?.salaryAccountId}
         />
       )}
-      {dates.length > 0 ? <UpcomingDates dates={dates} /> : null}
+      {salaries.length > 0 ? (
+        <Card padding={16} style={{ marginTop: 16 }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>SALÁRIOS</Text>
+          <Text style={{ fontSize: 12, color: Colors.textTer, marginTop: 2 }}>
+            Quando cair, marque como pago com o valor e o dia reais. Antes disso, dá para ajustar a previsão do mês.
+          </Text>
+          {salaries.map((salary) => (
+            <SalaryMonthRow key={`${salary.month}-${salary.paid}-${salary.date}-${salary.amount}`} salary={salary} />
+          ))}
+        </Card>
+      ) : null}
       <Text style={{ fontSize: 12, color: Colors.textTer, marginTop: 16, lineHeight: 18 }}>
         Renda variável, que vai direto para a reserva, não entra no orçamento: lance como receita na conta Reserva.
       </Text>
