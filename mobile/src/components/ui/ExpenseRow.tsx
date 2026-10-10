@@ -3,6 +3,7 @@ import { Colors, Radius } from "../../theme/tokens";
 import { categoryColor } from "../../theme/tokens";
 import { CategoryIcon } from "./CategoryIcon";
 import { useCurrency } from "../../context/CurrencyContext";
+import { subcategoryLabel } from "../../lib/category-label";
 
 interface ExpenseItem {
   id: string;
@@ -73,8 +74,8 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.text }} numberOfLines={1}>
-            {item.source === "invoice_adjustment" ? "Ajuste da fatura" : item.subcategory?.name ?? "Sem categoria"}
+          <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: Colors.text }} numberOfLines={2}>
+            {item.source === "invoice_adjustment" ? "Ajuste da fatura" : subcategoryLabel(item.subcategory)}
           </Text>
           {isIncome && (
             <View style={{

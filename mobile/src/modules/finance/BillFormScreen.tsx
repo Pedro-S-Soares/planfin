@@ -206,7 +206,7 @@ export function BillFormScreen() {
           name="subcategoryId"
           render={({ field: { onChange, value } }) => (
             <View style={{ marginBottom: 16 }}>
-              <FormLabel>Subcategoria</FormLabel>
+              <FormLabel>{`Subcategoria de ${categories.find((c) => c.id === watch("categoryId"))?.name ?? "categoria"}`}</FormLabel>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
                 {subcategories.map((sub) => (
                   <Chip key={sub.id ?? ""} label={sub.name ?? ""} selected={value === sub.id} onPress={() => onChange(value === sub.id ? "" : sub.id)} />

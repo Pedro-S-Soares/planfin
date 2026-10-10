@@ -168,7 +168,7 @@ defmodule PlanfinBackend.Finance do
       |> where([e], e.account_id == ^account.id)
       |> order_by([e], desc: e.date, desc: e.inserted_at)
       |> limit(^limit)
-      |> preload(:subcategory)
+      |> preload(subcategory: :category)
       |> Repo.all()
       |> Enum.map(fn e ->
         sign = if e.type == "income", do: 1, else: -1
@@ -210,12 +210,18 @@ defmodule PlanfinBackend.Finance do
   end
 
   defp entry_description(%Expense{} = e) do
-    base = e.note || (e.subcategory && e.subcategory.name) || "Lançamento"
+    base = e.note || subcategory_label(e.subcategory) || "Lançamento"
 
     if e.installment_count,
       do: "#{base} (#{e.installment_number}/#{e.installment_count})",
       else: base
   end
+
+  # Subcategories are always shown as "Categoria - Subcategoria": the same
+  # name can exist under different categories.
+  defp subcategory_label(%{name: name, category: %{name: category}}), do: "#{category} - #{name}"
+  defp subcategory_label(%{name: name}), do: name
+  defp subcategory_label(_), do: nil
 
   defp transfer_description("card_payment", false, other), do: "Pagamento da fatura #{other}"
   defp transfer_description("card_payment", true, other), do: "Pagamento recebido de #{other}"

@@ -207,7 +207,7 @@ export function AddExpenseScreen() {
       {subcategories.length > 0 && (
         <>
           <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 }}>
-            Subcategoria
+            Subcategoria de {categories.find((c) => c?.id === selectedCategoryId)?.name ?? "categoria"}
           </Text>
           <Controller
             control={control}

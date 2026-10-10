@@ -1,5 +1,6 @@
 import type { DashboardDataQuery } from "../../graphql/__generated__/hooks";
-import { assignCategoryColors } from "./palette";
+import { joinCategoryLabel } from "../../lib/category-label";
+import { assignCategoryColors, OTHER_CATEGORY_ID } from "./palette";
 import type { CategoryInfo, Fact } from "./types";
 
 const NO_SUBCATEGORY = "Sem subcategoria";
@@ -28,14 +29,16 @@ export function buildFacts(
     if (!e?.id || !e.date || !e.amount) return [];
     const amount = Number(e.amount);
     if (!Number.isFinite(amount)) return [];
+    const categoryId = resolve(e.subcategory?.categoryId);
+    const categoryName = categoryId === OTHER_CATEGORY_ID ? null : byId.get(categoryId)?.name;
     return [
       {
         id: e.id,
         amount,
         date: e.date,
         isExtra: e.isExtra ?? false,
-        categoryId: resolve(e.subcategory?.categoryId),
-        subcategoryName: e.subcategory?.name ?? NO_SUBCATEGORY,
+        categoryId,
+        subcategoryName: e.subcategory?.name ? joinCategoryLabel(categoryName, e.subcategory.name) : NO_SUBCATEGORY,
         authorId: e.createdBy?.id ?? "unknown",
         authorName: authorName(e.createdBy, currentUserId),
       },
