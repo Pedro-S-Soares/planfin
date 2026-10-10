@@ -281,4 +281,28 @@ defmodule PlanfinBackend.FinanceTest do
     assert PlanfinBackend.Repo.reload(recent).account_id == ctx.card.id
     assert is_nil(PlanfinBackend.Repo.reload(old).account_id)
   end
+
+  test "account movements name the subcategory with its category" do
+    ctx = setup_group()
+    {:ok, pet} = PlanfinBackend.Categories.create_category(ctx.group.id, %{name: "Tobias"})
+    {:ok, health} = PlanfinBackend.Categories.create_subcategory(pet, %{name: "Saúde"})
+
+    entry(ctx, %{
+      amount: Decimal.new("238.00"),
+      account_id: ctx.checking.id,
+      subcategory_id: health.id
+    })
+
+    entry(ctx, %{
+      amount: Decimal.new("10.00"),
+      account_id: ctx.checking.id,
+      subcategory_id: health.id,
+      note: "Ultrassom"
+    })
+
+    descriptions =
+      ctx.checking |> Finance.list_movements() |> Enum.map(& &1.description) |> Enum.sort()
+
+    assert descriptions == ["Tobias - Saúde", "Ultrassom"]
+  end
 end

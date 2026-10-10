@@ -7,6 +7,7 @@ export type Fact = {
   isExtra: boolean;
   /** Category the colour/legend follows — OTHER_CATEGORY_ID when folded or uncategorised */
   categoryId: string;
+  /** Display name, already as "Categoria - Subcategoria" */
   subcategoryName: string;
   authorId: string;
   authorName: string;
