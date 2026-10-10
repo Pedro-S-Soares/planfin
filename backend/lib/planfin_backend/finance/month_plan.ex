@@ -124,10 +124,11 @@ defmodule PlanfinBackend.Finance.MonthPlan do
       |> Enum.filter(&(&1.kind == "credit_card"))
       |> Enum.flat_map(&installments_due(&1, next_salary, b_end))
 
-    salary_item = %{label: "Salário", date: next_salary, amount: settings.salary_amount}
+    next_salary_amount = Salary.salary_amount(group_id, next_month, settings)
+    salary_item = %{label: "Salário", date: next_salary, amount: next_salary_amount}
 
     remaining =
-      settings.salary_amount
+      next_salary_amount
       |> Decimal.add(sum(benefits))
       |> Decimal.sub(sum(fixed))
       |> Decimal.sub(sum(installments))
@@ -151,16 +152,21 @@ defmodule PlanfinBackend.Finance.MonthPlan do
   defp pending_salaries(group_id, settings, primary, today, a_end) do
     cycle = Salary.cycle(group_id, today)
 
-    [{cycle.start_date.year, cycle.start_date.month}, {today.year, today.month}]
+    [{cycle.start_date.year, cycle.start_date.month}, cycle.month, {today.year, today.month}]
     |> Enum.uniq()
-    |> Enum.map(&Salary.salary_date(group_id, &1, settings))
-    |> Enum.uniq()
-    |> Enum.filter(fn date ->
+    |> Enum.map(fn month ->
+      %{
+        label: "Salário",
+        date: Salary.salary_date(group_id, month, settings),
+        amount: Salary.salary_amount(group_id, month, settings)
+      }
+    end)
+    |> Enum.uniq_by(& &1.date)
+    |> Enum.filter(fn %{date: date} ->
       Date.compare(date, cycle.start_date) != :lt and Date.compare(date, a_end) != :gt and
         not registered?(group_id, date) and
         (is_nil(primary) or Date.compare(primary.balance_date, date) == :lt)
     end)
-    |> Enum.map(&%{label: "Salário", date: &1, amount: settings.salary_amount})
   end
 
   defp registered?(group_id, date) do

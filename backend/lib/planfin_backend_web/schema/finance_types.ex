@@ -144,6 +144,11 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :month, :string
     field :date, :string
     field :is_manual, :boolean
+    @desc "Expected amount (the month's own or the usual salary)"
+    field :amount, :string
+    field :paid, :boolean
+    field :paid_amount, :string
+    field :paid_on, :string
   end
 
   @desc "Budget proposal for a salary cycle"
@@ -345,18 +350,27 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       resolve(&Finance.update_settings/3)
     end
 
-    @desc "Manual salary date for a month (null date restores the automatic one)"
+    @desc "What is specific to a month's salary. A null date restores the automatic one; a null/empty amount restores the usual salary. Omitted args are left untouched."
     field :set_salary_date, :boolean do
       arg(:month, non_null(:string))
       arg(:date, :string)
+      arg(:amount, :string)
       resolve(&Finance.set_salary_date/3)
     end
 
-    @desc "Record the salary as income on the salary account"
+    @desc "Mark a month's salary as paid: real amount and date, credited to the salary account"
     field :register_salary, :expense do
+      @desc "YYYY-MM; defaults to the month of the date"
+      arg(:month, :string)
+      @desc "Defaults to the month's expected amount"
       arg(:amount, :string)
       arg(:date, non_null(:string))
       resolve(&Finance.register_salary/3)
+    end
+
+    field :unregister_salary, :boolean do
+      arg(:month, non_null(:string))
+      resolve(&Finance.unregister_salary/3)
     end
 
     field :create_recurring_bill, :recurring_bill do

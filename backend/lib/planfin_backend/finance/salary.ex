@@ -66,21 +66,62 @@ defmodule PlanfinBackend.Finance.Salary do
     end
   end
 
-  def set_salary_date(group_id, {year, month}, %Date{} = date) do
-    month_date = Date.new!(year, month, 1)
+  @doc "Expected salary of `{year, month}`: the month's own amount or the usual one."
+  def salary_amount(group_id, {year, month}, settings \\ nil) do
+    settings = settings || get_settings(group_id)
 
-    (Repo.get_by(SalaryDateOverride, group_id: group_id, month: month_date) ||
-       %SalaryDateOverride{})
-    |> SalaryDateOverride.changeset(%{group_id: group_id, month: month_date, date: date})
+    case Repo.get_by(SalaryDateOverride, group_id: group_id, month: Date.new!(year, month, 1)) do
+      %SalaryDateOverride{amount: %Decimal{} = amount} -> amount
+      _ -> settings.salary_amount
+    end
+  end
+
+  def set_salary_date(group_id, month, %Date{} = date),
+    do: set_month(group_id, month, %{date: date})
+
+  @doc """
+  Sets what is specific to a month's salary. `:date` and `:amount` are both
+  optional; a `nil` amount goes back to the usual salary.
+  """
+  def set_month(group_id, {year, month}, attrs) do
+    month_date = Date.new!(year, month, 1)
+    existing = Repo.get_by(SalaryDateOverride, group_id: group_id, month: month_date)
+    settings = get_settings(group_id)
+
+    date =
+      Map.get(attrs, :date) || (existing && existing.date) ||
+        Calendar.nth_labor_business_day(year, month, settings.salary_business_day)
+
+    amount = if Map.has_key?(attrs, :amount), do: attrs.amount, else: existing && existing.amount
+
+    (existing || %SalaryDateOverride{})
+    |> SalaryDateOverride.changeset(%{
+      group_id: group_id,
+      month: month_date,
+      date: date,
+      amount: amount
+    })
     |> Repo.insert_or_update()
   end
 
+  @doc "Back to the automatic date. The month's own amount, if any, is kept."
   def clear_salary_date(group_id, {year, month}) do
-    SalaryDateOverride
-    |> where([o], o.group_id == ^group_id and o.month == ^Date.new!(year, month, 1))
-    |> Repo.delete_all()
+    month_date = Date.new!(year, month, 1)
 
-    :ok
+    case Repo.get_by(SalaryDateOverride, group_id: group_id, month: month_date) do
+      nil ->
+        :ok
+
+      %SalaryDateOverride{amount: nil} = override ->
+        Repo.delete!(override)
+        :ok
+
+      override ->
+        settings = get_settings(group_id)
+        automatic = Calendar.nth_labor_business_day(year, month, settings.salary_business_day)
+        override |> SalaryDateOverride.changeset(%{date: automatic}) |> Repo.update!()
+        :ok
+    end
   end
 
   @doc "Cycle containing `today`: `%{start_date, end_date, next_salary_date, month}`."
@@ -137,7 +178,7 @@ defmodule PlanfinBackend.Finance.Salary do
 
       %{
         configured: true,
-        amount: settings.salary_amount,
+        amount: salary_amount(group_id, c.month, settings),
         cycle_start_date: c.start_date,
         next_salary_date: c.next_salary_date,
         pending: recent? and not received?(group_id, today)
@@ -172,9 +213,33 @@ defmodule PlanfinBackend.Finance.Salary do
     |> Repo.exists?()
   end
 
-  @doc "Records the salary as income on the salary account (outside the daily budget)."
-  def register(group_id, user_id, %Decimal{} = amount, %Date{} = date) do
+  @doc """
+  The entry that paid the salary of `month`, or `nil`. A salary deposited up to
+  3 days before the month's salary date still counts.
+  """
+  def payment(group_id, month, settings \\ nil) do
+    date = salary_date(group_id, month, settings)
+    from = Date.add(date, -3)
+
+    Expense
+    |> where(
+      [e],
+      e.group_id == ^group_id and e.source == "salary" and e.date >= ^from and e.date <= ^date
+    )
+    |> order_by([e], desc: e.date)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  @doc """
+  Marks the salary of `month` (default: the month of `date`) as paid: records
+  the real `amount` as income on the salary account, outside the daily
+  budget, and makes `date` that month's salary date, so the cycle starts when
+  the money actually arrived.
+  """
+  def register(group_id, user_id, %Decimal{} = amount, %Date{} = date, month \\ nil) do
     settings = get_settings(group_id)
+    month = month || {date.year, date.month}
 
     account_id =
       settings.salary_account_id ||
@@ -183,15 +248,64 @@ defmodule PlanfinBackend.Finance.Salary do
           primary -> primary.id
         end
 
-    Expenses.create_expense(group_id, user_id, %{
-      amount: amount,
-      date: date,
-      type: "income",
-      note: "Salário",
-      account_id: account_id,
-      counts_in_budget: false,
-      source: "salary"
-    })
+    if payment(group_id, month, settings) do
+      {:error, :already_registered}
+    else
+      Repo.transaction(fn ->
+        with {:ok, _} <- set_month(group_id, month, %{date: date}),
+             {:ok, entry} <-
+               Expenses.create_expense(group_id, user_id, %{
+                 amount: amount,
+                 date: date,
+                 type: "income",
+                 note: "Salário",
+                 account_id: account_id,
+                 counts_in_budget: false,
+                 source: "salary"
+               }) do
+          entry
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
+    end
+  end
+
+  @doc "Undoes the payment of `month`: deletes the entry and restores the automatic date."
+  def unregister(group_id, month) do
+    case payment(group_id, month) do
+      nil ->
+        {:error, :not_found}
+
+      entry ->
+        {:ok, _} = Expenses.delete_expense(group_id, entry.id)
+        clear_salary_date(group_id, month)
+    end
+  end
+
+  @doc """
+  The salary of the current month and the next two: date, expected amount and,
+  when already paid, the real amount and date.
+  """
+  def upcoming(group_id, %Date{} = today) do
+    settings = get_settings(group_id)
+
+    for offset <- 0..2 do
+      {year, mon} = month = Calendar.add_months({today.year, today.month}, offset)
+      date = salary_date(group_id, month, settings)
+      paid = payment(group_id, month, settings)
+
+      %{
+        month: month,
+        date: date,
+        is_manual:
+          date != Calendar.nth_labor_business_day(year, mon, settings.salary_business_day),
+        amount: salary_amount(group_id, month, settings),
+        paid: paid != nil,
+        paid_amount: paid && paid.amount,
+        paid_on: paid && paid.date
+      }
+    end
   end
 
   # ---- Proposal ----

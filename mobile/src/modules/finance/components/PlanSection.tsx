@@ -12,10 +12,12 @@ type PlanSectionProps = {
   items: PlanLine[];
   /** Shown instead of a sum when there are no items. */
   emptyText?: string;
+  /** Single-item line: no "(1) ▾" and no expansion. */
+  hideCount?: boolean;
 };
 
 /** One line of the plan; expands to show what makes it up. */
-export function PlanSection({ sign, title, items, emptyText }: PlanSectionProps) {
+export function PlanSection({ sign, title, items, emptyText, hideCount }: PlanSectionProps) {
   const { currency } = useCurrency();
   const [open, setOpen] = useState(false);
   const total = items.reduce((acc, i) => acc + toNumber(i.amount), 0);
@@ -24,14 +26,16 @@ export function PlanSection({ sign, title, items, emptyText }: PlanSectionProps)
   return (
     <View style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
       <TouchableOpacity
-        disabled={items.length === 0}
+        disabled={items.length === 0 || hideCount}
         onPress={() => setOpen((v) => !v)}
         activeOpacity={0.7}
         style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
       >
         <Text style={{ flex: 1, fontSize: 14, color: Colors.text }}>
           {title}
-          {items.length > 0 ? <Text style={{ color: Colors.textTer }}>{open ? "  ▴" : `  (${items.length}) ▾`}</Text> : null}
+          {items.length > 0 && !hideCount ? (
+            <Text style={{ color: Colors.textTer }}>{open ? "  ▴" : `  (${items.length}) ▾`}</Text>
+          ) : null}
         </Text>
         <Text style={{ fontSize: 14, fontWeight: "700", color }}>
           {items.length === 0 && emptyText

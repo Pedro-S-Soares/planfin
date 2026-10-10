@@ -178,12 +178,20 @@ mutation UpdateFinancialSettings($salaryAmount: String, $salaryBusinessDay: Int,
   }
 }
 
-mutation SetSalaryDate($month: String!, $date: String) {
-  setSalaryDate(month: $month, date: $date)
+mutation SetSalaryDate($month: String!, $date: String, $amount: String) {
+  setSalaryDate(month: $month, date: $date, amount: $amount)
 }
 
-mutation RegisterSalary($amount: String, $date: String!) {
-  registerSalary(amount: $amount, date: $date) {
+mutation ResetSalaryDate($month: String!) {
+  setSalaryDate(month: $month, date: null)
+}
+
+mutation UnregisterSalary($month: String!) {
+  unregisterSalary(month: $month)
+}
+
+mutation RegisterSalary($amount: String, $date: String!, $month: String) {
+  registerSalary(amount: $amount, date: $date, month: $month) {
     id
     amount
   }

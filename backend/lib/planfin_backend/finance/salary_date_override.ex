@@ -1,5 +1,5 @@
 defmodule PlanfinBackend.Finance.SalaryDateOverride do
-  @moduledoc "Manual salary date for one month."
+  @moduledoc "What is specific to one month's salary: its date and/or its amount."
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -9,6 +9,7 @@ defmodule PlanfinBackend.Finance.SalaryDateOverride do
   schema "salary_date_overrides" do
     field :month, :date
     field :date, :date
+    field :amount, :decimal
 
     belongs_to :group, PlanfinBackend.Groups.Group
 
@@ -17,7 +18,8 @@ defmodule PlanfinBackend.Finance.SalaryDateOverride do
 
   def changeset(override, attrs) do
     override
-    |> cast(attrs, [:month, :date, :group_id])
+    |> cast(attrs, [:month, :date, :amount, :group_id])
+    |> validate_number(:amount, greater_than: 0)
     |> validate_required([:month, :date, :group_id])
     |> unique_constraint([:group_id, :month])
   end

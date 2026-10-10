@@ -396,7 +396,7 @@ export type RootMutationType = {
   /** Pay (part of) a card invoice from another account */
   payInvoice?: Maybe<Invoice>;
   redeemInviteCode?: Maybe<RedeemInvitePayload>;
-  /** Record the salary as income on the salary account */
+  /** Mark a month's salary as paid: real amount and date, credited to the salary account */
   registerSalary?: Maybe<Expense>;
   registerUser?: Maybe<AuthPayload>;
   removeMember?: Maybe<Scalars['Boolean']['output']>;
@@ -408,10 +408,11 @@ export type RootMutationType = {
   setAccountBalance?: Maybe<FinancialAccount>;
   /** Set the invoice total to the bank's number; the difference becomes one adjustment entry */
   setInvoiceTotal?: Maybe<Invoice>;
-  /** Manual salary date for a month (null date restores the automatic one) */
+  /** What is specific to a month's salary. A null date restores the automatic one; a null/empty amount restores the usual salary. Omitted args are left untouched. */
   setSalaryDate?: Maybe<Scalars['Boolean']['output']>;
   switchActiveGroup?: Maybe<Group>;
   unpayBill?: Maybe<Scalars['Boolean']['output']>;
+  unregisterSalary?: Maybe<Scalars['Boolean']['output']>;
   updateCategory?: Maybe<Category>;
   updateExpense?: Maybe<Expense>;
   updateFinancialAccount?: Maybe<FinancialAccount>;
@@ -613,6 +614,7 @@ export type RootMutationTypeRedeemInviteCodeArgs = {
 export type RootMutationTypeRegisterSalaryArgs = {
   amount?: InputMaybe<Scalars['String']['input']>;
   date: Scalars['String']['input'];
+  month?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -669,6 +671,7 @@ export type RootMutationTypeSetInvoiceTotalArgs = {
 
 
 export type RootMutationTypeSetSalaryDateArgs = {
+  amount?: InputMaybe<Scalars['String']['input']>;
   date?: InputMaybe<Scalars['String']['input']>;
   month: Scalars['String']['input'];
 };
@@ -681,6 +684,11 @@ export type RootMutationTypeSwitchActiveGroupArgs = {
 
 export type RootMutationTypeUnpayBillArgs = {
   billId: Scalars['ID']['input'];
+  month: Scalars['String']['input'];
+};
+
+
+export type RootMutationTypeUnregisterSalaryArgs = {
   month: Scalars['String']['input'];
 };
 
@@ -897,10 +905,15 @@ export type RootQueryTypeReserveStatusArgs = {
 
 export type SalaryDate = {
   __typename?: 'SalaryDate';
+  /** Expected amount (the month's own or the usual salary) */
+  amount?: Maybe<Scalars['String']['output']>;
   date?: Maybe<Scalars['String']['output']>;
   isManual?: Maybe<Scalars['Boolean']['output']>;
   /** YYYY-MM */
   month?: Maybe<Scalars['String']['output']>;
+  paid?: Maybe<Scalars['Boolean']['output']>;
+  paidAmount?: Maybe<Scalars['String']['output']>;
+  paidOn?: Maybe<Scalars['String']['output']>;
 };
 
 export type SalaryInfo = {
@@ -1285,14 +1298,30 @@ export type UpdateFinancialSettingsMutation = { __typename?: 'RootMutationType',
 export type SetSalaryDateMutationVariables = Exact<{
   month: Scalars['String']['input'];
   date?: InputMaybe<Scalars['String']['input']>;
+  amount?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
 export type SetSalaryDateMutation = { __typename?: 'RootMutationType', setSalaryDate?: boolean | null };
 
+export type ResetSalaryDateMutationVariables = Exact<{
+  month: Scalars['String']['input'];
+}>;
+
+
+export type ResetSalaryDateMutation = { __typename?: 'RootMutationType', setSalaryDate?: boolean | null };
+
+export type UnregisterSalaryMutationVariables = Exact<{
+  month: Scalars['String']['input'];
+}>;
+
+
+export type UnregisterSalaryMutation = { __typename?: 'RootMutationType', unregisterSalary?: boolean | null };
+
 export type RegisterSalaryMutationVariables = Exact<{
   amount?: InputMaybe<Scalars['String']['input']>;
   date: Scalars['String']['input'];
+  month?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
@@ -1499,7 +1528,7 @@ export type FinancialSettingsQueryVariables = Exact<{
 }>;
 
 
-export type FinancialSettingsQuery = { __typename?: 'RootQueryType', financialSettings?: { __typename?: 'FinancialSettings', salaryAmount?: string | null, salaryBusinessDay?: number | null, salaryAccountId?: string | null, reserveGoal?: string | null, upcomingSalaryDates?: Array<{ __typename?: 'SalaryDate', month?: string | null, date?: string | null, isManual?: boolean | null } | null> | null } | null };
+export type FinancialSettingsQuery = { __typename?: 'RootQueryType', financialSettings?: { __typename?: 'FinancialSettings', salaryAmount?: string | null, salaryBusinessDay?: number | null, salaryAccountId?: string | null, reserveGoal?: string | null, upcomingSalaryDates?: Array<{ __typename?: 'SalaryDate', month?: string | null, date?: string | null, isManual?: boolean | null, amount?: string | null, paid?: boolean | null, paidAmount?: string | null, paidOn?: string | null } | null> | null } | null };
 
 export type AllowancePlanQueryVariables = Exact<{
   today?: InputMaybe<Scalars['String']['input']>;
@@ -2926,8 +2955,8 @@ export type UpdateFinancialSettingsMutationHookResult = ReturnType<typeof useUpd
 export type UpdateFinancialSettingsMutationResult = Apollo.MutationResult<UpdateFinancialSettingsMutation>;
 export type UpdateFinancialSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateFinancialSettingsMutation, UpdateFinancialSettingsMutationVariables>;
 export const SetSalaryDateDocument = gql`
-    mutation SetSalaryDate($month: String!, $date: String) {
-  setSalaryDate(month: $month, date: $date)
+    mutation SetSalaryDate($month: String!, $date: String, $amount: String) {
+  setSalaryDate(month: $month, date: $date, amount: $amount)
 }
     `;
 export type SetSalaryDateMutationFn = Apollo.MutationFunction<SetSalaryDateMutation, SetSalaryDateMutationVariables>;
@@ -2947,6 +2976,7 @@ export type SetSalaryDateMutationFn = Apollo.MutationFunction<SetSalaryDateMutat
  *   variables: {
  *      month: // value for 'month'
  *      date: // value for 'date'
+ *      amount: // value for 'amount'
  *   },
  * });
  */
@@ -2957,9 +2987,71 @@ export function useSetSalaryDateMutation(baseOptions?: Apollo.MutationHookOption
 export type SetSalaryDateMutationHookResult = ReturnType<typeof useSetSalaryDateMutation>;
 export type SetSalaryDateMutationResult = Apollo.MutationResult<SetSalaryDateMutation>;
 export type SetSalaryDateMutationOptions = Apollo.BaseMutationOptions<SetSalaryDateMutation, SetSalaryDateMutationVariables>;
+export const ResetSalaryDateDocument = gql`
+    mutation ResetSalaryDate($month: String!) {
+  setSalaryDate(month: $month, date: null)
+}
+    `;
+export type ResetSalaryDateMutationFn = Apollo.MutationFunction<ResetSalaryDateMutation, ResetSalaryDateMutationVariables>;
+
+/**
+ * __useResetSalaryDateMutation__
+ *
+ * To run a mutation, you first call `useResetSalaryDateMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useResetSalaryDateMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [resetSalaryDateMutation, { data, loading, error }] = useResetSalaryDateMutation({
+ *   variables: {
+ *      month: // value for 'month'
+ *   },
+ * });
+ */
+export function useResetSalaryDateMutation(baseOptions?: Apollo.MutationHookOptions<ResetSalaryDateMutation, ResetSalaryDateMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ResetSalaryDateMutation, ResetSalaryDateMutationVariables>(ResetSalaryDateDocument, options);
+      }
+export type ResetSalaryDateMutationHookResult = ReturnType<typeof useResetSalaryDateMutation>;
+export type ResetSalaryDateMutationResult = Apollo.MutationResult<ResetSalaryDateMutation>;
+export type ResetSalaryDateMutationOptions = Apollo.BaseMutationOptions<ResetSalaryDateMutation, ResetSalaryDateMutationVariables>;
+export const UnregisterSalaryDocument = gql`
+    mutation UnregisterSalary($month: String!) {
+  unregisterSalary(month: $month)
+}
+    `;
+export type UnregisterSalaryMutationFn = Apollo.MutationFunction<UnregisterSalaryMutation, UnregisterSalaryMutationVariables>;
+
+/**
+ * __useUnregisterSalaryMutation__
+ *
+ * To run a mutation, you first call `useUnregisterSalaryMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUnregisterSalaryMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [unregisterSalaryMutation, { data, loading, error }] = useUnregisterSalaryMutation({
+ *   variables: {
+ *      month: // value for 'month'
+ *   },
+ * });
+ */
+export function useUnregisterSalaryMutation(baseOptions?: Apollo.MutationHookOptions<UnregisterSalaryMutation, UnregisterSalaryMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UnregisterSalaryMutation, UnregisterSalaryMutationVariables>(UnregisterSalaryDocument, options);
+      }
+export type UnregisterSalaryMutationHookResult = ReturnType<typeof useUnregisterSalaryMutation>;
+export type UnregisterSalaryMutationResult = Apollo.MutationResult<UnregisterSalaryMutation>;
+export type UnregisterSalaryMutationOptions = Apollo.BaseMutationOptions<UnregisterSalaryMutation, UnregisterSalaryMutationVariables>;
 export const RegisterSalaryDocument = gql`
-    mutation RegisterSalary($amount: String, $date: String!) {
-  registerSalary(amount: $amount, date: $date) {
+    mutation RegisterSalary($amount: String, $date: String!, $month: String) {
+  registerSalary(amount: $amount, date: $date, month: $month) {
     id
     amount
   }
@@ -2982,6 +3074,7 @@ export type RegisterSalaryMutationFn = Apollo.MutationFunction<RegisterSalaryMut
  *   variables: {
  *      amount: // value for 'amount'
  *      date: // value for 'date'
+ *      month: // value for 'month'
  *   },
  * });
  */
@@ -4231,6 +4324,10 @@ export const FinancialSettingsDocument = gql`
       month
       date
       isManual
+      amount
+      paid
+      paidAmount
+      paidOn
     }
   }
 }

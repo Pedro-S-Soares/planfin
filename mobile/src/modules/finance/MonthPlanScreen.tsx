@@ -23,6 +23,9 @@ import type { AppStackParamList } from "../../../App";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
+/** "Fatura Nubank crédito 10/2026" → "Fatura Nubank crédito" (the due date already says which one). */
+const invoiceName = (label: string | null | undefined) => (label ?? "Fatura").replace(/\s\d{2}\/\d{4}$/, "");
+
 const lines = (items: (PlanLine | null)[] | null | undefined): PlanLine[] => (items ?? []).filter((i): i is PlanLine => i !== null);
 
 /** The paper plan: this month's closing and next month's variable money with the daily goal. */
@@ -88,6 +91,7 @@ export function MonthPlanScreen() {
   const incomesBefore = beforeDue(lines(c.incomes));
   const incomesAfter = afterDue(lines(c.incomes));
   const dueLabel = cutoff ? formatShortDate(cutoff) : null;
+  const invoices = lines(c.invoices);
   const leftover = toNumber(c.leftover);
   const remaining = toNumber(n.remaining);
   const days = n.days ?? 30;
@@ -122,8 +126,26 @@ export function MonthPlanScreen() {
         {dueLabel && incomesBefore.length > 0 ? (
           <PlanSection sign="+" title={`Entradas até ${dueLabel}`} items={incomesBefore} />
         ) : null}
-        <PlanSection sign="−" title={dueLabel ? `Fatura do cartão · vence ${dueLabel}` : "Fatura do cartão"} items={lines(c.invoices)} emptyText="—" />
-        <PlanTotal label={dueLabel ? `Resto após pagar a fatura em ${dueLabel}` : "Resto após pagar a fatura"} value={money(c.afterInvoices)} />
+        {invoices.length === 0 ? <PlanSection sign="−" title="Fatura do cartão" items={[]} emptyText="—" /> : null}
+        {invoices.map((invoice) => (
+          <PlanSection
+            key={`${invoice.label}-${invoice.date}`}
+            sign="−"
+            title={`${invoiceName(invoice.label)} · vence ${formatShortDate(invoice.date)}`}
+            items={[invoice]}
+            hideCount
+          />
+        ))}
+        <PlanTotal
+          label={
+            invoices.length > 1
+              ? `Resto após pagar as faturas (até ${dueLabel})`
+              : dueLabel
+                ? `Resto após pagar a fatura em ${dueLabel}`
+                : "Resto após pagar a fatura"
+          }
+          value={money(c.afterInvoices)}
+        />
         <PlanSection sign="−" title="Fixas no boleto" items={lines(c.fixedBills)} emptyText="—" />
         <PlanSection sign="−" title="Gastos avulsos no boleto" items={lines(c.oneOffBills)} emptyText="—" />
         {salariesAfter.length > 0 ? <PlanSection sign="+" title={`Salário depois de ${dueLabel}`} items={salariesAfter} /> : null}
