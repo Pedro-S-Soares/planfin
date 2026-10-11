@@ -112,6 +112,7 @@ export function EditIncomeScreen() {
         note: values.note || null,
         subcategoryId: values.subcategoryId || null,
         type: "income",
+        ...(values.accountId !== (initialAccountId ?? null) ? { accountId: values.accountId ?? null } : {}),
       },
     });
   };

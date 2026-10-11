@@ -104,6 +104,7 @@ export function AddIncomeScreen() {
         note: values.note || null,
         subcategoryId: values.subcategoryId || null,
         type: "income",
+        accountId,
       },
     });
   };
