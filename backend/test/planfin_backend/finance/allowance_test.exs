@@ -31,18 +31,26 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
       )
 
     {:ok, mine} =
-      Finance.create_account(group.id, %{
-        name: "Mesada Pedro",
-        kind: "allowance",
-        owner_user_id: user.id
-      })
+      Finance.create_account(
+        group.id,
+        %{
+          name: "Mesada Pedro",
+          kind: "allowance",
+          owner_user_id: user.id
+        },
+        ~D[2026-10-01]
+      )
 
     {:ok, hers} =
-      Finance.create_account(group.id, %{
-        name: "Mesada Ela",
-        kind: "allowance",
-        owner_user_id: wife.id
-      })
+      Finance.create_account(
+        group.id,
+        %{
+          name: "Mesada Ela",
+          kind: "allowance",
+          owner_user_id: wife.id
+        },
+        ~D[2026-10-01]
+      )
 
     {:ok, _} = Salary.update_settings(group.id, %{salary_amount: Decimal.new("5000.00")})
 

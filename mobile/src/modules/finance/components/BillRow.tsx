@@ -20,6 +20,7 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) 
   const isPaid = o.status === "paid";
   const isSkipped = o.status === "skipped";
   const isOverdue = o.status === "overdue";
+  const isBeforeStart = o.status === "before_start";
   const isIncome = o.bill?.direction === "income";
   const recurrence = o.bill?.onceMonth ? `só em ${formatMonth(o.bill.onceMonth)}` : `todo dia ${o.bill?.dueDay}`;
 
@@ -32,14 +33,18 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) 
     ? `${isCard ? "✓ Na fatura" : "✓ Paga"} em ${formatShortDate(o.paidOn)}${next}`
     : isSkipped
       ? `Fora da fatura deste mês · próxima ${formatShortDate(o.nextDueDate)}`
+      : isBeforeStart
+        ? `Já estava na fatura quando foi cadastrada · próxima ${formatShortDate(o.nextDueDate)}`
       : isOverdue
         ? `${isCard ? "Não lançada" : "Não paga"} · venceu ${formatShortDate(o.dueDate)}`
         : isCard
-          ? `Entra na fatura em ${formatShortDate(o.dueDate)}`
+          ? `Entra sozinha na fatura em ${formatShortDate(o.dueDate)}`
           : `A pagar até ${formatShortDate(o.dueDate)}`;
 
   const statusColor = isPaid ? Colors.successText : isOverdue ? Colors.danger : Colors.textSec;
-  const actionLabel = isPaid ? (isCard ? "Tirar" : "Desfazer") : isIncome ? "Receber" : isCard ? "Lançar" : "Pagar";
+  const actionLabel = isPaid ? (isCard ? "Tirar" : "Desfazer") : isIncome ? "Receber" : isCard ? "Lançar agora" : "Pagar";
+  // Card bills enter the invoice by themselves: launching early is a secondary action.
+  const isPrimaryAction = !isPaid && !isCard;
 
   return (
     <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
@@ -64,10 +69,10 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) 
             borderRadius: Radius.full,
             paddingHorizontal: 14,
             paddingVertical: 6,
-            backgroundColor: isPaid ? Colors.bg : Colors.primary,
+            backgroundColor: isPrimaryAction ? Colors.primary : Colors.bg,
           }}
         >
-          <Text style={{ fontSize: 12, fontWeight: "700", color: isPaid ? Colors.textSec : "#fff" }}>{actionLabel}</Text>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: isPrimaryAction ? "#fff" : Colors.textSec }}>{actionLabel}</Text>
         </TouchableOpacity>
       </View>
     </View>
