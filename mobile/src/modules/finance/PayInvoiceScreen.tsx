@@ -27,7 +27,7 @@ export function PayInvoiceScreen() {
   const from = chosenFrom === undefined ? primary?.id ?? null : chosenFrom;
 
   const [payInvoice, { loading }] = usePayInvoiceMutation({
-    refetchQueries: ["Invoices", "Invoice", "FinancialAccounts", "AccountMovements", "FinancePanel"],
+    refetchQueries: ["Invoices", "Invoice", "FinancialAccounts", "AccountMovements", "FinancePanel", "MonthPlan"],
     onCompleted: () => navigation.goBack(),
     onError: (e) => setError(e.message),
   });

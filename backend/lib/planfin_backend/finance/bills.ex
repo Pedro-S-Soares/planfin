@@ -14,7 +14,9 @@ defmodule PlanfinBackend.Finance.Bills do
   A bill exists every month from the month it was created on, whatever its
   day: a bill created on the 3rd with day 1 already has this month's
   occurrence, pending until the user marks it paid. Only the automatic card
-  charge waits for a due date after the bill was created.
+  charge waits for a due date after the bill was created: a card occurrence
+  due before that is `before_start` (the purchase was already on the invoice
+  when the bill was registered) and is not charged nor shown as owed.
   """
 
   import Ecto.Query, warn: false
@@ -164,6 +166,7 @@ defmodule PlanfinBackend.Finance.Bills do
       cond do
         expense -> "paid"
         payment && card?(bill) -> "skipped"
+        card?(bill) and not auto_chargeable?(bill, due) -> "before_start"
         Date.compare(today, due) == :gt -> "overdue"
         true -> "pending"
       end

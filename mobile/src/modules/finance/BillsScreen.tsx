@@ -4,6 +4,7 @@ import { useFocusEffect, useNavigation, useRoute, type RouteProp } from "@react-
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Btn } from "../../components/ui/Btn";
 import { Card } from "../../components/ui/Card";
+import { Chip } from "../../components/ui/Chip";
 import { InlineError } from "../../components/ui/InlineError";
 import { useCurrency } from "../../context/CurrencyContext";
 import { useBillOccurrencesQuery, useUnpayBillMutation } from "../../graphql/__generated__/hooks";
@@ -16,6 +17,19 @@ import { addMonths, formatMoney, formatMonth, monthOf, toNumber } from "./format
 import type { AppStackParamList } from "../../../App";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
+type Occurrence = NonNullable<NonNullable<ReturnType<typeof useBillOccurrencesQuery>["data"]>["billOccurrences"]>[number];
+
+/** Occurrences that no longer need any action this month. */
+const SETTLED = ["paid", "before_start"];
+
+function uniqueAccounts(items: NonNullable<Occurrence>[]) {
+  const byId = new Map<string, { id: string; name: string; kind: string }>();
+  for (const o of items) {
+    const a = o.bill?.account;
+    if (a?.id && !byId.has(a.id)) byId.set(a.id, { id: a.id, name: a.name ?? "", kind: a.kind ?? "" });
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
 
 
 export function BillsScreen() {
@@ -24,6 +38,7 @@ export function BillsScreen() {
   const { params } = useRoute<RouteProp<AppStackParamList, "Bills">>();
   const { currency } = useCurrency();
   const [month, setMonth] = useState(params?.month || monthOf(new Date()));
+  const [accountFilter, setAccountFilter] = useState<string | null>(null);
 
   const { data, loading, error, refetch } = useBillOccurrencesQuery({
     variables: { month, today: toISODate(new Date()) },
@@ -37,10 +52,13 @@ export function BillsScreen() {
     }, [refetch]),
   );
 
-  const items = data?.billOccurrences?.filter((o) => o !== null) ?? [];
+  const allItems = data?.billOccurrences?.filter((o) => o !== null) ?? [];
+  const accounts = uniqueAccounts(allItems);
+  const items = accountFilter ? allItems.filter((o) => o.bill?.account?.id === accountFilter) : allItems;
   const active = items.filter((o) => o.status !== "skipped" && o.bill?.direction !== "income");
   const total = active.reduce((acc, o) => acc + toNumber(o.amount), 0);
-  const paid = active.filter((o) => o.status === "paid").reduce((acc, o) => acc + toNumber(o.amount), 0);
+  const paid = active.filter((o) => SETTLED.includes(o.status ?? "")).reduce((acc, o) => acc + toNumber(o.amount), 0);
+  const filterName = accounts.find((a) => a.id === accountFilter)?.name;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
@@ -66,6 +84,20 @@ export function BillsScreen() {
           </View>
         </View>
       </Card>
+
+      {accounts.length > 1 ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+          <Chip label="Todas" selected={accountFilter === null} onPress={() => setAccountFilter(null)} />
+          {accounts.map((a) => (
+            <Chip
+              key={a.id}
+              label={`${a.kind === "credit_card" ? "💳" : "🏦"} ${a.name}`}
+              selected={accountFilter === a.id}
+              onPress={() => setAccountFilter(accountFilter === a.id ? null : a.id)}
+            />
+          ))}
+        </View>
+      ) : null}
 
       <Card padding={16} style={{ marginBottom: 12 }}>
         {loading && !data ? (
@@ -119,6 +151,14 @@ export function BillsScreen() {
             );
           })
         )}
+        {active.length > 0 ? (
+          <View style={{ flexDirection: "row", justifyContent: "space-between", paddingTop: 12 }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.textSec }}>
+              Total {filterName ? `em ${filterName}` : "das despesas"} ({active.length})
+            </Text>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>{formatMoney(total, currency.symbol)}</Text>
+          </View>
+        ) : null}
       </Card>
 
       <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 12, lineHeight: 17 }}>

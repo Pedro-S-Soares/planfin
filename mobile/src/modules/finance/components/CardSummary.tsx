@@ -84,9 +84,24 @@ export function CardSummary({ card, onOpen, onOpenInvoice, onPay }: CardSummaryP
                 {formatMoney(current.total, currency.symbol)}
               </Text>
               <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
-                Fecha {formatShortDate(current.closingDate)} · vence {formatShortDate(current.dueDate)} · paga com o
-                próximo salário
+                Fecha {formatShortDate(current.closingDate)} · vence {formatShortDate(current.dueDate)}
               </Text>
+              {toNumber(current.paid) > 0 ? (
+                <Text style={{ fontSize: 12, color: Colors.successText, marginTop: 2 }}>
+                  Pago antecipado {formatMoney(current.paid, currency.symbol)} · falta{" "}
+                  {formatMoney(current.remaining, currency.symbol)}
+                </Text>
+              ) : null}
+            </TouchableOpacity>
+          ) : null}
+          {current && toNumber(current.remaining) > 0 ? (
+            <TouchableOpacity
+              onPress={() => onPay(current.month ?? "", current.remaining ?? "0")}
+              activeOpacity={0.8}
+              hitSlop={8}
+              style={{ alignSelf: "flex-start" }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>Pagar antecipado ›</Text>
             </TouchableOpacity>
           ) : null}
         </View>

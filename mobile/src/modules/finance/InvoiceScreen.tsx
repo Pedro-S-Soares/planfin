@@ -38,7 +38,8 @@ export function InvoiceScreen() {
 
   const invoice = data.invoice;
   const entries = invoice.entries?.filter((e) => e !== null) ?? [];
-  const canPay = invoice.status !== "open" && invoice.status !== "upcoming" && toNumber(invoice.remaining) > 0;
+  const canPay = toNumber(invoice.remaining) > 0;
+  const isEarly = invoice.status === "open" || invoice.status === "upcoming";
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
@@ -64,8 +65,14 @@ export function InvoiceScreen() {
         ) : null}
         {canPay ? (
           <View style={{ marginTop: 14 }}>
+            {isEarly ? (
+              <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 8, lineHeight: 17 }}>
+                A fatura ainda está aberta. Pague o que já tem nela; compras feitas depois continuam entrando e
+                ficam como saldo a pagar.
+              </Text>
+            ) : null}
             <Btn
-              label="Pagar fatura"
+              label={isEarly ? "Pagar antecipado" : "Pagar fatura"}
               onPress={() =>
                 navigation.navigate("PayInvoice", { cardId: params.cardId, month: params.month, remaining: invoice.remaining ?? "0" })
               }
