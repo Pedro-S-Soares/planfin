@@ -70,6 +70,8 @@ export type EntryFormParams =
       /** Start with "counts in budget" off (old purchases, salary, bills). */
       outsideBudget?: boolean;
       date?: string;
+      categoryId?: string;
+      subcategoryId?: string;
     }
   | undefined;
 

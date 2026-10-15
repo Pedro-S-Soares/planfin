@@ -119,6 +119,7 @@ query FinancePanel($today: String) {
 query RecurringBills {
   recurringBills {
     id
+    kind
     name
     amount
     dueDay
@@ -146,9 +147,11 @@ query BillOccurrences($month: String!, $today: String) {
     status
     note
     amount
+    quotaSpent
     expenseId
     bill {
       id
+      kind
       name
       amount
       dueDay

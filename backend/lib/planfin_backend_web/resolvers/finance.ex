@@ -294,7 +294,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
              account_id: args.account_id,
              subcategory_id: args[:subcategory_id],
              direction: args[:direction] || "expense",
-             once_month: once_month
+             once_month: once_month,
+             kind: args[:kind] || "fixed"
            }) do
       {:ok, format_bill(bill)}
     else
@@ -343,6 +344,9 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
       {:error, :already_paid} ->
         {:error, "This month is already paid"}
+
+      {:error, :quota_not_payable} ->
+        {:error, "A spending quota is not paid; record its purchases instead"}
 
       {:error, reason} ->
         {:error, inspect(reason)}
@@ -700,6 +704,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   defp format_bill(bill) do
     %{
       id: bill.id,
+      kind: bill.kind,
       direction: bill.direction,
       once_month:
         bill.once_month && Invoices.format_month({bill.once_month.year, bill.once_month.month}),
@@ -730,7 +735,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       status: occ.status,
       amount: Decimal.to_string(occ.amount),
       expense_id: occ.expense_id,
-      note: occ.note
+      note: occ.note,
+      quota_spent: occ.quota_spent && Decimal.to_string(occ.quota_spent)
     }
   end
 
@@ -821,7 +827,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   end
 
   defp bill_attrs(args) do
-    base = Map.take(args, [:name, :due_day, :account_id, :subcategory_id, :direction])
+    base = Map.take(args, [:name, :due_day, :account_id, :subcategory_id, :direction, :kind])
 
     with {:ok, base} <- put_once_month(base, args) do
       case args[:amount] do

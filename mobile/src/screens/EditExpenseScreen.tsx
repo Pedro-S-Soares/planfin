@@ -97,6 +97,7 @@ export function EditExpenseScreen() {
       "Invoices",
       "Invoice",
       "AccountMovements",
+      "BillOccurrences",
     ],
   });
 
@@ -111,6 +112,7 @@ export function EditExpenseScreen() {
       "Invoices",
       "Invoice",
       "AccountMovements",
+      "BillOccurrences",
     ],
   });
 

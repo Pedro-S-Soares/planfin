@@ -53,6 +53,7 @@ export function BillFormScreen() {
           subcategoryId: editing.subcategory?.id ?? "",
           direction: initialDirection,
           onceMonth: editing.onceMonth ?? "",
+          kind: editing.kind === "quota" ? "quota" : "fixed",
         }
       : undefined,
     defaultValues: {
@@ -64,11 +65,13 @@ export function BillFormScreen() {
       subcategoryId: "",
       direction: params.direction ?? "expense",
       onceMonth: params.once ? monthOf(new Date()) : "",
+      kind: "fixed",
     },
   });
   const direction = watch("direction");
   const isIncome = direction === "income";
   const onceMonth = watch("onceMonth");
+  const isQuota = !isIncome && watch("kind") === "quota";
   const categories = allCategories.filter((c) => c.type === (isIncome ? "income" : "expense"));
   const chosenAccount = watch("accountId");
   const defaultAccount = isIncome ? accounts.find((a) => a.isPrimary)?.id ?? null : defaultSpendingAccountId(accounts);
@@ -84,10 +87,13 @@ export function BillFormScreen() {
 
   const onSubmit = (values: BillFormValues) => {
     if (!accountId) return setError("root", { message: isIncome ? "Escolha a conta onde o dinheiro entra" : "Escolha como a despesa é paga" });
+    if (isQuota && !values.subcategoryId) return setError("root", { message: "Escolha a subcategoria dos gastos que entram na cota" });
     const variables = {
       name: values.name,
       amount: displayToAPI(values.amount),
-      dueDay: Number(values.dueDay),
+      // A quota has no due date of its own: it is reserved from the start of the month.
+      dueDay: isQuota ? 1 : Number(values.dueDay),
+      kind: isQuota ? "quota" : "fixed",
       accountId,
       subcategoryId: values.subcategoryId || null,
       direction: values.direction,
@@ -128,6 +134,26 @@ export function BillFormScreen() {
           </View>
         )}
       />
+      {isIncome ? null : (
+        <Controller
+          control={control}
+          name="kind"
+          render={({ field: { onChange, value } }) => (
+            <View style={{ marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", gap: 7 }}>
+                <Chip label="Valor fixo" selected={value !== "quota"} onPress={() => onChange("fixed")} />
+                <Chip label="Cota de gasto" selected={value === "quota"} onPress={() => onChange("quota")} />
+              </View>
+              {value === "quota" ? (
+                <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 8, lineHeight: 17 }}>
+                  Um valor reservado no mês e gasto aos poucos, como R$ 350 de unhas. Os gastos da subcategoria escolhida
+                  abaixo vão abatendo a cota e não mexem no limite diário. Nada é lançado sozinho.
+                </Text>
+              ) : null}
+            </View>
+          )}
+        />
+      )}
       <Controller
         control={control}
         name="name"
@@ -141,31 +167,33 @@ export function BillFormScreen() {
           />
         )}
       />
-      <FormLabel>{onceMonth ? "Valor" : "Valor por mês (estimado)"}</FormLabel>
+      <FormLabel>{isQuota ? "Cota do mês" : onceMonth ? "Valor" : "Valor por mês (estimado)"}</FormLabel>
       <Controller
         control={control}
         name="amount"
         render={({ field: { onChange, value } }) => <CurrencyInput value={value} onChange={onChange} error={errors.amount?.message} />}
       />
-      <Controller
-        control={control}
-        name="dueDay"
-        render={({ field: { onChange, value } }) => (
-          <FieldInput
-            label={isIncome ? "Entra no dia" : onceMonth ? "Pagar no dia" : "Pagar todo dia"}
-            value={value}
-            onChange={(v) => onChange(v.replace(/\D/g, "").slice(0, 2))}
-            keyboardType="number-pad"
-            error={errors.dueDay?.message}
-          />
-        )}
-      />
+      {isQuota ? null : (
+        <Controller
+          control={control}
+          name="dueDay"
+          render={({ field: { onChange, value } }) => (
+            <FieldInput
+              label={isIncome ? "Entra no dia" : onceMonth ? "Pagar no dia" : "Pagar todo dia"}
+              value={value}
+              onChange={(v) => onChange(v.replace(/\D/g, "").slice(0, 2))}
+              keyboardType="number-pad"
+              error={errors.dueDay?.message}
+            />
+          )}
+        />
+      )}
       <Controller
         control={control}
         name="accountId"
         render={({ field: { onChange } }) => (
           <AccountPicker
-            label={isIncome ? "Entra na conta" : "Como é paga"}
+            label={isIncome ? "Entra na conta" : isQuota ? "Onde costuma ser gasta" : "Como é paga"}
             accounts={accounts}
             value={accountId}
             onChange={onChange}
@@ -173,7 +201,7 @@ export function BillFormScreen() {
           />
         )}
       />
-      {isIncome ? null : (
+      {isIncome || isQuota ? null : (
         <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: -8, marginBottom: 16 }}>
           Na conta: boleto ou Pix, sai do saldo. No cartão: entra na fatura.
         </Text>
@@ -184,7 +212,7 @@ export function BillFormScreen() {
         name="categoryId"
         render={({ field: { onChange, value } }) => (
           <View style={{ marginBottom: 16 }}>
-            <FormLabel>Categoria (opcional)</FormLabel>
+            <FormLabel>{isQuota ? "Categoria dos gastos da cota" : "Categoria (opcional)"}</FormLabel>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
               {categories.map((cat) => (
                 <Chip

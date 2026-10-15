@@ -7,6 +7,10 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     * `direction: "income"` — expected money in (e.g. variable income),
       received on an account.
 
+  With `kind: "quota"` an expense is a monthly spending allowance (e.g. R$ 350
+  for nails) consumed by several purchases of its subcategory instead of one
+  payment. It is never paid nor charged: its purchases are the real entries.
+
   Recurring items happen every month; with `once_month` the item happens only
   in that month (a one-off boleto or a one-off expected income). Each month
   becomes an occurrence that is pending until a `BillPayment` exists.
@@ -24,6 +28,7 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     field :active, :boolean, default: true
     field :direction, :string, default: "expense"
     field :once_month, :date
+    field :kind, :string, default: "fixed"
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :account, PlanfinBackend.Finance.Account
@@ -44,7 +49,8 @@ defmodule PlanfinBackend.Finance.RecurringBill do
       :account_id,
       :subcategory_id,
       :direction,
-      :once_month
+      :once_month,
+      :kind
     ])
     |> update_change(:once_month, &Date.beginning_of_month/1)
     |> update_change(:name, &String.trim/1)
@@ -53,5 +59,17 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     |> validate_number(:amount, greater_than: 0)
     |> validate_number(:due_day, greater_than_or_equal_to: 1, less_than_or_equal_to: 31)
     |> validate_inclusion(:direction, ["expense", "income"])
+    |> validate_inclusion(:kind, ["fixed", "quota"])
+    |> validate_quota()
+  end
+
+  defp validate_quota(changeset) do
+    if get_field(changeset, :kind) == "quota" do
+      changeset
+      |> validate_required([:subcategory_id], message: "a quota needs a subcategory")
+      |> validate_inclusion(:direction, ["expense"], message: "a quota must be an expense")
+    else
+      changeset
+    end
   end
 end

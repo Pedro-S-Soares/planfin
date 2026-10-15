@@ -22,6 +22,18 @@ type Occurrence = NonNullable<NonNullable<ReturnType<typeof useBillOccurrencesQu
 /** Occurrences that no longer need any action this month. */
 const SETTLED = ["paid", "before_start"];
 
+/** A running quota is planned at its full value, or at what was spent when it went over. */
+function plannedAmount(o: NonNullable<Occurrence>) {
+  if (o.bill?.kind !== "quota") return toNumber(o.amount);
+  if (o.status === "paid") return toNumber(o.amount);
+  return Math.max(toNumber(o.bill.amount), toNumber(o.quotaSpent));
+}
+
+function settledAmount(o: NonNullable<Occurrence>) {
+  if (o.bill?.kind === "quota") return toNumber(o.quotaSpent);
+  return SETTLED.includes(o.status ?? "") ? toNumber(o.amount) : 0;
+}
+
 function uniqueAccounts(items: NonNullable<Occurrence>[]) {
   const byId = new Map<string, { id: string; name: string; kind: string }>();
   for (const o of items) {
@@ -57,8 +69,8 @@ export function BillsScreen() {
   const accounts = uniqueAccounts(allItems);
   const items = accountFilter ? allItems.filter((o) => o.bill?.account?.id === accountFilter) : allItems;
   const active = items.filter((o) => o.status !== "skipped" && o.bill?.direction !== "income");
-  const total = active.reduce((acc, o) => acc + toNumber(o.amount), 0);
-  const paid = active.filter((o) => SETTLED.includes(o.status ?? "")).reduce((acc, o) => acc + toNumber(o.amount), 0);
+  const total = active.reduce((acc, o) => acc + plannedAmount(o), 0);
+  const paid = active.reduce((acc, o) => acc + settledAmount(o), 0);
   const filterName = accounts.find((a) => a.id === accountFilter)?.name;
 
   return (
@@ -128,6 +140,13 @@ export function BillsScreen() {
                     name: bill.name ?? "",
                     isCard,
                     isIncome: bill.direction === "income",
+                  })
+                }
+                onAddPurchase={() =>
+                  navigation.navigate("AddExpense", {
+                    accountId: bill.account?.id ?? undefined,
+                    categoryId: bill.subcategory?.categoryId ?? undefined,
+                    subcategoryId: bill.subcategory?.id ?? undefined,
                   })
                 }
                 onSkip={() => navigation.navigate("SkipBill", { billId, month, name: bill.name ?? "", isCard })}
