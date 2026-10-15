@@ -25,7 +25,9 @@ defmodule PlanfinBackend.Expenses do
       `counts_in_budget`; parcels 2..N are dated one month apart and are
       budget commitments of later cycles (`counts_in_budget: false`).
     * `:counts_in_budget` — `false` records a movement outside the daily/period
-      budget; it needs no active period.
+      budget; it needs no active period. An expense in the subcategory of a
+      spending quota (`RecurringBill` with `kind: "quota"`) is always outside:
+      the quota was already reserved among the fixed bills.
 
   Budget entries follow the original rules: the active period must exist and
   contain the date, and the entry is linked to its period and budget_day.
@@ -37,7 +39,10 @@ defmodule PlanfinBackend.Expenses do
 
     with {:ok, account} <- fetch_account(group_id, Map.get(attrs, :account_id)),
          :ok <- validate_installments(installments, account) do
-      counts_in_budget = counts_in_budget?(Map.get(attrs, :counts_in_budget, true), account)
+      counts_in_budget =
+        counts_in_budget?(Map.get(attrs, :counts_in_budget, true), account) and
+          not quota_expense?(group_id, attrs)
+
       options = Map.take(attrs, [:first_invoice, :amount_per_installment, :today])
 
       attrs =
@@ -235,6 +240,11 @@ defmodule PlanfinBackend.Expenses do
 
   defp validate_installments(_n, _account), do: {:error, :invalid_installments}
 
+  defp quota_expense?(group_id, attrs) do
+    Map.get(attrs, :type, "expense") == "expense" and
+      PlanfinBackend.Finance.Bills.quota_subcategory?(group_id, Map.get(attrs, :subcategory_id))
+  end
+
   defp counts_in_budget?(_requested, %{kind: kind})
        when kind in ["allowance", "reserve"],
        do: false
@@ -294,6 +304,14 @@ defmodule PlanfinBackend.Expenses do
       else: {:ok, :unchanged}
   end
 
+  defp moved_into_quota?(expense, attrs) do
+    Map.has_key?(attrs, :subcategory_id) and
+      quota_expense?(expense.group_id, %{
+        type: Map.get(attrs, :type, expense.type),
+        subcategory_id: attrs.subcategory_id
+      })
+  end
+
   # Budget entries must stay inside their period and keep the right budget_day;
   # moving one to an allowance/reserve account takes it out of the budget.
   defp budget_link_attrs(%Expense{counts_in_budget: true} = expense, attrs, account) do
@@ -301,7 +319,8 @@ defmodule PlanfinBackend.Expenses do
     new_date = Map.get(attrs, :date, expense.date)
 
     cond do
-      match?(%{kind: kind} when kind in ["allowance", "reserve"], account) ->
+      match?(%{kind: kind} when kind in ["allowance", "reserve"], account) or
+          moved_into_quota?(expense, attrs) ->
         {:ok, Map.merge(attrs, %{counts_in_budget: false, period_id: nil, budget_day_id: nil})}
 
       is_nil(expense.period) ->

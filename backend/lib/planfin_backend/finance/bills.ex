@@ -11,6 +11,12 @@ defmodule PlanfinBackend.Finance.Bills do
   (`charge_due_card_bills/2`), landing on the invoice of that date. Removing
   such a charge marks the month as `skipped` so it is not charged again.
 
+  A quota bill (`kind: "quota"`) is a monthly spending allowance consumed by
+  the month's expenses of its subcategory: while the month runs it is
+  `pending` with `amount` = what is left of it (never negative), and it turns
+  `paid` once used up or when the month ends, with `amount` = what was spent.
+  It is never charged nor paid.
+
   Any bill can be skipped in one month (`skip/5`, with an optional note): the
   month leaves the commitments, the plan and the automatic charge, and the
   bill comes back the following month.
@@ -161,6 +167,35 @@ defmodule PlanfinBackend.Finance.Bills do
   defp auto_chargeable?(%RecurringBill{inserted_at: inserted_at}, due),
     do: Date.compare(due, NaiveDateTime.to_date(inserted_at)) != :lt
 
+  defp occurrence(%RecurringBill{kind: "quota"} = bill, month, payments, today) do
+    payment = Map.get(payments, {bill.id, month})
+    spent = quota_spent(bill, month)
+    remaining = Decimal.max(Decimal.sub(bill.amount, spent), Decimal.new("0"))
+    {year, mon} = month
+    month_end = Date.new!(year, mon, Elixir.Calendar.ISO.days_in_month(year, mon))
+
+    status =
+      cond do
+        payment -> "skipped"
+        Date.compare(today, month_end) == :gt -> "paid"
+        Decimal.compare(remaining, 0) == :eq -> "paid"
+        true -> "pending"
+      end
+
+    %{
+      bill: bill,
+      month: month,
+      due_date: due_date(bill, month),
+      next_due_date: due_date(bill, Calendar.add_months(month, 1)),
+      status: status,
+      paid_on: nil,
+      amount: if(status == "pending", do: remaining, else: spent),
+      expense_id: nil,
+      note: payment && payment.note,
+      quota_spent: spent
+    }
+  end
+
   defp occurrence(bill, month, payments, today) do
     due = due_date(bill, month)
     payment = Map.get(payments, {bill.id, month})
@@ -184,12 +219,17 @@ defmodule PlanfinBackend.Finance.Bills do
       paid_on: expense && expense.date,
       amount: if(expense, do: expense.amount, else: bill.amount),
       expense_id: expense && expense.id,
-      note: payment && is_nil(expense) && payment.note
+      note: payment && is_nil(expense) && payment.note,
+      quota_spent: nil
     }
   end
 
-  defp card?(%RecurringBill{direction: "expense", account: %Account{kind: "credit_card"}}),
-    do: true
+  defp card?(%RecurringBill{
+         kind: "fixed",
+         direction: "expense",
+         account: %Account{kind: "credit_card"}
+       }),
+       do: true
 
   defp card?(_bill), do: false
 
@@ -221,6 +261,35 @@ defmodule PlanfinBackend.Finance.Bills do
     :ok
   end
 
+  @doc "What the month's expenses of the quota's subcategory add up to."
+  def quota_spent(%RecurringBill{group_id: group_id, subcategory_id: sub_id}, {year, month}) do
+    from = Date.new!(year, month, 1)
+    to = Date.end_of_month(from)
+
+    PlanfinBackend.Expenses.Expense
+    |> where(
+      [e],
+      e.group_id == ^group_id and e.subcategory_id == ^sub_id and e.type == "expense" and
+        e.date >= ^from and e.date <= ^to
+    )
+    |> select([e], sum(e.amount))
+    |> Repo.one()
+    |> Kernel.||(Decimal.new("0"))
+  end
+
+  @doc "Whether an expense in `subcategory_id` feeds an active quota of the group."
+  def quota_subcategory?(_group_id, nil), do: false
+
+  def quota_subcategory?(group_id, subcategory_id) do
+    RecurringBill
+    |> where(
+      [b],
+      b.group_id == ^group_id and b.active == true and b.kind == "quota" and
+        b.subcategory_id == ^subcategory_id
+    )
+    |> Repo.exists?()
+  end
+
   defp payments_for(group_id, months) do
     dates = Enum.map(months, fn {y, m} -> Date.new!(y, m, 1) end)
 
@@ -238,6 +307,9 @@ defmodule PlanfinBackend.Finance.Bills do
   Pays the bill's occurrence of `month`: records an entry outside the budget on
   the bill's account (or card) and links it. Returns `{:ok, occurrence}`.
   """
+  def pay(_group_id, _user_id, %RecurringBill{kind: "quota"}, _month, _amount, _date),
+    do: {:error, :quota_not_payable}
+
   def pay(group_id, user_id, %RecurringBill{} = bill, month, %Decimal{} = amount, %Date{} = date) do
     month_date = Date.new!(elem(month, 0), elem(month, 1), 1)
 

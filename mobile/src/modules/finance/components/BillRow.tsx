@@ -2,7 +2,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { useCurrency } from "../../../context/CurrencyContext";
 import type { BillOccurrencesQuery } from "../../../graphql/__generated__/hooks";
 import { Colors, Radius } from "../../../theme/tokens";
-import { formatMoney, formatMonth, formatShortDate } from "../format";
+import { formatMoney, formatMonth, formatShortDate, toNumber } from "../format";
 
 export type BillOccurrence = NonNullable<NonNullable<BillOccurrencesQuery["billOccurrences"]>[number]>;
 
@@ -13,29 +13,43 @@ type BillRowProps = {
   onUndo: () => void;
   onSkip: () => void;
   onUnskip: () => void;
+  onAddPurchase: () => void;
 };
 
 /** One fixed bill: its day, whether this month is settled and what comes next. */
-export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip }: BillRowProps) {
+export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip, onAddPurchase }: BillRowProps) {
   const { currency } = useCurrency();
   const isCard = o.bill?.account?.kind === "credit_card";
   const isPaid = o.status === "paid";
   const isSkipped = o.status === "skipped";
   const isOverdue = o.status === "overdue";
   const isBeforeStart = o.status === "before_start";
+  const isQuota = o.bill?.kind === "quota";
+  const quota = toNumber(o.bill?.amount);
+  const spent = toNumber(o.quotaSpent);
   const isIncome = o.bill?.direction === "income";
-  const recurrence = o.bill?.onceMonth ? `só em ${formatMonth(o.bill.onceMonth)}` : `todo dia ${o.bill?.dueDay}`;
+  const recurrence = isQuota
+    ? "cota do mês"
+    : o.bill?.onceMonth
+      ? `só em ${formatMonth(o.bill.onceMonth)}`
+      : `todo dia ${o.bill?.dueDay}`;
 
   const next = o.bill?.onceMonth ? "" : ` · próxima ${formatShortDate(o.nextDueDate)}`;
-  const statusText = isIncome
+  const quotaText =
+    spent > quota
+      ? `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · passou ${formatMoney(spent - quota, currency.symbol)}`
+      : `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · ${isPaid ? "mês encerrado" : `resta ${formatMoney(quota - spent, currency.symbol)}`}`;
+  const statusText = isSkipped
+    ? `Pulada neste mês${o.note ? `: ${o.note}` : ""} · próxima ${formatShortDate(o.nextDueDate)}`
+    : isQuota
+      ? quotaText
+      : isIncome
     ? isPaid
       ? `✓ Recebida em ${formatShortDate(o.paidOn)}${next}`
       : `A receber em ${formatShortDate(o.dueDate)}`
     : isPaid
     ? `${isCard ? "✓ Na fatura" : "✓ Paga"} em ${formatShortDate(o.paidOn)}${next}`
-    : isSkipped
-      ? `Pulada neste mês${o.note ? `: ${o.note}` : ""} · próxima ${formatShortDate(o.nextDueDate)}`
-      : isBeforeStart
+    : isBeforeStart
         ? `Já estava na fatura quando foi cadastrada · próxima ${formatShortDate(o.nextDueDate)}`
       : isOverdue
         ? `${isCard ? "Não lançada" : "Não paga"} · venceu ${formatShortDate(o.dueDate)}`
@@ -43,8 +57,18 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
           ? `Entra sozinha na fatura em ${formatShortDate(o.dueDate)}`
           : `A pagar até ${formatShortDate(o.dueDate)}`;
 
-  const statusColor = isPaid ? Colors.successText : isOverdue ? Colors.danger : Colors.textSec;
-  const actionLabel = isPaid
+  const statusColor = isQuota
+    ? spent > quota
+      ? Colors.danger
+      : Colors.textSec
+    : isPaid
+      ? Colors.successText
+      : isOverdue
+        ? Colors.danger
+        : Colors.textSec;
+  const actionLabel = isQuota && !isSkipped
+    ? "+ Gasto"
+    : isPaid
     ? isCard
       ? "Tirar"
       : "Desfazer"
@@ -56,9 +80,9 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
           ? "Lançar agora"
           : "Pagar";
   // Card bills enter the invoice by themselves: launching early is a secondary action.
-  const isPrimaryAction = !isPaid && !isSkipped && !isCard;
-  const canSkip = !isPaid && !isSkipped && !isBeforeStart;
-  const onAction = isPaid ? onUndo : isSkipped ? onUnskip : onPay;
+  const isPrimaryAction = (isQuota && !isSkipped) || (!isPaid && !isSkipped && !isCard);
+  const canSkip = !isPaid && !isSkipped && !isBeforeStart && !(isQuota && spent > 0);
+  const onAction = isSkipped ? onUnskip : isQuota ? onAddPurchase : isPaid ? onUndo : onPay;
 
   return (
     <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
@@ -71,7 +95,7 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
         </TouchableOpacity>
         <Text style={{ fontSize: 15, fontWeight: "700", color: isIncome ? Colors.successText : Colors.text }}>
           {isIncome ? "+" : ""}
-          {formatMoney(o.amount, currency.symbol)}
+          {formatMoney(isQuota ? o.bill?.amount : o.amount, currency.symbol)}
         </Text>
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 10 }}>

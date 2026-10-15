@@ -6,6 +6,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import {
   useCategoriesQuery,
   useCreateExpenseMutation,
+  useRecurringBillsQuery,
   ActivePeriodDocument,
   CategoriesQuery,
 } from "../graphql/__generated__/hooks";
@@ -70,8 +71,8 @@ export function AddExpenseScreen() {
       firstInvoice: undefined,
       countsInBudget: !params?.outsideBudget,
       note: "",
-      categoryId: "",
-      subcategoryId: "",
+      categoryId: params?.categoryId ?? "",
+      subcategoryId: params?.subcategoryId ?? "",
     },
   });
 
@@ -88,7 +89,12 @@ export function AddExpenseScreen() {
   const firstInvoice = watch("firstInvoice") || defaultInvoice;
   // A purchase placed on another invoice never touches today's limit.
   const isRetroactive = installments > 1 && firstInvoice !== defaultInvoice;
-  const countsInBudget = watch("countsInBudget") && !isPrivateAccount && !isRetroactive;
+  const { data: billsData } = useRecurringBillsQuery();
+  const quota = billsData?.recurringBills?.find(
+    (b) => b?.kind === "quota" && !!b.subcategory?.id && b.subcategory.id === watch("subcategoryId"),
+  );
+  // Quota purchases were reserved among the fixed bills: the server keeps them out of the daily limit.
+  const countsInBudget = watch("countsInBudget") && !isPrivateAccount && !isRetroactive && !quota;
   const amountValue = parseCents(watch("amount")) / 100;
   const subcategories: NonNullable<Subcategory>[] =
     categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
@@ -104,6 +110,7 @@ export function AddExpenseScreen() {
       "Invoices",
       "Invoice",
       "AccountMovements",
+      "BillOccurrences",
     ],
   });
 
@@ -228,7 +235,12 @@ export function AddExpenseScreen() {
         </>
       )}
 
-      {isPrivateAccount || isRetroactive ? null : (
+      {quota ? (
+        <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 16, lineHeight: 17 }}>
+          Entra na cota "{quota.name}": abate do valor reservado no mês e não mexe no limite diário.
+        </Text>
+      ) : null}
+      {isPrivateAccount || isRetroactive || quota ? null : (
         <Controller
           control={control}
           name="countsInBudget"

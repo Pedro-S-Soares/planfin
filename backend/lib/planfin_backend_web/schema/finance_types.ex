@@ -64,6 +64,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
 
   object :recurring_bill do
     field :id, :id
+    @desc "fixed | quota (monthly spending allowance consumed by its subcategory)"
+    field :kind, :string
     @desc "expense | income"
     field :direction, :string
     @desc "YYYY-MM when it happens only in that month"
@@ -90,8 +92,10 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :note, :string
     @desc "Date of the payment/charge when paid"
     field :paid_on, :string
-    @desc "Real amount when paid, estimate otherwise"
+    @desc "Real amount when paid, estimate otherwise; for a running quota, what is left"
     field :amount, :string
+    @desc "Quota bills: what the month's expenses of its subcategory add up to"
+    field :quota_spent, :string
     field :expense_id, :id
   end
 
@@ -377,6 +381,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
 
     field :create_recurring_bill, :recurring_bill do
       arg(:direction, :string)
+      @desc "fixed | quota"
+      arg(:kind, :string)
       @desc "YYYY-MM to make it a one-month item; empty string clears"
       arg(:once_month, :string)
       arg(:name, non_null(:string))
@@ -389,6 +395,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
 
     field :update_recurring_bill, :recurring_bill do
       arg(:direction, :string)
+      @desc "fixed | quota"
+      arg(:kind, :string)
       @desc "YYYY-MM to make it a one-month item; empty string clears"
       arg(:once_month, :string)
       arg(:id, non_null(:id))

@@ -88,8 +88,10 @@ export function CardSummary({ card, onOpen, onOpenInvoice, onPay }: CardSummaryP
               </Text>
               {toNumber(current.paid) > 0 ? (
                 <Text style={{ fontSize: 12, color: Colors.successText, marginTop: 2 }}>
-                  Pago antecipado {formatMoney(current.paid, currency.symbol)} · falta{" "}
-                  {formatMoney(current.remaining, currency.symbol)}
+                  Pago antecipado {formatMoney(current.paid, currency.symbol)} ·{" "}
+                  {toNumber(current.remaining) > 0
+                    ? `falta ${formatMoney(current.remaining, currency.symbol)}`
+                    : "nada a pagar por enquanto"}
                 </Text>
               ) : null}
             </TouchableOpacity>
