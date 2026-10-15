@@ -70,9 +70,11 @@ export type BillOccurrence = {
   month?: Maybe<Scalars['String']['output']>;
   /** Due date of the following month */
   nextDueDate?: Maybe<Scalars['String']['output']>;
+  /** Why the month was skipped */
+  note?: Maybe<Scalars['String']['output']>;
   /** Date of the payment/charge when paid */
   paidOn?: Maybe<Scalars['String']['output']>;
-  /** pending | overdue | paid | skipped */
+  /** pending | overdue | paid | skipped | before_start */
   status?: Maybe<Scalars['String']['output']>;
 };
 
@@ -410,9 +412,13 @@ export type RootMutationType = {
   setInvoiceTotal?: Maybe<Invoice>;
   /** What is specific to a month's salary. A null date restores the automatic one; a null/empty amount restores the usual salary. Omitted args are left untouched. */
   setSalaryDate?: Maybe<Scalars['Boolean']['output']>;
+  /** Skip the bill in one month (it is not owed nor charged), with an optional note */
+  skipBill?: Maybe<BillOccurrence>;
   switchActiveGroup?: Maybe<Group>;
   unpayBill?: Maybe<Scalars['Boolean']['output']>;
   unregisterSalary?: Maybe<Scalars['Boolean']['output']>;
+  /** Bring back a skipped month */
+  unskipBill?: Maybe<Scalars['Boolean']['output']>;
   updateCategory?: Maybe<Category>;
   updateExpense?: Maybe<Expense>;
   updateFinancialAccount?: Maybe<FinancialAccount>;
@@ -677,6 +683,13 @@ export type RootMutationTypeSetSalaryDateArgs = {
 };
 
 
+export type RootMutationTypeSkipBillArgs = {
+  billId: Scalars['ID']['input'];
+  month: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type RootMutationTypeSwitchActiveGroupArgs = {
   id: Scalars['ID']['input'];
 };
@@ -689,6 +702,12 @@ export type RootMutationTypeUnpayBillArgs = {
 
 
 export type RootMutationTypeUnregisterSalaryArgs = {
+  month: Scalars['String']['input'];
+};
+
+
+export type RootMutationTypeUnskipBillArgs = {
+  billId: Scalars['ID']['input'];
   month: Scalars['String']['input'];
 };
 
@@ -1284,6 +1303,23 @@ export type UnpayBillMutationVariables = Exact<{
 
 export type UnpayBillMutation = { __typename?: 'RootMutationType', unpayBill?: boolean | null };
 
+export type SkipBillMutationVariables = Exact<{
+  billId: Scalars['ID']['input'];
+  month: Scalars['String']['input'];
+  note?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type SkipBillMutation = { __typename?: 'RootMutationType', skipBill?: { __typename?: 'BillOccurrence', month?: string | null, status?: string | null, note?: string | null } | null };
+
+export type UnskipBillMutationVariables = Exact<{
+  billId: Scalars['ID']['input'];
+  month: Scalars['String']['input'];
+}>;
+
+
+export type UnskipBillMutation = { __typename?: 'RootMutationType', unskipBill?: boolean | null };
+
 export type UpdateFinancialSettingsMutationVariables = Exact<{
   salaryAmount?: InputMaybe<Scalars['String']['input']>;
   salaryBusinessDay?: InputMaybe<Scalars['Int']['input']>;
@@ -1521,7 +1557,7 @@ export type BillOccurrencesQueryVariables = Exact<{
 }>;
 
 
-export type BillOccurrencesQuery = { __typename?: 'RootQueryType', billOccurrences?: Array<{ __typename?: 'BillOccurrence', month?: string | null, dueDate?: string | null, nextDueDate?: string | null, paidOn?: string | null, status?: string | null, amount?: string | null, expenseId?: string | null, bill?: { __typename?: 'RecurringBill', id?: string | null, name?: string | null, amount?: string | null, dueDay?: number | null, direction?: string | null, onceMonth?: string | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null } | null> | null };
+export type BillOccurrencesQuery = { __typename?: 'RootQueryType', billOccurrences?: Array<{ __typename?: 'BillOccurrence', month?: string | null, dueDate?: string | null, nextDueDate?: string | null, paidOn?: string | null, status?: string | null, note?: string | null, amount?: string | null, expenseId?: string | null, bill?: { __typename?: 'RecurringBill', id?: string | null, name?: string | null, amount?: string | null, dueDay?: number | null, direction?: string | null, onceMonth?: string | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null } | null> | null };
 
 export type FinancialSettingsQueryVariables = Exact<{
   today?: InputMaybe<Scalars['String']['input']>;
@@ -2908,6 +2944,75 @@ export function useUnpayBillMutation(baseOptions?: Apollo.MutationHookOptions<Un
 export type UnpayBillMutationHookResult = ReturnType<typeof useUnpayBillMutation>;
 export type UnpayBillMutationResult = Apollo.MutationResult<UnpayBillMutation>;
 export type UnpayBillMutationOptions = Apollo.BaseMutationOptions<UnpayBillMutation, UnpayBillMutationVariables>;
+export const SkipBillDocument = gql`
+    mutation SkipBill($billId: ID!, $month: String!, $note: String) {
+  skipBill(billId: $billId, month: $month, note: $note) {
+    month
+    status
+    note
+  }
+}
+    `;
+export type SkipBillMutationFn = Apollo.MutationFunction<SkipBillMutation, SkipBillMutationVariables>;
+
+/**
+ * __useSkipBillMutation__
+ *
+ * To run a mutation, you first call `useSkipBillMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSkipBillMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [skipBillMutation, { data, loading, error }] = useSkipBillMutation({
+ *   variables: {
+ *      billId: // value for 'billId'
+ *      month: // value for 'month'
+ *      note: // value for 'note'
+ *   },
+ * });
+ */
+export function useSkipBillMutation(baseOptions?: Apollo.MutationHookOptions<SkipBillMutation, SkipBillMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SkipBillMutation, SkipBillMutationVariables>(SkipBillDocument, options);
+      }
+export type SkipBillMutationHookResult = ReturnType<typeof useSkipBillMutation>;
+export type SkipBillMutationResult = Apollo.MutationResult<SkipBillMutation>;
+export type SkipBillMutationOptions = Apollo.BaseMutationOptions<SkipBillMutation, SkipBillMutationVariables>;
+export const UnskipBillDocument = gql`
+    mutation UnskipBill($billId: ID!, $month: String!) {
+  unskipBill(billId: $billId, month: $month)
+}
+    `;
+export type UnskipBillMutationFn = Apollo.MutationFunction<UnskipBillMutation, UnskipBillMutationVariables>;
+
+/**
+ * __useUnskipBillMutation__
+ *
+ * To run a mutation, you first call `useUnskipBillMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUnskipBillMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [unskipBillMutation, { data, loading, error }] = useUnskipBillMutation({
+ *   variables: {
+ *      billId: // value for 'billId'
+ *      month: // value for 'month'
+ *   },
+ * });
+ */
+export function useUnskipBillMutation(baseOptions?: Apollo.MutationHookOptions<UnskipBillMutation, UnskipBillMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UnskipBillMutation, UnskipBillMutationVariables>(UnskipBillDocument, options);
+      }
+export type UnskipBillMutationHookResult = ReturnType<typeof useUnskipBillMutation>;
+export type UnskipBillMutationResult = Apollo.MutationResult<UnskipBillMutation>;
+export type UnskipBillMutationOptions = Apollo.BaseMutationOptions<UnskipBillMutation, UnskipBillMutationVariables>;
 export const UpdateFinancialSettingsDocument = gql`
     mutation UpdateFinancialSettings($salaryAmount: String, $salaryBusinessDay: Int, $salaryAccountId: ID, $reserveGoal: String, $today: String) {
   updateFinancialSettings(
@@ -4253,6 +4358,7 @@ export const BillOccurrencesDocument = gql`
     nextDueDate
     paidOn
     status
+    note
     amount
     expenseId
     bill {

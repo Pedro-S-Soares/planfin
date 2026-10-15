@@ -112,9 +112,12 @@ defmodule PlanfinBackend.Finance.MonthPlan do
         %{label: a.name, date: today, amount: Finance.account_balance(a, today)}
       end)
 
+    skipped_next = Bills.skipped_ids(group_id, next_month)
+
     fixed =
       group_id
       |> Bills.recurring_expenses(["checking", "allowance", "reserve", "benefit", "credit_card"])
+      |> Enum.reject(&MapSet.member?(skipped_next, &1.id))
       |> Enum.map(fn bill ->
         %{label: bill.name, date: Bills.due_date(bill, next_month), amount: bill.amount}
       end)
