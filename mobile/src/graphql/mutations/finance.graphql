@@ -163,6 +163,18 @@ mutation UnpayBill($billId: ID!, $month: String!) {
   unpayBill(billId: $billId, month: $month)
 }
 
+mutation SkipBill($billId: ID!, $month: String!, $note: String) {
+  skipBill(billId: $billId, month: $month, note: $note) {
+    month
+    status
+    note
+  }
+}
+
+mutation UnskipBill($billId: ID!, $month: String!) {
+  unskipBill(billId: $billId, month: $month)
+}
+
 mutation UpdateFinancialSettings($salaryAmount: String, $salaryBusinessDay: Int, $salaryAccountId: ID, $reserveGoal: String, $today: String) {
   updateFinancialSettings(
     salaryAmount: $salaryAmount

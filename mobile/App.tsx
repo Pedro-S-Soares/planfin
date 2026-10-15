@@ -49,6 +49,7 @@ import { TransferScreen } from "./src/modules/finance/TransferScreen";
 import { BillsScreen } from "./src/modules/finance/BillsScreen";
 import { BillFormScreen } from "./src/modules/finance/BillFormScreen";
 import { PayBillScreen } from "./src/modules/finance/PayBillScreen";
+import { SkipBillScreen } from "./src/modules/finance/SkipBillScreen";
 import { SalarySettingsScreen } from "./src/modules/finance/SalarySettingsScreen";
 import { MonthPlanScreen } from "./src/modules/finance/MonthPlanScreen";
 import type { AccountKind } from "./src/modules/finance/format";
@@ -104,6 +105,7 @@ export type AppStackParamList = {
   Bills: { month?: string } | undefined;
   BillForm: { billId?: string; direction?: "expense" | "income"; once?: boolean };
   PayBill: { billId: string; month: string; amount: string; name: string; isCard: boolean; isIncome?: boolean };
+  SkipBill: { billId: string; month: string; name: string; isCard: boolean };
   SalarySettings: undefined;
   MonthPlan: undefined;
   Transfer: {
@@ -357,6 +359,7 @@ function AppNavigator() {
           <AppStack.Screen name="Bills" component={BillsScreen} options={pushOptions("Fixas, avulsas e entradas")} />
           <AppStack.Screen name="BillForm" component={BillFormScreen} options={modalOptions("Item planejado")} />
           <AppStack.Screen name="PayBill" component={PayBillScreen} options={modalOptions("Pagar despesa fixa")} />
+          <AppStack.Screen name="SkipBill" component={SkipBillScreen} options={modalOptions("Pular despesa fixa")} />
           <AppStack.Screen name="SalarySettings" component={SalarySettingsScreen} options={pushOptions("Salário e ciclo")} />
           <AppStack.Screen name="MonthPlan" component={MonthPlanScreen} options={pushOptions("Planejamento")} />
           <AppStack.Screen

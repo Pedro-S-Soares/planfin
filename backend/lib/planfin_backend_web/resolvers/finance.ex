@@ -363,6 +363,31 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def unpay_bill(_parent, _args, context), do: access_error(context)
 
+  def skip_bill(_parent, args, %{context: %{current_group: group}}) do
+    with {:ok, bill} <- fetch_bill(group.id, args.bill_id),
+         {:ok, month} <- parse_month(args.month) do
+      case Bills.skip(group.id, bill, month, args[:note], today(args)) do
+        {:ok, occurrence} -> {:ok, format_occurrence(occurrence)}
+        {:error, :already_paid} -> {:error, "This month is already paid"}
+        {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      end
+    end
+  end
+
+  def skip_bill(_parent, _args, context), do: access_error(context)
+
+  def unskip_bill(_parent, args, %{context: %{current_group: group}}) do
+    with {:ok, bill} <- fetch_bill(group.id, args.bill_id),
+         {:ok, month} <- parse_month(args.month) do
+      case Bills.unskip(group.id, bill, month) do
+        :ok -> {:ok, true}
+        {:error, :not_found} -> {:error, "This month is not skipped"}
+      end
+    end
+  end
+
+  def unskip_bill(_parent, _args, context), do: access_error(context)
+
   def create_account(_parent, args, %{context: %{current_group: group}}) do
     attrs = %{
       name: args.name,
@@ -704,7 +729,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       paid_on: occ.paid_on && Date.to_iso8601(occ.paid_on),
       status: occ.status,
       amount: Decimal.to_string(occ.amount),
-      expense_id: occ.expense_id
+      expense_id: occ.expense_id,
+      note: occ.note
     }
   end
 

@@ -11,10 +11,12 @@ type BillRowProps = {
   onEdit: () => void;
   onPay: () => void;
   onUndo: () => void;
+  onSkip: () => void;
+  onUnskip: () => void;
 };
 
 /** One fixed bill: its day, whether this month is settled and what comes next. */
-export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) {
+export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip }: BillRowProps) {
   const { currency } = useCurrency();
   const isCard = o.bill?.account?.kind === "credit_card";
   const isPaid = o.status === "paid";
@@ -32,7 +34,7 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) 
     : isPaid
     ? `${isCard ? "✓ Na fatura" : "✓ Paga"} em ${formatShortDate(o.paidOn)}${next}`
     : isSkipped
-      ? `Fora da fatura deste mês · próxima ${formatShortDate(o.nextDueDate)}`
+      ? `Pulada neste mês${o.note ? `: ${o.note}` : ""} · próxima ${formatShortDate(o.nextDueDate)}`
       : isBeforeStart
         ? `Já estava na fatura quando foi cadastrada · próxima ${formatShortDate(o.nextDueDate)}`
       : isOverdue
@@ -42,9 +44,21 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) 
           : `A pagar até ${formatShortDate(o.dueDate)}`;
 
   const statusColor = isPaid ? Colors.successText : isOverdue ? Colors.danger : Colors.textSec;
-  const actionLabel = isPaid ? (isCard ? "Tirar" : "Desfazer") : isIncome ? "Receber" : isCard ? "Lançar agora" : "Pagar";
+  const actionLabel = isPaid
+    ? isCard
+      ? "Tirar"
+      : "Desfazer"
+    : isSkipped
+      ? "Voltar"
+      : isIncome
+        ? "Receber"
+        : isCard
+          ? "Lançar agora"
+          : "Pagar";
   // Card bills enter the invoice by themselves: launching early is a secondary action.
-  const isPrimaryAction = !isPaid && !isCard;
+  const isPrimaryAction = !isPaid && !isSkipped && !isCard;
+  const canSkip = !isPaid && !isSkipped && !isBeforeStart;
+  const onAction = isPaid ? onUndo : isSkipped ? onUnskip : onPay;
 
   return (
     <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
@@ -62,8 +76,13 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo }: BillRowProps) 
       </View>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 8, gap: 10 }}>
         <Text style={{ flex: 1, fontSize: 12, fontWeight: "600", color: statusColor }}>{statusText}</Text>
+        {canSkip ? (
+          <TouchableOpacity onPress={onSkip} activeOpacity={0.75} hitSlop={8}>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.textSec }}>Pular mês</Text>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity
-          onPress={isPaid ? onUndo : onPay}
+          onPress={onAction}
           activeOpacity={0.75}
           style={{
             borderRadius: Radius.full,

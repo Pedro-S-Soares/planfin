@@ -7,7 +7,7 @@ import { Card } from "../../components/ui/Card";
 import { Chip } from "../../components/ui/Chip";
 import { InlineError } from "../../components/ui/InlineError";
 import { useCurrency } from "../../context/CurrencyContext";
-import { useBillOccurrencesQuery, useUnpayBillMutation } from "../../graphql/__generated__/hooks";
+import { useBillOccurrencesQuery, useUnpayBillMutation, useUnskipBillMutation } from "../../graphql/__generated__/hooks";
 import { confirm } from "../../lib/alert";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
@@ -45,6 +45,7 @@ export function BillsScreen() {
     fetchPolicy: "cache-and-network",
   });
   const [unpayBill] = useUnpayBillMutation({ refetchQueries: ["BillOccurrences", "FinancePanel", "FinancialAccounts"] });
+  const [unskipBill] = useUnskipBillMutation({ refetchQueries: ["BillOccurrences", "FinancePanel", "MonthPlan", "AllowancePlan"] });
 
   useFocusEffect(
     useCallback(() => {
@@ -129,12 +130,14 @@ export function BillsScreen() {
                     isIncome: bill.direction === "income",
                   })
                 }
+                onSkip={() => navigation.navigate("SkipBill", { billId, month, name: bill.name ?? "", isCard })}
+                onUnskip={() => unskipBill({ variables: { billId, month } })}
                 onUndo={() =>
                   confirm(
                     isCard
                       ? {
                           title: "Tirar da fatura",
-                          message: `A cobrança de ${formatMonth(month)} sai da fatura e não volta sozinha neste mês.`,
+                          message: `A cobrança de ${formatMonth(month)} sai da fatura e o mês fica pulado. Toque em Voltar para cobrar de novo.`,
                           confirmLabel: "Tirar",
                           destructive: true,
                         }

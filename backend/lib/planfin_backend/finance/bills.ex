@@ -11,6 +11,10 @@ defmodule PlanfinBackend.Finance.Bills do
   (`charge_due_card_bills/2`), landing on the invoice of that date. Removing
   such a charge marks the month as `skipped` so it is not charged again.
 
+  Any bill can be skipped in one month (`skip/5`, with an optional note): the
+  month leaves the commitments, the plan and the automatic charge, and the
+  bill comes back the following month.
+
   A bill exists every month from the month it was created on, whatever its
   day: a bill created on the 3rd with day 1 already has this month's
   occurrence, pending until the user marks it paid. Only the automatic card
@@ -165,7 +169,7 @@ defmodule PlanfinBackend.Finance.Bills do
     status =
       cond do
         expense -> "paid"
-        payment && card?(bill) -> "skipped"
+        payment -> "skipped"
         card?(bill) and not auto_chargeable?(bill, due) -> "before_start"
         Date.compare(today, due) == :gt -> "overdue"
         true -> "pending"
@@ -179,7 +183,8 @@ defmodule PlanfinBackend.Finance.Bills do
       status: status,
       paid_on: expense && expense.date,
       amount: if(expense, do: expense.amount, else: bill.amount),
-      expense_id: expense && expense.id
+      expense_id: expense && expense.id,
+      note: payment && is_nil(expense) && payment.note
     }
   end
 
@@ -271,6 +276,50 @@ defmodule PlanfinBackend.Finance.Bills do
   # A skipped month (payment without entry) can be paid again.
   defp not_paid_yet(%BillPayment{expense_id: id}) when not is_nil(id), do: {:error, :already_paid}
   defp not_paid_yet(_), do: :ok
+
+  @doc """
+  Skips the bill in `month`: it is neither owed nor charged that month. A paid
+  month must be undone first. Returns `{:ok, occurrence}`.
+  """
+  def skip(group_id, %RecurringBill{} = bill, month, note, today \\ Date.utc_today()) do
+    month_date = Date.new!(elem(month, 0), elem(month, 1), 1)
+    existing = Repo.get_by(BillPayment, bill_id: bill.id, month: month_date, group_id: group_id)
+
+    with :ok <- not_paid_yet(existing),
+         {:ok, _payment} <-
+           (existing || %BillPayment{})
+           |> BillPayment.changeset(%{
+             group_id: group_id,
+             bill_id: bill.id,
+             month: month_date,
+             note: note || ""
+           })
+           |> Repo.insert_or_update() do
+      {:ok, occurrence(bill, month, payments_for(group_id, [month]), today)}
+    end
+  end
+
+  @doc "Brings back a skipped month: it is owed (or charged) again."
+  def unskip(group_id, %RecurringBill{} = bill, month) do
+    month_date = Date.new!(elem(month, 0), elem(month, 1), 1)
+
+    case Repo.get_by(BillPayment, bill_id: bill.id, month: month_date, group_id: group_id) do
+      %BillPayment{expense_id: nil} = payment ->
+        Repo.delete!(payment)
+        :ok
+
+      _ ->
+        {:error, :not_found}
+    end
+  end
+
+  @doc "Ids of the bills skipped in `month`."
+  def skipped_ids(group_id, month) do
+    group_id
+    |> payments_for([month])
+    |> Enum.filter(fn {_key, p} -> is_nil(p.expense_id) end)
+    |> MapSet.new(fn {{bill_id, _month}, _p} -> bill_id end)
+  end
 
   @doc """
   Undoes the payment of `month`, deleting the entry it created. For a card bill

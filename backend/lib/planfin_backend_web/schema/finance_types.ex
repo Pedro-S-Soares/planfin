@@ -84,8 +84,10 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :due_date, :string
     @desc "Due date of the following month"
     field :next_due_date, :string
-    @desc "pending | overdue | paid | skipped"
+    @desc "pending | overdue | paid | skipped | before_start"
     field :status, :string
+    @desc "Why the month was skipped"
+    field :note, :string
     @desc "Date of the payment/charge when paid"
     field :paid_on, :string
     @desc "Real amount when paid, estimate otherwise"
@@ -416,6 +418,21 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       arg(:bill_id, non_null(:id))
       arg(:month, non_null(:string))
       resolve(&Finance.unpay_bill/3)
+    end
+
+    @desc "Skip the bill in one month (it is not owed nor charged), with an optional note"
+    field :skip_bill, :bill_occurrence do
+      arg(:bill_id, non_null(:id))
+      arg(:month, non_null(:string))
+      arg(:note, :string)
+      resolve(&Finance.skip_bill/3)
+    end
+
+    @desc "Bring back a skipped month"
+    field :unskip_bill, :boolean do
+      arg(:bill_id, non_null(:id))
+      arg(:month, non_null(:string))
+      resolve(&Finance.unskip_bill/3)
     end
 
     field :create_financial_account, :financial_account do
