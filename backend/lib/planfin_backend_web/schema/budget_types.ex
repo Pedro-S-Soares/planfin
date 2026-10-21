@@ -76,10 +76,25 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :kind, :string
   end
 
+  @desc "Money moved between two accounts of the group, shown in the history"
+  object :history_transfer do
+    field :id, :id
+    field :amount, :string
+    field :date, :string
+    @desc "card_payment | allowance | reserve | other"
+    field :kind, :string
+    field :note, :string
+    field :from_account, :expense_account
+    field :to_account, :expense_account
+    field :created_by, :user
+  end
+
   object :expense_day do
     field :date, :string
+    @desc "Net of the day's entries (income − expenses); transfers do not count"
     field :total, :string
     field :expenses, list_of(:expense)
+    field :transfers, list_of(:history_transfer)
   end
 
   object :period_summary do

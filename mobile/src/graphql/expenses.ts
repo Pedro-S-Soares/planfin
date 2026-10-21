@@ -22,10 +22,24 @@ export type ExpenseWithAuthor = {
   createdBy: ExpenseAuthor | null;
 };
 
+export type HistoryAccountRef = { id: string; name: string; kind: string };
+
+export type HistoryTransfer = {
+  id: string;
+  amount: string;
+  date: string;
+  kind: string | null;
+  note: string | null;
+  fromAccount: HistoryAccountRef | null;
+  toAccount: HistoryAccountRef | null;
+  createdBy: ExpenseAuthor | null;
+};
+
 export type ExpenseDayWithAuthors = {
   date: string;
   total: string;
   expenses: ExpenseWithAuthor[];
+  transfers: HistoryTransfer[];
 };
 
 export const EXPENSE_HISTORY_WITH_AUTHORS = gql`
@@ -57,6 +71,27 @@ export const EXPENSE_HISTORY_WITH_AUTHORS = gql`
             name
             icon
           }
+        }
+        createdBy {
+          id
+          email
+        }
+      }
+      transfers {
+        id
+        amount
+        date
+        kind
+        note
+        fromAccount {
+          id
+          name
+          kind
+        }
+        toAccount {
+          id
+          name
+          kind
         }
         createdBy {
           id
