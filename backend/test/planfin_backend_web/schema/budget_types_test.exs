@@ -397,6 +397,87 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypesTest do
       assert length(day["expenses"]) == 2
     end
 
+    test "lists transfers on their day without changing the day total", %{conn: conn} do
+      {conn, user, group} = authed_conn_with_group(conn)
+      today = Date.utc_today()
+      tomorrow = Date.add(today, 1)
+
+      {:ok, period} = Periods.create_period(group.id, valid_period_attrs())
+
+      {:ok, bank} =
+        PlanfinBackend.Finance.create_account(group.id, %{name: "BB", kind: "checking"})
+
+      {:ok, card} =
+        PlanfinBackend.Finance.create_account(group.id, %{
+          name: "Nubank",
+          kind: "credit_card",
+          closing_day: 25,
+          due_day: 5
+        })
+
+      {:ok, _} =
+        Expenses.create_expense(group.id, user.id, %{
+          amount: Decimal.new("10.00"),
+          date: today,
+          account_id: bank.id
+        })
+
+      {:ok, _} =
+        PlanfinBackend.Finance.create_transfer(group.id, user.id, %{
+          amount: Decimal.new("500.00"),
+          date: today,
+          kind: "card_payment",
+          from_account_id: bank.id,
+          to_account_id: card.id
+        })
+
+      {:ok, _} =
+        PlanfinBackend.Finance.create_transfer(group.id, user.id, %{
+          amount: Decimal.new("50.00"),
+          date: tomorrow,
+          kind: "other",
+          from_account_id: bank.id,
+          to_account_id: card.id
+        })
+
+      query = """
+        query ExpenseHistory($periodId: ID!) {
+          expenseHistory(periodId: $periodId) {
+            date
+            total
+            expenses { id }
+            transfers {
+              amount
+              kind
+              fromAccount { id name kind }
+              toAccount { id name }
+            }
+          }
+        }
+      """
+
+      resp = post_graphql(conn, query, %{periodId: period.id})
+      assert resp["errors"] == nil
+
+      [only_transfer_day, entry_day] = resp["data"]["expenseHistory"]
+
+      assert only_transfer_day["date"] == Date.to_iso8601(tomorrow)
+      assert only_transfer_day["expenses"] == []
+      assert Decimal.equal?(Decimal.new(only_transfer_day["total"]), 0)
+
+      assert entry_day["date"] == Date.to_iso8601(today)
+      assert Decimal.equal?(Decimal.new(entry_day["total"]), Decimal.new("-10.00"))
+
+      assert [
+               %{
+                 "amount" => "500.00",
+                 "kind" => "card_payment",
+                 "fromAccount" => %{"name" => "BB", "kind" => "checking"},
+                 "toAccount" => %{"name" => "Nubank"}
+               }
+             ] = entry_day["transfers"]
+    end
+
     test "returns subcategory.category with icon for each expense", %{conn: conn} do
       {conn, user, group} = authed_conn_with_group(conn)
       today = Date.utc_today()

@@ -249,6 +249,18 @@ defmodule PlanfinBackend.Finance do
     end
   end
 
+  @doc """
+  Transfers of the group dated within `from` and `to` (inclusive), newest
+  first, with both accounts preloaded. Feeds the history next to the entries.
+  """
+  def list_transfers_between(group_id, %Date{} = from, %Date{} = to) do
+    Transfer
+    |> where([t], t.group_id == ^group_id and t.date >= ^from and t.date <= ^to)
+    |> order_by([t], desc: t.date, desc: t.inserted_at)
+    |> preload([:from_account, :to_account, :created_by])
+    |> Repo.all()
+  end
+
   def delete_transfer(group_id, transfer_id) do
     case Repo.get_by(Transfer, id: transfer_id, group_id: group_id) do
       nil -> {:error, :not_found}

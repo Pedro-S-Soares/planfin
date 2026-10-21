@@ -48,13 +48,30 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
     case Periods.get_period(group.id, period_id) do
       {:ok, period} ->
-        days =
+        transfers =
+          PlanfinBackend.Finance.list_transfers_between(
+            group.id,
+            period.start_date,
+            period.end_date
+          )
+          |> Enum.group_by(& &1.date)
+
+        entry_days =
           Expenses.list_expenses_by_period(group.id, period.id)
-          |> Enum.map(fn %{date: date, expenses: expenses, total: total} ->
+          |> Map.new(&{&1.date, &1})
+
+        days =
+          (Map.keys(entry_days) ++ Map.keys(transfers))
+          |> Enum.uniq()
+          |> Enum.sort({:desc, Date})
+          |> Enum.map(fn date ->
+            day = Map.get(entry_days, date, %{expenses: [], total: Decimal.new("0")})
+
             %{
               date: Date.to_iso8601(date),
-              total: Decimal.to_string(total),
-              expenses: Enum.map(expenses, &format_expense/1)
+              total: Decimal.to_string(day.total),
+              expenses: Enum.map(day.expenses, &format_expense/1),
+              transfers: Enum.map(Map.get(transfers, date, []), &format_history_transfer/1)
             }
           end)
 
@@ -558,6 +575,24 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       source: expense.source
     }
   end
+
+  defp format_history_transfer(transfer) do
+    %{
+      id: transfer.id,
+      amount: Decimal.to_string(transfer.amount),
+      date: Date.to_iso8601(transfer.date),
+      kind: transfer.kind,
+      note: transfer.note,
+      from_account: format_account_ref(transfer.from_account),
+      to_account: format_account_ref(transfer.to_account),
+      created_by: format_created_by(transfer)
+    }
+  end
+
+  defp format_account_ref(%PlanfinBackend.Finance.Account{} = a),
+    do: %{id: a.id, name: a.name, kind: a.kind}
+
+  defp format_account_ref(_), do: nil
 
   defp format_expense_account(%{account: %PlanfinBackend.Finance.Account{} = a}),
     do: %{id: a.id, name: a.name, kind: a.kind}

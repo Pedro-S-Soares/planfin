@@ -4,6 +4,7 @@ import { categoryColor } from "../../theme/tokens";
 import { CategoryIcon } from "./CategoryIcon";
 import { useCurrency } from "../../context/CurrencyContext";
 import { subcategoryLabel } from "../../lib/category-label";
+import { isRecurringEntry } from "../../modules/history/history-filters";
 
 interface ExpenseItem {
   id: string;
@@ -34,13 +35,19 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
   const colorKey = item.subcategory?.category?.name ?? item.subcategory?.name ?? "";
   const cc = categoryColor(colorKey);
   const isIncome = item.type === "income";
+  // A paid fixed bill is recognised by its name (the bill's name is stored as the note).
+  const isBillEntry = item.source === "bill" && Boolean(item.note);
+  const title = item.source === "invoice_adjustment"
+    ? "Ajuste da fatura"
+    : isBillEntry ? item.note : subcategoryLabel(item.subcategory);
   const details = [
     authorLabel,
     item.installmentCount ? `${item.installmentNumber}/${item.installmentCount}` : null,
     item.account?.name ? `${item.account.kind === "credit_card" ? "💳" : "🏦"} ${item.account.name}` : null,
-    item.note,
+    isBillEntry ? subcategoryLabel(item.subcategory, "") : item.note,
   ].filter(Boolean);
   const isOutsideBudget = item.countsInBudget === false;
+  const isRecurring = isRecurringEntry({ source: item.source ?? null });
 
   return (
     <TouchableOpacity
@@ -75,7 +82,7 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: Colors.text }} numberOfLines={2}>
-            {item.source === "invoice_adjustment" ? "Ajuste da fatura" : subcategoryLabel(item.subcategory)}
+            {title}
           </Text>
           {isIncome && (
             <View style={{
@@ -87,6 +94,16 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
               <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.successText }}>Receita</Text>
             </View>
           )}
+          {isRecurring ? (
+            <View style={{
+              backgroundColor: Colors.primaryLight,
+              borderRadius: 4,
+              paddingHorizontal: 5,
+              paddingVertical: 1,
+            }}>
+              <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.primaryText }}>↻ Recorrente</Text>
+            </View>
+          ) : null}
         </View>
         {details.length > 0 ? (
           <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 1 }} numberOfLines={1}>

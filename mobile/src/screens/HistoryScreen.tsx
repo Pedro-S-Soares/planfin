@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -21,22 +21,25 @@ import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { InlineError } from "../components/ui/InlineError";
 import { Colors } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { formatMoney } from "../modules/finance/format";
+import { useFinancialAccounts } from "../modules/finance/use-financial-accounts";
+import {
+  DEFAULT_HISTORY_FILTERS,
+  filterHistory,
+  hasActiveFilters,
+  summarizeHistory,
+  type HistoryFilters,
+} from "../modules/history/history-filters";
+import { HistoryFilterBar } from "../modules/history/components/HistoryFilterBar";
+import { HistorySummaryCard } from "../modules/history/components/HistorySummaryCard";
+import { TransferRow } from "../modules/history/components/TransferRow";
 import type { AppStackParamList } from "../../App";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 type ExpenseHistoryData = { expenseHistory: ExpenseDayWithAuthors[] };
 
-/** Day total is net (income − expenses); keep the sign visible so a spending day reads as negative. */
-function formatSignedAmount(total: string | null | undefined, symbol: string) {
-  const value = parseFloat(total ?? "0");
-  const safe = Number.isFinite(value) ? value : 0;
-  const sign = safe < 0 ? "-" : safe > 0 ? "+" : "";
-  return `${sign}${symbol} ${Math.abs(safe).toFixed(2).replace(".", ",")}`;
-}
-
-function dayTotalColor(total: string | null | undefined) {
-  const value = parseFloat(total ?? "0");
-  return value > 0 ? Colors.success : Colors.textSec;
+function dayTotalColor(total: number) {
+  return total > 0 ? Colors.success : Colors.textSec;
 }
 
 function authorLabel(author: ExpenseWithAuthor["createdBy"], currentUserId?: string) {
@@ -51,6 +54,8 @@ export function HistoryScreen() {
   const { period, refetch: refetchPeriod } = usePeriod();
   const { user } = useAuth();
   const { currency } = useCurrency();
+  const { accounts } = useFinancialAccounts();
+  const [filters, setFilters] = useState<HistoryFilters>(DEFAULT_HISTORY_FILTERS);
 
   const { data, loading, error, refetch } = useQuery<ExpenseHistoryData>(
     EXPENSE_HISTORY_WITH_AUTHORS,
@@ -73,7 +78,14 @@ export function HistoryScreen() {
     refetchQueries: [{ query: ActivePeriodDocument }],
   });
 
-  const days = data?.expenseHistory ?? [];
+  const rawDays = data?.expenseHistory;
+  // Day totals are recomputed from what the filters leave visible, so they always match the list.
+  const days = useMemo(() => filterHistory(rawDays ?? [], filters), [rawDays, filters]);
+  const summary = useMemo(() => summarizeHistory(days), [days]);
+  const accountFilter = filters.account;
+  const filteredAccount = accountFilter.kind === "account"
+    ? accounts.find((a) => a.id === accountFilter.id) ?? null
+    : null;
 
   const periodLabel = (() => {
     if (!period?.startDate || !period?.endDate) return null;
@@ -103,6 +115,10 @@ export function HistoryScreen() {
     </View>
   );
 
+  const filterBar = (
+    <HistoryFilterBar filters={filters} accounts={accounts} onChange={setFilters} />
+  );
+
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.bg }}>
@@ -129,8 +145,11 @@ export function HistoryScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.bg }}>
         {header}
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: Colors.textTer, fontSize: 15 }}>Nenhum gasto registrado ainda.</Text>
+        {filterBar}
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <Text style={{ color: Colors.textTer, fontSize: 15, textAlign: "center" }}>
+            {hasActiveFilters(filters) ? "Nenhum lançamento com esses filtros." : "Nenhum gasto registrado ainda."}
+          </Text>
         </View>
       </View>
     );
@@ -139,10 +158,14 @@ export function HistoryScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: Colors.bg }}>
       {header}
+      {filterBar}
       <FlatList
         data={days}
         keyExtractor={(day) => day.date}
         contentContainerStyle={{ paddingVertical: 14, paddingHorizontal: 16 }}
+        ListHeaderComponent={
+          <HistorySummaryCard summary={summary} account={filteredAccount} currencySymbol={currency.symbol} />
+        }
         renderItem={({ item: day }) => (
           <View style={{ marginBottom: 14 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8, paddingHorizontal: 2 }}>
@@ -150,15 +173,23 @@ export function HistoryScreen() {
                 {formatDateBR(day.date)}
               </Text>
               <Text style={{ fontSize: 12, color: dayTotalColor(day.total), fontWeight: "600" }}>
-                Total: {formatSignedAmount(day.total, currency.symbol)}
+                Total: {formatMoney(day.total, currency.symbol, true)}
               </Text>
             </View>
             <Card padding={12}>
-              {day.expenses.map((item) => (
+              {day.items.map((historyItem) => historyItem.kind === "transfer" ? (
+                <TransferRow
+                  key={`transfer-${historyItem.transfer.id}`}
+                  transfer={historyItem.transfer}
+                  signedAmount={historyItem.signedAmount}
+                  currencySymbol={currency.symbol}
+                />
+              ) : (
                 <ExpenseRow
-                  key={item.id}
-                  item={item}
+                  key={historyItem.entry.id}
+                  item={historyItem.entry}
                   onPress={() => {
+                    const item = historyItem.entry;
                     const params = {
                       id: item.id,
                       amount: item.amount,
@@ -178,7 +209,7 @@ export function HistoryScreen() {
                     }
                   }}
                   onDelete={(id) => deleteExpense({ variables: { id } })}
-                  authorLabel={authorLabel(item.createdBy, user?.id)}
+                  authorLabel={authorLabel(historyItem.entry.createdBy, user?.id)}
                 />
               ))}
             </Card>
