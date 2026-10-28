@@ -116,14 +116,12 @@ defmodule PlanfinBackend.Finance.CyclePlanTest do
     # Rent of Nov 5 and Dec 5
     assert Decimal.equal?(sum(c.fixed_bills), Decimal.new("3000"))
 
-    # Caju: R$ 800 today + the R$ 1.150 credit of Nov 1, before the closing
-    assert [%{label: "Caju · saldo hoje"}, %{label: "Caju · crédito", date: ~D[2026-11-01]}] =
-             c.benefits
+    # Caju: only today's R$ 800; the credit of Nov 1 is for the next cycle
+    assert [%{label: "Caju · saldo hoje"}] = c.benefits
+    assert Decimal.equal?(sum(c.benefits), Decimal.new("800"))
 
-    assert Decimal.equal?(sum(c.benefits), Decimal.new("1950"))
-
-    # 1400 + 10607 + 2700 + 1950 − 7000 − 20 − 200 − 3000
-    assert Decimal.equal?(c.result, Decimal.new("6437"))
+    # 1400 + 10607 + 2700 + 800 − 7000 − 20 − 200 − 3000
+    assert Decimal.equal?(c.result, Decimal.new("5287"))
     assert c.goal_start == @today
     assert c.days == 9
   end
@@ -139,8 +137,8 @@ defmodule PlanfinBackend.Finance.CyclePlanTest do
     assert n.last_purchase_date == ~D[2026-12-04]
     assert n.due_date == ~D[2026-12-15]
     assert Decimal.equal?(n.partner.amount, Decimal.new("3000"))
-    # Only the credit of Dec 1: today's balance belongs to the open invoice
-    assert [%{date: ~D[2026-12-01]}] = n.benefits
+    # The credit of Nov 1, arriving during the current invoice
+    assert [%{date: ~D[2026-11-01]}] = n.benefits
     assert Decimal.equal?(sum(n.benefits), Decimal.new("1150"))
     assert Decimal.equal?(sum(n.card_bills), Decimal.new("75.90"))
     assert Decimal.equal?(sum(n.installments), Decimal.new("200"))
@@ -167,8 +165,9 @@ defmodule PlanfinBackend.Finance.CyclePlanTest do
     # Purchases of the open invoice count in the daily goal from today
     assert plan.next.goal_start == ~D[2026-11-08]
     assert plan.next.days == 27
-    # The voucher balance moves to the invoice taking purchases now
-    assert [%{label: "Caju · saldo hoje"}, %{date: ~D[2026-12-01]}] = plan.next.benefits
+    # The voucher balance (with the Nov 1 credit) goes to the invoice taking
+    # purchases now; the Dec 1 credit is for the cycle after it
+    assert [%{label: "Caju · saldo hoje"}] = plan.next.benefits
   end
 
   test "a received partner salary no longer counts as expected" do
@@ -179,7 +178,7 @@ defmodule PlanfinBackend.Finance.CyclePlanTest do
     {:ok, plan} = CyclePlan.build(ctx.group.id, @today)
     assert plan.current.partner.received
     # The income entry is in the balance now (+2700) and the expectation is gone (−2700)
-    assert Decimal.equal?(plan.current.result, Decimal.new("6437"))
+    assert Decimal.equal?(plan.current.result, Decimal.new("5287"))
   end
 
   describe "set_partner_income" do
