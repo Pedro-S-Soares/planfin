@@ -242,3 +242,28 @@ query MonthPlan($today: String) {
     }
   }
 }
+
+query InstallmentsDue($month: String!, $today: String) {
+  installmentsDue(month: $month, today: $today) {
+    cardId
+    month
+    dueDate
+    status
+    entries {
+      id
+      amount
+      date
+      note
+      installmentNumber
+      installmentCount
+      subcategory {
+        id
+        name
+        category {
+          id
+          name
+        }
+      }
+    }
+  }
+}

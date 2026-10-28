@@ -117,7 +117,8 @@ defmodule PlanfinBackend.Finance.SalaryTest do
         amount: Decimal.new("900.00"),
         date: ~D[2026-10-01],
         account_id: ctx.card.id,
-        installments: 3
+        installments: 3,
+        today: ~D[2026-10-03]
       })
 
     # Active period covers the current cycle → proposal is for the next one

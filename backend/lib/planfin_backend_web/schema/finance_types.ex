@@ -307,6 +307,13 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       resolve(&Finance.list_invoices/3)
     end
 
+    @desc "Card invoices due in the calendar month (YYYY-MM), each with only its installment entries"
+    field :installments_due, list_of(:invoice) do
+      arg(:month, non_null(:string))
+      arg(:today, :string)
+      resolve(&Finance.installments_due/3)
+    end
+
     field :invoice, :invoice do
       arg(:card_id, non_null(:id))
       arg(:month, non_null(:string))

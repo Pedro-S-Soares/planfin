@@ -162,7 +162,9 @@ export type ExpenseDay = {
   __typename?: 'ExpenseDay';
   date?: Maybe<Scalars['String']['output']>;
   expenses?: Maybe<Array<Maybe<Expense>>>;
+  /** Net of the day's entries (income − expenses); transfers do not count */
   total?: Maybe<Scalars['String']['output']>;
+  transfers?: Maybe<Array<Maybe<HistoryTransfer>>>;
 };
 
 export type FinancePanel = {
@@ -238,6 +240,20 @@ export type GroupMember = {
   id?: Maybe<Scalars['Int']['output']>;
   isOwner?: Maybe<Scalars['Boolean']['output']>;
   joinedAt?: Maybe<Scalars['String']['output']>;
+};
+
+/** Money moved between two accounts of the group, shown in the history */
+export type HistoryTransfer = {
+  __typename?: 'HistoryTransfer';
+  amount?: Maybe<Scalars['String']['output']>;
+  createdBy?: Maybe<User>;
+  date?: Maybe<Scalars['String']['output']>;
+  fromAccount?: Maybe<ExpenseAccount>;
+  id?: Maybe<Scalars['ID']['output']>;
+  /** card_payment | allowance | reserve | other */
+  kind?: Maybe<Scalars['String']['output']>;
+  note?: Maybe<Scalars['String']['output']>;
+  toAccount?: Maybe<ExpenseAccount>;
 };
 
 /** Credit card invoice of a month, computed from the card's entries */
@@ -810,6 +826,8 @@ export type RootQueryType = {
   groupPeriods?: Maybe<Array<Maybe<Period>>>;
   /** All entries of the installment purchase the expense belongs to */
   installments?: Maybe<Array<Maybe<Expense>>>;
+  /** Card invoices due in the calendar month (YYYY-MM), each with only its installment entries */
+  installmentsDue?: Maybe<Array<Maybe<Invoice>>>;
   invoice?: Maybe<Invoice>;
   /** Invoices of a card: closed ones before the current, the current and future ones with installments */
   invoices?: Maybe<Array<Maybe<Invoice>>>;
@@ -897,6 +915,12 @@ export type RootQueryTypeGroupMembersArgs = {
 
 export type RootQueryTypeInstallmentsArgs = {
   expenseId: Scalars['ID']['input'];
+};
+
+
+export type RootQueryTypeInstallmentsDueArgs = {
+  month: Scalars['String']['input'];
+  today?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1594,6 +1618,14 @@ export type MonthPlanQueryVariables = Exact<{
 
 
 export type MonthPlanQuery = { __typename?: 'RootQueryType', monthPlan?: { __typename?: 'MonthPlan', current?: { __typename?: 'MonthPlanCurrent', endDate?: string | null, hasPrimary?: boolean | null, balance?: string | null, invoiceDueDate?: string | null, afterInvoices?: string | null, leftover?: string | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoices?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null } | null, next?: { __typename?: 'MonthPlanNext', startDate?: string | null, endDate?: string | null, days?: number | null, remaining?: string | null, salary?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null } | null } | null };
+
+export type InstallmentsDueQueryVariables = Exact<{
+  month: Scalars['String']['input'];
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type InstallmentsDueQuery = { __typename?: 'RootQueryType', installmentsDue?: Array<{ __typename?: 'Invoice', cardId?: string | null, month?: string | null, dueDate?: string | null, status?: string | null, entries?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, installmentNumber?: number | null, installmentCount?: number | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, category?: { __typename?: 'SubcategoryCategory', id?: string | null, name?: string | null } | null } | null } | null> | null } | null> | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -4689,6 +4721,69 @@ export type MonthPlanQueryHookResult = ReturnType<typeof useMonthPlanQuery>;
 export type MonthPlanLazyQueryHookResult = ReturnType<typeof useMonthPlanLazyQuery>;
 export type MonthPlanSuspenseQueryHookResult = ReturnType<typeof useMonthPlanSuspenseQuery>;
 export type MonthPlanQueryResult = Apollo.QueryResult<MonthPlanQuery, MonthPlanQueryVariables>;
+export const InstallmentsDueDocument = gql`
+    query InstallmentsDue($month: String!, $today: String) {
+  installmentsDue(month: $month, today: $today) {
+    cardId
+    month
+    dueDate
+    status
+    entries {
+      id
+      amount
+      date
+      note
+      installmentNumber
+      installmentCount
+      subcategory {
+        id
+        name
+        category {
+          id
+          name
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useInstallmentsDueQuery__
+ *
+ * To run a query within a React component, call `useInstallmentsDueQuery` and pass it any options that fit your needs.
+ * When your component renders, `useInstallmentsDueQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useInstallmentsDueQuery({
+ *   variables: {
+ *      month: // value for 'month'
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useInstallmentsDueQuery(baseOptions: Apollo.QueryHookOptions<InstallmentsDueQuery, InstallmentsDueQueryVariables> & ({ variables: InstallmentsDueQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<InstallmentsDueQuery, InstallmentsDueQueryVariables>(InstallmentsDueDocument, options);
+      }
+export function useInstallmentsDueLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<InstallmentsDueQuery, InstallmentsDueQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<InstallmentsDueQuery, InstallmentsDueQueryVariables>(InstallmentsDueDocument, options);
+        }
+// @ts-ignore
+export function useInstallmentsDueSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<InstallmentsDueQuery, InstallmentsDueQueryVariables>): Apollo.UseSuspenseQueryResult<InstallmentsDueQuery, InstallmentsDueQueryVariables>;
+export function useInstallmentsDueSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<InstallmentsDueQuery, InstallmentsDueQueryVariables>): Apollo.UseSuspenseQueryResult<InstallmentsDueQuery | undefined, InstallmentsDueQueryVariables>;
+export function useInstallmentsDueSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<InstallmentsDueQuery, InstallmentsDueQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<InstallmentsDueQuery, InstallmentsDueQueryVariables>(InstallmentsDueDocument, options);
+        }
+export type InstallmentsDueQueryHookResult = ReturnType<typeof useInstallmentsDueQuery>;
+export type InstallmentsDueLazyQueryHookResult = ReturnType<typeof useInstallmentsDueLazyQuery>;
+export type InstallmentsDueSuspenseQueryHookResult = ReturnType<typeof useInstallmentsDueSuspenseQuery>;
+export type InstallmentsDueQueryResult = Apollo.QueryResult<InstallmentsDueQuery, InstallmentsDueQueryVariables>;
 export const MyGroupsDocument = gql`
     query MyGroups {
   myGroups {

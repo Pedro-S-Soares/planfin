@@ -82,7 +82,7 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypesTest do
         conn,
         """
         mutation($accountId: ID) {
-          createExpense(amount: "300.00", date: "2026-10-02", accountId: $accountId, installments: 3) {
+          createExpense(amount: "300.00", date: "2026-10-02", accountId: $accountId, installments: 3, today: "2026-10-03") {
             id amount installmentNumber installmentCount countsInBudget account { id kind }
           }
         }
@@ -130,6 +130,68 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypesTest do
     resp = gql(conn, "query { financialAccounts(today: \"2026-10-14\") { kind balance } }")
     checking_now = Enum.find(resp["data"]["financialAccounts"], &(&1["kind"] == "checking"))
     assert checking_now["balance"] == "1400.00"
+  end
+
+  test "installmentsDue lists the installments of each card's invoice due in the month", %{
+    conn: conn
+  } do
+    {conn, user, group} = setup_conn(conn)
+    {_checking, bb} = create_accounts(conn)
+
+    %{"data" => %{"createFinancialAccount" => nubank}} =
+      gql(conn, @create, %{name: "Nubank", kind: "credit_card", closingDay: 28, dueDay: 5})
+
+    purchase = fn card, amount, date, installments ->
+      {:ok, _} =
+        PlanfinBackend.Expenses.create_expense(group.id, user.id, %{
+          amount: Decimal.new(amount),
+          date: date,
+          account_id: card["id"],
+          counts_in_budget: false,
+          installments: installments,
+          today: ~D[2027-03-01]
+        })
+    end
+
+    # BB (closes 5, due 15): parcels on the invoices due 15/04, 15/05 and 15/06.
+    purchase.(bb, "300.00", ~D[2027-03-10], 3)
+    # Nubank (closes 28, due 5): parcel 1 on the invoice closing 28/04, due 05/05.
+    purchase.(nubank, "200.00", ~D[2027-03-29], 2)
+    # A one-off purchase on the BB invoice due in May is not an installment.
+    purchase.(bb, "80.00", ~D[2027-04-20], 1)
+
+    resp =
+      gql(conn, """
+      query {
+        installmentsDue(month: "2027-05", today: "2027-03-01") {
+          cardId month dueDate total entries { amount installmentNumber installmentCount }
+        }
+      }
+      """)
+
+    assert resp["errors"] == nil
+    invoices = Enum.sort_by(resp["data"]["installmentsDue"], & &1["dueDate"])
+
+    assert [
+             %{
+               "cardId" => nubank_id,
+               "month" => "2027-04",
+               "dueDate" => "2027-05-05",
+               "entries" => [%{"amount" => "100.00", "installmentNumber" => 1}]
+             },
+             %{
+               "cardId" => bb_id,
+               "month" => "2027-05",
+               "dueDate" => "2027-05-17",
+               "total" => "180.00",
+               "entries" => [
+                 %{"amount" => "100.00", "installmentNumber" => 2, "installmentCount" => 3}
+               ]
+             }
+           ] = invoices
+
+    assert nubank_id == nubank["id"]
+    assert bb_id == bb["id"]
   end
 
   test "setAccountBalance reconciles and accountMovements lists history", %{conn: conn} do

@@ -48,6 +48,21 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def get_invoice(_parent, _args, context), do: access_error(context)
 
+  def installments_due(_parent, %{month: month} = args, %{context: %{current_group: group}}) do
+    charge_card_bills(group.id, args)
+
+    with {:ok, month} <- parse_month(month) do
+      {:ok,
+       group.id
+       |> PlanfinBackend.Finance.list_accounts()
+       |> Enum.filter(&(&1.kind == "credit_card"))
+       |> Enum.flat_map(&Invoices.with_installments_due_in(&1, month, today(args)))
+       |> Enum.map(&format_invoice/1)}
+    end
+  end
+
+  def installments_due(_parent, _args, context), do: access_error(context)
+
   def list_movements(_parent, %{account_id: id} = args, %{context: %{current_group: group}}) do
     with {:ok, account} <- fetch_account(group.id, id) do
       limit = args |> Map.get(:limit, 50) |> max(1) |> min(200)
