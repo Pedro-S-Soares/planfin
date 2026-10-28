@@ -6,6 +6,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   alias PlanfinBackend.Finance.{
     Allowance,
     Bills,
+    CyclePlan,
     MonthPlan,
     Invoices,
     Panel,
@@ -154,6 +155,36 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def month_plan(_parent, _args, context), do: access_error(context)
 
+  def cycle_plan(_parent, args, %{context: %{current_group: group}}) do
+    charge_card_bills(group.id, args)
+
+    case CyclePlan.build(group.id, today(args)) do
+      {:ok, plan} -> {:ok, format_cycle_plan(plan)}
+      {:error, _} -> {:ok, nil}
+    end
+  end
+
+  def cycle_plan(_parent, _args, context), do: access_error(context)
+
+  def set_partner_income(_parent, %{month: month} = args, %{context: %{current_group: group}}) do
+    with {:ok, m} <- parse_month(month),
+         {:ok, amount} <- parse_optional_amount(args[:amount]),
+         {:ok, _bill} <- CyclePlan.set_partner_income(group.id, m, amount) do
+      {:ok, group.id |> CyclePlan.partner_income(m, today(args)) |> format_partner()}
+    else
+      {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
+      {:error, :already_received} -> {:error, "Already received: undo it in the bills first"}
+      {:error, :account_not_found} -> {:error, "Account not found"}
+      {:error, msg} when is_binary(msg) -> {:error, msg}
+      {:error, reason} -> {:error, inspect(reason)}
+    end
+  end
+
+  def set_partner_income(_parent, _args, context), do: access_error(context)
+
+  defp parse_optional_amount(value) when value in [nil, ""], do: {:ok, nil}
+  defp parse_optional_amount(value), do: parse_decimal(value)
+
   def set_invoice_total(_parent, args, %{context: %{current_group: group, current_user: user}}) do
     with {:ok, card} <- fetch_card(group.id, args.card_id),
          {:ok, month} <- parse_month(args.month),
@@ -171,12 +202,14 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def apply_daily_goal(_parent, %{daily: daily} = args, %{context: %{current_group: group}}) do
     with {:ok, daily} <- parse_decimal(daily),
-         {:ok, end_date} <- parse_optional_date(args[:end_date]) do
-      case MonthPlan.apply_goal(group.id, daily, today(args), end_date) do
+         {:ok, end_date} <- parse_optional_date(args[:end_date]),
+         {:ok, start_date} <- parse_optional_date(args[:start_date]) do
+      case MonthPlan.apply_goal(group.id, daily, today(args), end_date, start_date) do
         {:ok, period} -> {:ok, Budget.format_period(period, nil)}
         {:error, :salary_not_configured} -> {:error, "Salary amount not configured"}
         {:error, :invalid_goal} -> {:error, "Invalid amount"}
-        {:error, :invalid_end_date} -> {:error, "End date must be after today"}
+        {:error, :invalid_end_date} -> {:error, "End date must be after the start date"}
+        {:error, :invalid_start_date} -> {:error, "Start date cannot be in the past"}
         {:error, %Ecto.Changeset{} = cs} -> {:error, Budget.format_errors(cs)}
         {:error, reason} -> {:error, inspect(reason)}
       end
@@ -617,6 +650,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       salary_amount: decimal_string(settings.salary_amount),
       salary_business_day: settings.salary_business_day,
       salary_account_id: settings.salary_account_id,
+      cycle_card_id: settings.cycle_card_id,
       reserve_goal: decimal_string(settings.reserve_goal),
       upcoming_salary_dates: upcoming
     }
@@ -642,6 +676,61 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
             amount: Decimal.to_string(amount)
           }
         end)
+    }
+  end
+
+  defp format_cycle_plan(plan) do
+    %{
+      card_id: plan.card.id,
+      card_name: plan.card.name,
+      current: format_cycle_block(plan.current),
+      next: format_cycle_block(plan.next)
+    }
+  end
+
+  defp format_cycle_block(b) do
+    item = fn i ->
+      %{label: i.label, date: Date.to_iso8601(i.date), amount: Decimal.to_string(i.amount)}
+    end
+
+    items = fn list -> Enum.map(list, item) end
+    date = fn d -> d && Date.to_iso8601(d) end
+
+    %{
+      status: b.status,
+      invoice_month: Invoices.format_month(b.invoice_month),
+      purchase_start: date.(b.purchase_start),
+      last_purchase_date: date.(b.last_purchase_date),
+      due_date: date.(b.due_date),
+      salary_date: date.(b.salary_date),
+      window_end: date.(b.window_end),
+      balance: decimal_string(b.balance),
+      has_primary: b.has_primary,
+      salaries: items.(b.salaries),
+      partner: format_partner(b.partner),
+      incomes: items.(b.incomes),
+      benefits: items.(b.benefits),
+      invoice: b.invoice && item.(b.invoice),
+      card_bills: items.(b.card_bills),
+      installments: items.(b.installments),
+      other_cards: items.(b.other_cards),
+      fixed_bills: items.(b.fixed_bills),
+      one_off_bills: items.(b.one_off_bills),
+      result: Decimal.to_string(b.result),
+      goal_start: date.(b.goal_start),
+      days: b.days
+    }
+  end
+
+  defp format_partner(nil), do: nil
+
+  defp format_partner(p) do
+    %{
+      month: Invoices.format_month(p.month),
+      label: p.label,
+      date: Date.to_iso8601(p.date),
+      amount: Decimal.to_string(p.amount),
+      received: p.received
     }
   end
 
@@ -697,7 +786,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   defp settings_attrs(args) do
     Enum.reduce_while(
       [:salary_amount, :reserve_goal],
-      {:ok, Map.take(args, [:salary_business_day, :salary_account_id])},
+      {:ok, Map.take(args, [:salary_business_day, :salary_account_id, :cycle_card_id])},
       fn key, {:ok, acc} ->
         case Map.fetch(args, key) do
           :error ->

@@ -37,7 +37,7 @@ function PeriodStatusChip({ status }: { status: string }) {
     <View style={[styles.chip, isActive ? styles.chipActive : styles.chipClosed]}>
       <View style={[styles.chipDot, isActive ? styles.chipDotActive : styles.chipDotClosed]} />
       <Text style={[styles.chipLabel, isActive ? styles.chipLabelActive : styles.chipLabelClosed]}>
-        {isActive ? "Ativo" : "Encerrado"}
+        {isActive ? "Ativo" : status === "scheduled" ? "Agendado" : "Encerrado"}
       </Text>
     </View>
   );

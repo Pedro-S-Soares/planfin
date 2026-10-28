@@ -114,6 +114,50 @@ export type Commitment = {
   status?: Maybe<Scalars['String']['output']>;
 };
 
+/** One invoice of the cycle card and the money that pays it */
+export type CycleBlock = {
+  __typename?: 'CycleBlock';
+  /** Main account balance (current block only) */
+  balance?: Maybe<Scalars['String']['output']>;
+  benefits?: Maybe<Array<Maybe<PlanItem>>>;
+  cardBills?: Maybe<Array<Maybe<PlanItem>>>;
+  /** Purchase days from goal_start to the eve of the closing */
+  days?: Maybe<Scalars['Int']['output']>;
+  dueDate?: Maybe<Scalars['String']['output']>;
+  fixedBills?: Maybe<Array<Maybe<PlanItem>>>;
+  /** First day of the daily goal (null for a closed invoice) */
+  goalStart?: Maybe<Scalars['String']['output']>;
+  hasPrimary?: Maybe<Scalars['Boolean']['output']>;
+  incomes?: Maybe<Array<Maybe<PlanItem>>>;
+  installments?: Maybe<Array<Maybe<PlanItem>>>;
+  /** Cycle card invoice so far (current block only) */
+  invoice?: Maybe<PlanItem>;
+  /** YYYY-MM */
+  invoiceMonth?: Maybe<Scalars['String']['output']>;
+  lastPurchaseDate?: Maybe<Scalars['String']['output']>;
+  oneOffBills?: Maybe<Array<Maybe<PlanItem>>>;
+  otherCards?: Maybe<Array<Maybe<PlanItem>>>;
+  partner?: Maybe<PartnerIncome>;
+  purchaseStart?: Maybe<Scalars['String']['output']>;
+  /** open: still spendable until the closing; closed: left over; next: free for variable spending */
+  result?: Maybe<Scalars['String']['output']>;
+  salaries?: Maybe<Array<Maybe<PlanItem>>>;
+  /** Salary that pays the invoice */
+  salaryDate?: Maybe<Scalars['String']['output']>;
+  /** open (receiving purchases) | closed (waiting payment) | next */
+  status?: Maybe<Scalars['String']['output']>;
+  /** Eve of the following salary: end of the money window */
+  windowEnd?: Maybe<Scalars['String']['output']>;
+};
+
+export type CyclePlan = {
+  __typename?: 'CyclePlan';
+  cardId?: Maybe<Scalars['ID']['output']>;
+  cardName?: Maybe<Scalars['String']['output']>;
+  current?: Maybe<CycleBlock>;
+  next?: Maybe<CycleBlock>;
+};
+
 /** Budget proposal for a salary cycle */
 export type CycleProposal = {
   __typename?: 'CycleProposal';
@@ -207,6 +251,8 @@ export type FinancialAccount = {
 
 export type FinancialSettings = {
   __typename?: 'FinancialSettings';
+  /** Card whose invoice cycle drives the plan (null: the first card) */
+  cycleCardId?: Maybe<Scalars['ID']['output']>;
   reserveGoal?: Maybe<Scalars['String']['output']>;
   salaryAccountId?: Maybe<Scalars['ID']['output']>;
   salaryAmount?: Maybe<Scalars['String']['output']>;
@@ -320,6 +366,18 @@ export type MonthPlanNext = {
   startDate?: Maybe<Scalars['String']['output']>;
 };
 
+/** The partner's expected salary of a month, typed month by month */
+export type PartnerIncome = {
+  __typename?: 'PartnerIncome';
+  amount?: Maybe<Scalars['String']['output']>;
+  date?: Maybe<Scalars['String']['output']>;
+  label?: Maybe<Scalars['String']['output']>;
+  /** YYYY-MM */
+  month?: Maybe<Scalars['String']['output']>;
+  /** Already received: it is in the balance and no longer counts as expected */
+  received?: Maybe<Scalars['Boolean']['output']>;
+};
+
 export type Period = {
   __typename?: 'Period';
   availableBalance?: Maybe<Scalars['String']['output']>;
@@ -430,6 +488,8 @@ export type RootMutationType = {
   setAccountBalance?: Maybe<FinancialAccount>;
   /** Set the invoice total to the bank's number; the difference becomes one adjustment entry */
   setInvoiceTotal?: Maybe<Invoice>;
+  /** Sets (or with a null/zero amount removes) the partner's expected salary of a month */
+  setPartnerIncome?: Maybe<PartnerIncome>;
   /** What is specific to a month's salary. A null date restores the automatic one; a null/empty amount restores the usual salary. Omitted args are left untouched. */
   setSalaryDate?: Maybe<Scalars['Boolean']['output']>;
   /** Skip the bill in one month (it is not owed nor charged), with an optional note */
@@ -459,6 +519,7 @@ export type RootMutationTypeAnticipateInstallmentsArgs = {
 export type RootMutationTypeApplyDailyGoalArgs = {
   daily: Scalars['String']['input'];
   endDate?: InputMaybe<Scalars['String']['input']>;
+  startDate?: InputMaybe<Scalars['String']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
 };
 
@@ -697,6 +758,13 @@ export type RootMutationTypeSetInvoiceTotalArgs = {
 };
 
 
+export type RootMutationTypeSetPartnerIncomeArgs = {
+  amount?: InputMaybe<Scalars['String']['input']>;
+  month: Scalars['String']['input'];
+  today?: InputMaybe<Scalars['String']['input']>;
+};
+
+
 export type RootMutationTypeSetSalaryDateArgs = {
   amount?: InputMaybe<Scalars['String']['input']>;
   date?: InputMaybe<Scalars['String']['input']>;
@@ -766,6 +834,7 @@ export type RootMutationTypeUpdateFinancialAccountArgs = {
 
 
 export type RootMutationTypeUpdateFinancialSettingsArgs = {
+  cycleCardId?: InputMaybe<Scalars['ID']['input']>;
   reserveGoal?: InputMaybe<Scalars['String']['input']>;
   salaryAccountId?: InputMaybe<Scalars['ID']['input']>;
   salaryAmount?: InputMaybe<Scalars['String']['input']>;
@@ -814,6 +883,8 @@ export type RootQueryType = {
   allowancePlan?: Maybe<AllowancePlan>;
   billOccurrences?: Maybe<Array<Maybe<BillOccurrence>>>;
   categories?: Maybe<Array<Maybe<Category>>>;
+  /** Plan around the cycle card invoice: current and next invoice. Null without salary or card. */
+  cyclePlan?: Maybe<CyclePlan>;
   cycleProposal?: Maybe<CycleProposal>;
   expenseHistory?: Maybe<Array<Maybe<ExpenseDay>>>;
   /** Expenses dated within [from, to] (ISO dates, inclusive, max 400 days), across periods */
@@ -833,7 +904,6 @@ export type RootQueryType = {
   invoices?: Maybe<Array<Maybe<Invoice>>>;
   listInvites?: Maybe<Array<Maybe<UserInvite>>>;
   me?: Maybe<User>;
-  /** The monthly plan; null when the salary is not configured */
   monthPlan?: Maybe<MonthPlan>;
   myGroups?: Maybe<Array<Maybe<Group>>>;
   periodSummary?: Maybe<PeriodSummary>;
@@ -868,6 +938,11 @@ export type RootQueryTypeBillOccurrencesArgs = {
 
 export type RootQueryTypeCategoriesArgs = {
   type?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+export type RootQueryTypeCyclePlanArgs = {
+  today?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -1356,12 +1431,13 @@ export type UpdateFinancialSettingsMutationVariables = Exact<{
   salaryAmount?: InputMaybe<Scalars['String']['input']>;
   salaryBusinessDay?: InputMaybe<Scalars['Int']['input']>;
   salaryAccountId?: InputMaybe<Scalars['ID']['input']>;
+  cycleCardId?: InputMaybe<Scalars['ID']['input']>;
   reserveGoal?: InputMaybe<Scalars['String']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type UpdateFinancialSettingsMutation = { __typename?: 'RootMutationType', updateFinancialSettings?: { __typename?: 'FinancialSettings', salaryAmount?: string | null, salaryBusinessDay?: number | null, salaryAccountId?: string | null, reserveGoal?: string | null } | null };
+export type UpdateFinancialSettingsMutation = { __typename?: 'RootMutationType', updateFinancialSettings?: { __typename?: 'FinancialSettings', salaryAmount?: string | null, salaryBusinessDay?: number | null, salaryAccountId?: string | null, cycleCardId?: string | null, reserveGoal?: string | null } | null };
 
 export type SetSalaryDateMutationVariables = Exact<{
   month: Scalars['String']['input'];
@@ -1422,12 +1498,22 @@ export type SetInvoiceTotalMutation = { __typename?: 'RootMutationType', setInvo
 
 export type ApplyDailyGoalMutationVariables = Exact<{
   daily: Scalars['String']['input'];
+  startDate?: InputMaybe<Scalars['String']['input']>;
   endDate?: InputMaybe<Scalars['String']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type ApplyDailyGoalMutation = { __typename?: 'RootMutationType', applyDailyGoal?: { __typename?: 'Period', id?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null } | null };
+export type ApplyDailyGoalMutation = { __typename?: 'RootMutationType', applyDailyGoal?: { __typename?: 'Period', id?: string | null, status?: string | null, startDate?: string | null, endDate?: string | null, dailyLimit?: string | null } | null };
+
+export type SetPartnerIncomeMutationVariables = Exact<{
+  month: Scalars['String']['input'];
+  amount?: InputMaybe<Scalars['String']['input']>;
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type SetPartnerIncomeMutation = { __typename?: 'RootMutationType', setPartnerIncome?: { __typename?: 'PartnerIncome', month?: string | null, amount?: string | null, received?: boolean | null } | null };
 
 export type CreateGroupMutationVariables = Exact<{
   name: Scalars['String']['input'];
@@ -1596,7 +1682,7 @@ export type FinancialSettingsQueryVariables = Exact<{
 }>;
 
 
-export type FinancialSettingsQuery = { __typename?: 'RootQueryType', financialSettings?: { __typename?: 'FinancialSettings', salaryAmount?: string | null, salaryBusinessDay?: number | null, salaryAccountId?: string | null, reserveGoal?: string | null, upcomingSalaryDates?: Array<{ __typename?: 'SalaryDate', month?: string | null, date?: string | null, isManual?: boolean | null, amount?: string | null, paid?: boolean | null, paidAmount?: string | null, paidOn?: string | null } | null> | null } | null };
+export type FinancialSettingsQuery = { __typename?: 'RootQueryType', financialSettings?: { __typename?: 'FinancialSettings', salaryAmount?: string | null, salaryBusinessDay?: number | null, salaryAccountId?: string | null, cycleCardId?: string | null, reserveGoal?: string | null, upcomingSalaryDates?: Array<{ __typename?: 'SalaryDate', month?: string | null, date?: string | null, isManual?: boolean | null, amount?: string | null, paid?: boolean | null, paidAmount?: string | null, paidOn?: string | null } | null> | null } | null };
 
 export type AllowancePlanQueryVariables = Exact<{
   today?: InputMaybe<Scalars['String']['input']>;
@@ -1626,6 +1712,15 @@ export type InstallmentsDueQueryVariables = Exact<{
 
 
 export type InstallmentsDueQuery = { __typename?: 'RootQueryType', installmentsDue?: Array<{ __typename?: 'Invoice', cardId?: string | null, month?: string | null, dueDate?: string | null, status?: string | null, entries?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, installmentNumber?: number | null, installmentCount?: number | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, category?: { __typename?: 'SubcategoryCategory', id?: string | null, name?: string | null } | null } | null } | null> | null } | null> | null };
+
+export type CycleBlockFieldsFragment = { __typename?: 'CycleBlock', status?: string | null, invoiceMonth?: string | null, purchaseStart?: string | null, lastPurchaseDate?: string | null, dueDate?: string | null, salaryDate?: string | null, windowEnd?: string | null, balance?: string | null, hasPrimary?: boolean | null, result?: string | null, goalStart?: string | null, days?: number | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, partner?: { __typename?: 'PartnerIncome', month?: string | null, label?: string | null, date?: string | null, amount?: string | null, received?: boolean | null } | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoice?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, otherCards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null };
+
+export type CyclePlanQueryVariables = Exact<{
+  today?: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type CyclePlanQuery = { __typename?: 'RootQueryType', cyclePlan?: { __typename?: 'CyclePlan', cardId?: string | null, cardName?: string | null, current?: { __typename?: 'CycleBlock', status?: string | null, invoiceMonth?: string | null, purchaseStart?: string | null, lastPurchaseDate?: string | null, dueDate?: string | null, salaryDate?: string | null, windowEnd?: string | null, balance?: string | null, hasPrimary?: boolean | null, result?: string | null, goalStart?: string | null, days?: number | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, partner?: { __typename?: 'PartnerIncome', month?: string | null, label?: string | null, date?: string | null, amount?: string | null, received?: boolean | null } | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoice?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, otherCards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null } | null, next?: { __typename?: 'CycleBlock', status?: string | null, invoiceMonth?: string | null, purchaseStart?: string | null, lastPurchaseDate?: string | null, dueDate?: string | null, salaryDate?: string | null, windowEnd?: string | null, balance?: string | null, hasPrimary?: boolean | null, result?: string | null, goalStart?: string | null, days?: number | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, partner?: { __typename?: 'PartnerIncome', month?: string | null, label?: string | null, date?: string | null, amount?: string | null, received?: boolean | null } | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoice?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, otherCards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null } | null } | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1661,7 +1756,74 @@ export type ListInvitesQueryVariables = Exact<{ [key: string]: never; }>;
 
 export type ListInvitesQuery = { __typename?: 'RootQueryType', listInvites?: Array<{ __typename?: 'UserInvite', id?: string | null, token?: string | null, usedByEmail?: string | null, usedAt?: string | null, expiresAt?: string | null, revokedAt?: string | null, insertedAt?: string | null } | null> | null };
 
-
+export const CycleBlockFieldsFragmentDoc = gql`
+    fragment CycleBlockFields on CycleBlock {
+  status
+  invoiceMonth
+  purchaseStart
+  lastPurchaseDate
+  dueDate
+  salaryDate
+  windowEnd
+  balance
+  hasPrimary
+  salaries {
+    label
+    date
+    amount
+  }
+  partner {
+    month
+    label
+    date
+    amount
+    received
+  }
+  incomes {
+    label
+    date
+    amount
+  }
+  benefits {
+    label
+    date
+    amount
+  }
+  invoice {
+    label
+    date
+    amount
+  }
+  cardBills {
+    label
+    date
+    amount
+  }
+  installments {
+    label
+    date
+    amount
+  }
+  otherCards {
+    label
+    date
+    amount
+  }
+  fixedBills {
+    label
+    date
+    amount
+  }
+  oneOffBills {
+    label
+    date
+    amount
+  }
+  result
+  goalStart
+  days
+}
+    `;
 export const LoginDocument = gql`
     mutation Login($email: String!, $password: String!) {
   login(email: $email, password: $password) {
@@ -3058,17 +3220,19 @@ export type UnskipBillMutationHookResult = ReturnType<typeof useUnskipBillMutati
 export type UnskipBillMutationResult = Apollo.MutationResult<UnskipBillMutation>;
 export type UnskipBillMutationOptions = Apollo.BaseMutationOptions<UnskipBillMutation, UnskipBillMutationVariables>;
 export const UpdateFinancialSettingsDocument = gql`
-    mutation UpdateFinancialSettings($salaryAmount: String, $salaryBusinessDay: Int, $salaryAccountId: ID, $reserveGoal: String, $today: String) {
+    mutation UpdateFinancialSettings($salaryAmount: String, $salaryBusinessDay: Int, $salaryAccountId: ID, $cycleCardId: ID, $reserveGoal: String, $today: String) {
   updateFinancialSettings(
     salaryAmount: $salaryAmount
     salaryBusinessDay: $salaryBusinessDay
     salaryAccountId: $salaryAccountId
+    cycleCardId: $cycleCardId
     reserveGoal: $reserveGoal
     today: $today
   ) {
     salaryAmount
     salaryBusinessDay
     salaryAccountId
+    cycleCardId
     reserveGoal
   }
 }
@@ -3091,6 +3255,7 @@ export type UpdateFinancialSettingsMutationFn = Apollo.MutationFunction<UpdateFi
  *      salaryAmount: // value for 'salaryAmount'
  *      salaryBusinessDay: // value for 'salaryBusinessDay'
  *      salaryAccountId: // value for 'salaryAccountId'
+ *      cycleCardId: // value for 'cycleCardId'
  *      reserveGoal: // value for 'reserveGoal'
  *      today: // value for 'today'
  *   },
@@ -3343,9 +3508,15 @@ export type SetInvoiceTotalMutationHookResult = ReturnType<typeof useSetInvoiceT
 export type SetInvoiceTotalMutationResult = Apollo.MutationResult<SetInvoiceTotalMutation>;
 export type SetInvoiceTotalMutationOptions = Apollo.BaseMutationOptions<SetInvoiceTotalMutation, SetInvoiceTotalMutationVariables>;
 export const ApplyDailyGoalDocument = gql`
-    mutation ApplyDailyGoal($daily: String!, $endDate: String, $today: String) {
-  applyDailyGoal(daily: $daily, endDate: $endDate, today: $today) {
+    mutation ApplyDailyGoal($daily: String!, $startDate: String, $endDate: String, $today: String) {
+  applyDailyGoal(
+    daily: $daily
+    startDate: $startDate
+    endDate: $endDate
+    today: $today
+  ) {
     id
+    status
     startDate
     endDate
     dailyLimit
@@ -3368,6 +3539,7 @@ export type ApplyDailyGoalMutationFn = Apollo.MutationFunction<ApplyDailyGoalMut
  * const [applyDailyGoalMutation, { data, loading, error }] = useApplyDailyGoalMutation({
  *   variables: {
  *      daily: // value for 'daily'
+ *      startDate: // value for 'startDate'
  *      endDate: // value for 'endDate'
  *      today: // value for 'today'
  *   },
@@ -3380,6 +3552,43 @@ export function useApplyDailyGoalMutation(baseOptions?: Apollo.MutationHookOptio
 export type ApplyDailyGoalMutationHookResult = ReturnType<typeof useApplyDailyGoalMutation>;
 export type ApplyDailyGoalMutationResult = Apollo.MutationResult<ApplyDailyGoalMutation>;
 export type ApplyDailyGoalMutationOptions = Apollo.BaseMutationOptions<ApplyDailyGoalMutation, ApplyDailyGoalMutationVariables>;
+export const SetPartnerIncomeDocument = gql`
+    mutation SetPartnerIncome($month: String!, $amount: String, $today: String) {
+  setPartnerIncome(month: $month, amount: $amount, today: $today) {
+    month
+    amount
+    received
+  }
+}
+    `;
+export type SetPartnerIncomeMutationFn = Apollo.MutationFunction<SetPartnerIncomeMutation, SetPartnerIncomeMutationVariables>;
+
+/**
+ * __useSetPartnerIncomeMutation__
+ *
+ * To run a mutation, you first call `useSetPartnerIncomeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetPartnerIncomeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setPartnerIncomeMutation, { data, loading, error }] = useSetPartnerIncomeMutation({
+ *   variables: {
+ *      month: // value for 'month'
+ *      amount: // value for 'amount'
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useSetPartnerIncomeMutation(baseOptions?: Apollo.MutationHookOptions<SetPartnerIncomeMutation, SetPartnerIncomeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetPartnerIncomeMutation, SetPartnerIncomeMutationVariables>(SetPartnerIncomeDocument, options);
+      }
+export type SetPartnerIncomeMutationHookResult = ReturnType<typeof useSetPartnerIncomeMutation>;
+export type SetPartnerIncomeMutationResult = Apollo.MutationResult<SetPartnerIncomeMutation>;
+export type SetPartnerIncomeMutationOptions = Apollo.BaseMutationOptions<SetPartnerIncomeMutation, SetPartnerIncomeMutationVariables>;
 export const CreateGroupDocument = gql`
     mutation CreateGroup($name: String!) {
   createGroup(name: $name) {
@@ -4472,6 +4681,7 @@ export const FinancialSettingsDocument = gql`
     salaryAmount
     salaryBusinessDay
     salaryAccountId
+    cycleCardId
     reserveGoal
     upcomingSalaryDates {
       month
@@ -4784,6 +4994,56 @@ export type InstallmentsDueQueryHookResult = ReturnType<typeof useInstallmentsDu
 export type InstallmentsDueLazyQueryHookResult = ReturnType<typeof useInstallmentsDueLazyQuery>;
 export type InstallmentsDueSuspenseQueryHookResult = ReturnType<typeof useInstallmentsDueSuspenseQuery>;
 export type InstallmentsDueQueryResult = Apollo.QueryResult<InstallmentsDueQuery, InstallmentsDueQueryVariables>;
+export const CyclePlanDocument = gql`
+    query CyclePlan($today: String) {
+  cyclePlan(today: $today) {
+    cardId
+    cardName
+    current {
+      ...CycleBlockFields
+    }
+    next {
+      ...CycleBlockFields
+    }
+  }
+}
+    ${CycleBlockFieldsFragmentDoc}`;
+
+/**
+ * __useCyclePlanQuery__
+ *
+ * To run a query within a React component, call `useCyclePlanQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCyclePlanQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCyclePlanQuery({
+ *   variables: {
+ *      today: // value for 'today'
+ *   },
+ * });
+ */
+export function useCyclePlanQuery(baseOptions?: Apollo.QueryHookOptions<CyclePlanQuery, CyclePlanQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CyclePlanQuery, CyclePlanQueryVariables>(CyclePlanDocument, options);
+      }
+export function useCyclePlanLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CyclePlanQuery, CyclePlanQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CyclePlanQuery, CyclePlanQueryVariables>(CyclePlanDocument, options);
+        }
+// @ts-ignore
+export function useCyclePlanSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<CyclePlanQuery, CyclePlanQueryVariables>): Apollo.UseSuspenseQueryResult<CyclePlanQuery, CyclePlanQueryVariables>;
+export function useCyclePlanSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CyclePlanQuery, CyclePlanQueryVariables>): Apollo.UseSuspenseQueryResult<CyclePlanQuery | undefined, CyclePlanQueryVariables>;
+export function useCyclePlanSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<CyclePlanQuery, CyclePlanQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<CyclePlanQuery, CyclePlanQueryVariables>(CyclePlanDocument, options);
+        }
+export type CyclePlanQueryHookResult = ReturnType<typeof useCyclePlanQuery>;
+export type CyclePlanLazyQueryHookResult = ReturnType<typeof useCyclePlanLazyQuery>;
+export type CyclePlanSuspenseQueryHookResult = ReturnType<typeof useCyclePlanSuspenseQuery>;
+export type CyclePlanQueryResult = Apollo.QueryResult<CyclePlanQuery, CyclePlanQueryVariables>;
 export const MyGroupsDocument = gql`
     query MyGroups {
   myGroups {

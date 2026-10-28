@@ -140,6 +140,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :salary_amount, :string
     field :salary_business_day, :integer
     field :salary_account_id, :id
+    @desc "Card whose invoice cycle drives the plan (null: the first card)"
+    field :cycle_card_id, :id
     field :reserve_goal, :string
     @desc "Next salary dates (with manual overrides applied)"
     field :upcoming_salary_dates, list_of(:salary_date)
@@ -200,6 +202,60 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :total, :string
   end
 
+  @desc "The partner's expected salary of a month, typed month by month"
+  object :partner_income do
+    @desc "YYYY-MM"
+    field :month, :string
+    field :label, :string
+    field :date, :string
+    field :amount, :string
+    @desc "Already received: it is in the balance and no longer counts as expected"
+    field :received, :boolean
+  end
+
+  @desc "One invoice of the cycle card and the money that pays it"
+  object :cycle_block do
+    @desc "open (receiving purchases) | closed (waiting payment) | next"
+    field :status, :string
+    @desc "YYYY-MM"
+    field :invoice_month, :string
+    field :purchase_start, :string
+    field :last_purchase_date, :string
+    field :due_date, :string
+    @desc "Salary that pays the invoice"
+    field :salary_date, :string
+    @desc "Eve of the following salary: end of the money window"
+    field :window_end, :string
+    @desc "Main account balance (current block only)"
+    field :balance, :string
+    field :has_primary, :boolean
+    field :salaries, list_of(:plan_item)
+    field :partner, :partner_income
+    field :incomes, list_of(:plan_item)
+    field :benefits, list_of(:plan_item)
+    @desc "Cycle card invoice so far (current block only)"
+    field :invoice, :plan_item
+    field :card_bills, list_of(:plan_item)
+    field :installments, list_of(:plan_item)
+    field :other_cards, list_of(:plan_item)
+    field :fixed_bills, list_of(:plan_item)
+    field :one_off_bills, list_of(:plan_item)
+
+    @desc "open: still spendable until the closing; closed: left over; next: free for variable spending"
+    field :result, :string
+    @desc "First day of the daily goal (null for a closed invoice)"
+    field :goal_start, :string
+    @desc "Purchase days from goal_start to the eve of the closing"
+    field :days, :integer
+  end
+
+  object :cycle_plan do
+    field :card_id, :id
+    field :card_name, :string
+    field :current, :cycle_block
+    field :next, :cycle_block
+  end
+
   object :plan_item do
     field :label, :string
     field :date, :string
@@ -253,6 +309,12 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
 
   object :finance_queries do
     @desc "The monthly plan; null when the salary is not configured"
+    @desc "Plan around the cycle card invoice: current and next invoice. Null without salary or card."
+    field :cycle_plan, :cycle_plan do
+      arg(:today, :string)
+      resolve(&Finance.cycle_plan/3)
+    end
+
     field :month_plan, :month_plan do
       arg(:today, :string)
       resolve(&Finance.month_plan/3)
@@ -343,6 +405,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       arg(:daily, non_null(:string))
       @desc "Last day of the new period; defaults to the eve of next month's salary"
       arg(:end_date, :string)
+      @desc "First day; later than today schedules the period to start on it"
+      arg(:start_date, :string)
       arg(:today, :string)
       resolve(&Finance.apply_daily_goal/3)
     end
@@ -354,10 +418,20 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       resolve(&Finance.distribute_allowance/3)
     end
 
+    @desc "Sets (or with a null/zero amount removes) the partner's expected salary of a month"
+    field :set_partner_income, :partner_income do
+      arg(:month, non_null(:string))
+      arg(:amount, :string)
+      arg(:today, :string)
+      resolve(&Finance.set_partner_income/3)
+    end
+
     field :update_financial_settings, :financial_settings do
       arg(:salary_amount, :string)
       arg(:salary_business_day, :integer)
       arg(:salary_account_id, :id)
+      @desc "Card whose invoice cycle drives the plan"
+      arg(:cycle_card_id, :id)
       arg(:reserve_goal, :string)
       arg(:today, :string)
       resolve(&Finance.update_settings/3)

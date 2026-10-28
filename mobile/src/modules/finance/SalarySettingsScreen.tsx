@@ -23,11 +23,15 @@ type SalaryFormProps = {
   initialAmount: string | null | undefined;
   initialDay: number;
   initialAccountId: string | null | undefined;
+  initialCycleCardId: string | null | undefined;
 };
 
-function SalaryForm({ initialAmount, initialDay, initialAccountId }: SalaryFormProps) {
+function SalaryForm({ initialAmount, initialDay, initialAccountId, initialCycleCardId }: SalaryFormProps) {
   const navigation = useNavigation();
-  const { accounts, primary } = useFinancialAccounts();
+  const { accounts, primary, cards } = useFinancialAccounts();
+  const [cycleCardId, setCycleCardId] = useState<string | null | undefined>(initialCycleCardId ?? undefined);
+  // Without a choice the plan follows the first card, as the backend does.
+  const effectiveCycleCard = cycleCardId === undefined ? cards[0]?.id ?? null : cycleCardId;
   const [amount, setAmount] = useState(formatCents(Math.round(toNumber(initialAmount) * 100)));
   const [day, setDay] = useState(String(initialDay));
   const [accountId, setAccountId] = useState<string | null | undefined>(initialAccountId ?? undefined);
@@ -35,7 +39,7 @@ function SalaryForm({ initialAmount, initialDay, initialAccountId }: SalaryFormP
   const effectiveAccount = accountId === undefined ? primary?.id ?? null : accountId;
 
   const [save, { loading }] = useUpdateFinancialSettingsMutation({
-    refetchQueries: ["FinancialSettings", "FinancePanel", "MonthPlan"],
+    refetchQueries: ["FinancialSettings", "FinancePanel", "MonthPlan", "CyclePlan"],
     onCompleted: () => navigation.goBack(),
     onError: (e) => setError(e.message),
   });
@@ -49,6 +53,7 @@ function SalaryForm({ initialAmount, initialDay, initialAccountId }: SalaryFormP
         salaryAmount: displayToAPI(amount),
         salaryBusinessDay: businessDay,
         salaryAccountId: effectiveAccount,
+        cycleCardId: effectiveCycleCard,
         today: toISODate(new Date()),
       },
     });
@@ -66,6 +71,13 @@ function SalaryForm({ initialAmount, initialDay, initialAccountId }: SalaryFormP
         hint="Sábado conta como dia útil; domingos e feriados nacionais não."
       />
       <AccountPicker label="Cai na conta" accounts={accounts} value={effectiveAccount} onChange={setAccountId} kinds={["checking"]} />
+      <AccountPicker
+        label="Cartão principal (define o ciclo do planejamento)"
+        accounts={accounts}
+        value={effectiveCycleCard}
+        onChange={setCycleCardId}
+        kinds={["credit_card"]}
+      />
       {error ? <Text style={{ color: Colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
       <Btn label="Salvar salário" onPress={handleSave} loading={loading} />
     </>
@@ -98,8 +110,8 @@ export function SalarySettingsScreen() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors.surface }} contentContainerStyle={{ padding: 18, paddingBottom: 32 }}>
       <Text style={{ fontSize: 14, color: Colors.textSec, lineHeight: 20, marginBottom: 18 }}>
-        O ciclo vai do dia do salário até a véspera do próximo. Com o salário cadastrado, o app propõe o orçamento do
-        ciclo e mostra quanto você pode gastar até o próximo pagamento.
+        O planejamento segue a fatura do cartão principal: o que você compra de um fechamento ao outro é pago com o
+        salário do mês em que a fatura vence.
       </Text>
       {loading && !data ? (
         <ActivityIndicator color={Colors.primary} />
@@ -109,6 +121,7 @@ export function SalarySettingsScreen() {
           initialAmount={settings?.salaryAmount}
           initialDay={settings?.salaryBusinessDay ?? 10}
           initialAccountId={settings?.salaryAccountId}
+          initialCycleCardId={settings?.cycleCardId}
         />
       )}
       {salaries.length > 0 ? (

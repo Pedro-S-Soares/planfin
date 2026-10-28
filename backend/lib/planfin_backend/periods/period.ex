@@ -5,7 +5,8 @@ defmodule PlanfinBackend.Periods.Period do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @valid_statuses ~w(active closed abandoned)
+  # `scheduled`: created ahead of time, becomes active on its start date.
+  @valid_statuses ~w(active scheduled closed abandoned)
 
   schema "periods" do
     field :name, :string
