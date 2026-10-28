@@ -179,17 +179,19 @@ mutation UnskipBill($billId: ID!, $month: String!) {
   unskipBill(billId: $billId, month: $month)
 }
 
-mutation UpdateFinancialSettings($salaryAmount: String, $salaryBusinessDay: Int, $salaryAccountId: ID, $reserveGoal: String, $today: String) {
+mutation UpdateFinancialSettings($salaryAmount: String, $salaryBusinessDay: Int, $salaryAccountId: ID, $cycleCardId: ID, $reserveGoal: String, $today: String) {
   updateFinancialSettings(
     salaryAmount: $salaryAmount
     salaryBusinessDay: $salaryBusinessDay
     salaryAccountId: $salaryAccountId
+    cycleCardId: $cycleCardId
     reserveGoal: $reserveGoal
     today: $today
   ) {
     salaryAmount
     salaryBusinessDay
     salaryAccountId
+    cycleCardId
     reserveGoal
   }
 }
@@ -237,11 +239,20 @@ mutation SetInvoiceTotal($cardId: ID!, $month: String!, $total: String!, $today:
 }
 
 
-mutation ApplyDailyGoal($daily: String!, $endDate: String, $today: String) {
-  applyDailyGoal(daily: $daily, endDate: $endDate, today: $today) {
+mutation ApplyDailyGoal($daily: String!, $startDate: String, $endDate: String, $today: String) {
+  applyDailyGoal(daily: $daily, startDate: $startDate, endDate: $endDate, today: $today) {
     id
+    status
     startDate
     endDate
     dailyLimit
+  }
+}
+
+mutation SetPartnerIncome($month: String!, $amount: String, $today: String) {
+  setPartnerIncome(month: $month, amount: $amount, today: $today) {
+    month
+    amount
+    received
   }
 }

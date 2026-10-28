@@ -36,7 +36,7 @@ defmodule PlanfinBackend.Finance.MonthPlan do
   alias PlanfinBackend.{Finance, Periods, Repo}
   alias PlanfinBackend.Expenses.Expense
   alias PlanfinBackend.Finance.{Bills, Calendar, Invoices, Salary}
-  alias PlanfinBackend.Periods.{BudgetDay, Period}
+  alias PlanfinBackend.Periods.Period
 
   def build(group_id, %Date{} = today) do
     settings = Salary.get_settings(group_id)
@@ -252,27 +252,41 @@ defmodule PlanfinBackend.Finance.MonthPlan do
   defp format_month({y, m}), do: "#{String.pad_leading(Integer.to_string(m), 2, "0")}/#{y}"
 
   @doc """
-  Applies a daily goal from today: active periods end yesterday (or are
-  abandoned when they start today or later) and a new period runs from today
-  to `end_date` (default: the end of this month's window).
+  Applies a daily goal from `start_date` (default: today) to `end_date`
+  (default: the end of this month's window). Starting today, the active
+  periods end yesterday (or are abandoned when they start today or later).
+  Starting later, the period is `scheduled`: it replaces any other scheduled
+  one and becomes active on its start date (`Periods.activate_scheduled/2`).
   """
-  def apply_goal(group_id, %Decimal{} = daily, %Date{} = today, end_date \\ nil) do
+  def apply_goal(
+        group_id,
+        %Decimal{} = daily,
+        %Date{} = today,
+        end_date \\ nil,
+        start_date \\ nil
+      ) do
+    start_date = start_date || today
+
     with {:ok, plan} <- build(group_id, today),
          :ok <- validate_goal(daily),
+         :ok <- validate_start(start_date, today),
          end_date = end_date || plan.current.end_date,
-         :ok <- validate_end(end_date, today) do
-      days = Date.diff(end_date, today) + 1
+         :ok <- validate_end(end_date, start_date) do
+      days = Date.diff(end_date, start_date) + 1
       daily = Decimal.round(daily, 2)
+      scheduled? = Date.compare(start_date, today) == :gt
 
       Repo.transaction(fn ->
-        close_active_periods(group_id, today)
+        abandon_scheduled(group_id)
+        unless scheduled?, do: Periods.close_active_before(group_id, today)
 
         attrs = %{
-          name: "Meta de #{Calendar.format_br(today)}",
-          start_date: today,
+          name: "Meta de #{Calendar.format_br(start_date)}",
+          start_date: start_date,
           end_date: end_date,
           daily_limit: daily,
-          total_budget: Decimal.mult(daily, days)
+          total_budget: Decimal.mult(daily, days),
+          status: if(scheduled?, do: "scheduled", else: "active")
         }
 
         case Periods.create_period(group_id, attrs, today) do
@@ -283,33 +297,21 @@ defmodule PlanfinBackend.Finance.MonthPlan do
     end
   end
 
+  defp validate_start(start_date, today) do
+    if Date.compare(start_date, today) == :lt, do: {:error, :invalid_start_date}, else: :ok
+  end
+
+  defp abandon_scheduled(group_id) do
+    Period
+    |> where([p], p.group_id == ^group_id and p.status == "scheduled")
+    |> Repo.update_all(set: [status: "abandoned"])
+  end
+
   defp validate_end(end_date, today) do
     if Date.compare(end_date, today) == :gt, do: :ok, else: {:error, :invalid_end_date}
   end
 
   defp validate_goal(daily) do
     if Decimal.compare(daily, 0) == :gt, do: :ok, else: {:error, :invalid_goal}
-  end
-
-  defp close_active_periods(group_id, today) do
-    Period
-    |> where([p], p.group_id == ^group_id and p.status == "active")
-    |> Repo.all()
-    |> Enum.each(fn period ->
-      if Date.compare(period.start_date, today) == :lt do
-        yesterday = Date.add(today, -1)
-
-        new_end =
-          if Date.compare(period.end_date, yesterday) == :gt, do: yesterday, else: period.end_date
-
-        BudgetDay
-        |> where([bd], bd.period_id == ^period.id and bd.date > ^new_end)
-        |> Repo.delete_all()
-
-        period |> Ecto.Changeset.change(end_date: new_end, status: "closed") |> Repo.update!()
-      else
-        period |> Ecto.Changeset.change(status: "abandoned") |> Repo.update!()
-      end
-    end)
   end
 end

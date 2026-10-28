@@ -144,6 +144,22 @@ export function PeriodProvider({ children }: { children: React.ReactNode }) {
     return activePeriod?.id ?? periods[0]?.id ?? null;
   }, [storageReady, periods, selectedPeriodId]);
 
+  // A scheduled period that became active succeeds the one stored as selected:
+  // follow it, once per new active period, so browsing an old period by hand
+  // is not overridden later.
+  const followedActiveRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!storageReady || !groupId) return;
+    const selected = periods.find((p) => p.id === selectedPeriodId);
+    const active = periods.find((p) => p.status === "active");
+    if (!selected || !active || selected.status === "active") return;
+    if (followedActiveRef.current === active.id) return;
+    if ((active.startDate ?? "") <= (selected.endDate ?? "")) return;
+    followedActiveRef.current = active.id;
+    setSelectedPeriodIdState(active.id);
+    storage.setItem(storageKey(groupId), active.id);
+  }, [storageReady, groupId, periods, selectedPeriodId]);
+
   // ── Fetch full period detail (the activePeriod query still drives the
   //    balance/today data because it computes availableBalance for today) ────
   const { data, loading, error, refetch } = useQuery<ActivePeriodData>(ACTIVE_PERIOD_QUERY, {

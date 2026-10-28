@@ -176,6 +176,7 @@ query FinancialSettings($today: String) {
     salaryAmount
     salaryBusinessDay
     salaryAccountId
+    cycleCardId
     reserveGoal
     upcomingSalaryDates {
       month
@@ -265,5 +266,39 @@ query InstallmentsDue($month: String!, $today: String) {
         }
       }
     }
+  }
+}
+
+fragment CycleBlockFields on CycleBlock {
+  status
+  invoiceMonth
+  purchaseStart
+  lastPurchaseDate
+  dueDate
+  salaryDate
+  windowEnd
+  balance
+  hasPrimary
+  salaries { label date amount }
+  partner { month label date amount received }
+  incomes { label date amount }
+  benefits { label date amount }
+  invoice { label date amount }
+  cardBills { label date amount }
+  installments { label date amount }
+  otherCards { label date amount }
+  fixedBills { label date amount }
+  oneOffBills { label date amount }
+  result
+  goalStart
+  days
+}
+
+query CyclePlan($today: String) {
+  cyclePlan(today: $today) {
+    cardId
+    cardName
+    current { ...CycleBlockFields }
+    next { ...CycleBlockFields }
   }
 }

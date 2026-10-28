@@ -138,7 +138,9 @@ defmodule PlanfinBackend.Periods do
   Returns `{:ok, period}` with budget_days preloaded if the group has an active
   period, or `{:ok, nil}` otherwise.
   """
-  def get_active_period(group_id) do
+  def get_active_period(group_id, today \\ Date.utc_today()) do
+    activate_scheduled(group_id, today)
+
     period =
       Period
       |> where([p], p.group_id == ^group_id and p.status == "active")
@@ -294,9 +296,58 @@ defmodule PlanfinBackend.Periods do
   end
 
   @doc """
+  Activates the scheduled periods whose start date has arrived: the periods
+  active before each one end the day before it starts.
+  """
+  def activate_scheduled(group_id, today \\ Date.utc_today()) do
+    Period
+    |> where(
+      [p],
+      p.group_id == ^group_id and p.status == "scheduled" and p.start_date <= ^today
+    )
+    |> order_by([p], asc: p.start_date)
+    |> Repo.all()
+    |> Enum.each(fn period ->
+      Repo.transaction(fn ->
+        close_active_before(group_id, period.start_date)
+        period = period |> Ecto.Changeset.change(status: "active") |> Repo.update!()
+        :ok = generate_budget_days(period, today)
+      end)
+    end)
+  end
+
+  @doc """
+  Makes room for a period starting on `start_date`: active periods that began
+  before it end the day before (dropping their later budget days); the ones
+  starting on or after it are abandoned.
+  """
+  def close_active_before(group_id, %Date{} = start_date) do
+    last_day = Date.add(start_date, -1)
+
+    Period
+    |> where([p], p.group_id == ^group_id and p.status == "active")
+    |> Repo.all()
+    |> Enum.each(fn period ->
+      if Date.compare(period.start_date, start_date) == :lt do
+        new_end = earlier_date(period.end_date, last_day)
+
+        BudgetDay
+        |> where([bd], bd.period_id == ^period.id and bd.date > ^new_end)
+        |> Repo.delete_all()
+
+        period |> Ecto.Changeset.change(end_date: new_end, status: "closed") |> Repo.update!()
+      else
+        period |> Ecto.Changeset.change(status: "abandoned") |> Repo.update!()
+      end
+    end)
+  end
+
+  @doc """
   Lists all periods for a group ordered by start_date descending.
   """
-  def list_periods(group_id) do
+  def list_periods(group_id, today \\ Date.utc_today()) do
+    activate_scheduled(group_id, today)
+
     Period
     |> where([p], p.group_id == ^group_id)
     |> order_by([p], desc: p.start_date)

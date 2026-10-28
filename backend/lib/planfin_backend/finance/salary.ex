@@ -36,7 +36,8 @@ defmodule PlanfinBackend.Finance.Salary do
   def configured?(_), do: false
 
   def update_settings(group_id, attrs) do
-    with :ok <- validate_account(group_id, attrs[:salary_account_id]) do
+    with :ok <- validate_account(group_id, attrs[:salary_account_id]),
+         :ok <- validate_card(group_id, attrs[:cycle_card_id]) do
       group_id
       |> get_settings()
       |> Settings.changeset(Map.put(attrs, :group_id, group_id))
@@ -49,6 +50,15 @@ defmodule PlanfinBackend.Finance.Salary do
   defp validate_account(group_id, account_id) do
     case Finance.get_account(group_id, account_id) do
       {:ok, _} -> :ok
+      _ -> {:error, :account_not_found}
+    end
+  end
+
+  defp validate_card(_group_id, nil), do: :ok
+
+  defp validate_card(group_id, account_id) do
+    case Finance.get_account(group_id, account_id) do
+      {:ok, %{kind: "credit_card"}} -> :ok
       _ -> {:error, :account_not_found}
     end
   end

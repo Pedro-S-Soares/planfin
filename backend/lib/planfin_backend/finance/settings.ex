@@ -1,5 +1,8 @@
 defmodule PlanfinBackend.Finance.Settings do
-  @moduledoc "Per-group financial settings: salary, salary day and reserve goal."
+  @moduledoc """
+  Per-group financial settings: salary, salary day, reserve goal and the card
+  whose invoice cycle drives the plan (`cycle_card`).
+  """
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -13,6 +16,7 @@ defmodule PlanfinBackend.Finance.Settings do
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :salary_account, PlanfinBackend.Finance.Account
+    belongs_to :cycle_card, PlanfinBackend.Finance.Account
 
     timestamps()
   end
@@ -23,6 +27,7 @@ defmodule PlanfinBackend.Finance.Settings do
       :salary_amount,
       :salary_business_day,
       :salary_account_id,
+      :cycle_card_id,
       :reserve_goal,
       :group_id
     ])

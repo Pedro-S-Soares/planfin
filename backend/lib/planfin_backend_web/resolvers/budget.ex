@@ -5,6 +5,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
   def active_period(_parent, args, %{context: %{current_group: group}}) do
     today = parse_today(args)
+    Periods.activate_scheduled(group.id, today)
 
     period_result =
       case Map.get(args, :period_id) do

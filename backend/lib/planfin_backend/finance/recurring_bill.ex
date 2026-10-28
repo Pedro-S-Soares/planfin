@@ -14,6 +14,9 @@ defmodule PlanfinBackend.Finance.RecurringBill do
   Recurring items happen every month; with `once_month` the item happens only
   in that month (a one-off boleto or a one-off expected income). Each month
   becomes an occurrence that is pending until a `BillPayment` exists.
+
+  `partner_income` marks the one-off expected income holding the partner's
+  salary of a month, typed month by month in the plan.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -29,6 +32,7 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     field :direction, :string, default: "expense"
     field :once_month, :date
     field :kind, :string, default: "fixed"
+    field :partner_income, :boolean, default: false
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :account, PlanfinBackend.Finance.Account
@@ -50,7 +54,8 @@ defmodule PlanfinBackend.Finance.RecurringBill do
       :subcategory_id,
       :direction,
       :once_month,
-      :kind
+      :kind,
+      :partner_income
     ])
     |> update_change(:once_month, &Date.beginning_of_month/1)
     |> update_change(:name, &String.trim/1)
