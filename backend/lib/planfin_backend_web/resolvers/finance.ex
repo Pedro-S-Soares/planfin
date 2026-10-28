@@ -157,6 +157,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
   def cycle_plan(_parent, args, %{context: %{current_group: group}}) do
     charge_card_bills(group.id, args)
+    PlanfinBackend.Finance.Benefits.credit_due(group.id, today(args))
 
     case CyclePlan.build(group.id, today(args)) do
       {:ok, plan} -> {:ok, format_cycle_plan(plan)}

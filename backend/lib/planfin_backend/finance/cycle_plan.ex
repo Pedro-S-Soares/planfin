@@ -12,6 +12,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
 
         saldo da conta principal
       + salários e entradas previstas (inclusive o salário do parceiro) até lá
+      + vale alimentação (aberta): saldo de hoje e créditos até o fechamento
       − fatura do cartão até agora
       − fixas do cartão que ainda entram nela (aberta)
       − faturas dos outros cartões que vencem até lá
@@ -23,7 +24,8 @@ defmodule PlanfinBackend.Finance.CyclePlan do
   paid by the following salary. Its money window runs from that salary to the
   eve of the next one:
 
-        salário + salário do parceiro + entradas previstas + vale alimentação
+        salário + salário do parceiro + entradas previstas
+      + créditos do vale alimentação no ciclo (e o saldo, se a atual fechou)
       − fixas do cartão lançadas no ciclo
       − parcelas que caem na fatura
       − faturas dos outros cartões que vencem na janela
@@ -35,7 +37,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
 
   alias PlanfinBackend.{Finance, Repo}
   alias PlanfinBackend.Expenses.Expense
-  alias PlanfinBackend.Finance.{Bills, Calendar, Invoices, RecurringBill, Salary}
+  alias PlanfinBackend.Finance.{Benefits, Bills, Calendar, Invoices, RecurringBill, Salary}
 
   @default_partner_name "Salário da esposa"
   @default_partner_day 15
@@ -80,7 +82,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
     current =
       current_block(ctx, first_month, if(first_month == open_month, do: "open", else: "closed"))
 
-    next = next_block(ctx, second_month, current.window_end)
+    next = next_block(ctx, second_month, current)
 
     %{card: card, current: current, next: next}
   end
@@ -131,7 +133,11 @@ defmodule PlanfinBackend.Finance.CyclePlan do
       salaries: pending_salaries(ctx, dates.window_end),
       partner: partner,
       incomes: pending |> Enum.filter(&income?(&1, partner)) |> Enum.map(&item/1),
-      benefits: [],
+      benefits:
+        if(status == "open",
+          do: benefit_items(ctx, today, Date.add(dates.closing_date, -1), true),
+          else: []
+        ),
       invoice: %{
         label: "Fatura #{card.name}",
         date: dates.due_date,
@@ -150,6 +156,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
       sum(block.salaries)
       |> Decimal.add(sum(block.incomes))
       |> Decimal.add(partner_amount(partner))
+      |> Decimal.add(sum(block.benefits))
 
     outflows =
       block.invoice.amount
@@ -166,10 +173,11 @@ defmodule PlanfinBackend.Finance.CyclePlan do
 
   # ---- Next invoice ----
 
-  defp next_block(ctx, month, previous_window_end) do
+  defp next_block(ctx, month, current) do
     %{card: card, today: today, group_id: group_id, settings: settings} = ctx
     dates = invoice_dates(ctx, month)
-    from = Date.add(previous_window_end, 1)
+    from = Date.add(current.window_end, 1)
+    {goal_start, days} = goal_days("next", today, dates)
     partner = partner_income(group_id, dates.salary_month, today)
 
     occurrences =
@@ -201,10 +209,14 @@ defmodule PlanfinBackend.Finance.CyclePlan do
         in_window
         |> Enum.filter(&(&1.status in ["pending", "overdue"] and income?(&1, partner)))
         |> Enum.map(&item/1),
+      # While the current invoice is open the voucher balance belongs to it.
       benefits:
-        ctx.accounts
-        |> Enum.filter(&(&1.kind == "benefit"))
-        |> Enum.map(&%{label: &1.name, date: today, amount: Finance.account_balance(&1, today)}),
+        benefit_items(
+          ctx,
+          goal_start,
+          Date.add(dates.closing_date, -1),
+          current.status == "closed"
+        ),
       invoice: nil,
       card_bills:
         occurrences
@@ -237,8 +249,6 @@ defmodule PlanfinBackend.Finance.CyclePlan do
       |> Decimal.add(sum(block.other_cards))
       |> Decimal.add(sum(block.fixed_bills))
       |> Decimal.add(sum(block.one_off_bills))
-
-    {goal_start, days} = goal_days("next", today, dates)
 
     Map.merge(block, %{result: Decimal.sub(inflows, outflows), goal_start: goal_start, days: days})
   end
@@ -274,6 +284,41 @@ defmodule PlanfinBackend.Finance.CyclePlan do
       if Date.compare(dates.purchase_start, today) == :gt, do: dates.purchase_start, else: today
 
     {start, max(Date.diff(dates.closing_date, start), 1)}
+  end
+
+  # ---- Meal voucher ----
+
+  # Voucher money for the purchases from `from` to `to`: the balance of today
+  # (when asked) plus the monthly credits still to arrive in that range.
+  # Today's credit is already recorded, so it is inside the balance.
+  defp benefit_items(ctx, from, to, with_balance?) do
+    ctx.accounts
+    |> Enum.filter(&(&1.kind == "benefit"))
+    |> Enum.flat_map(fn account ->
+      balance =
+        if with_balance?,
+          do: [
+            %{
+              label: "#{account.name} · saldo hoje",
+              date: ctx.today,
+              amount: Finance.account_balance(account, ctx.today)
+            }
+          ],
+          else: []
+
+      balance ++ benefit_credits(account, ctx.today, from, to)
+    end)
+  end
+
+  defp benefit_credits(%{monthly_credit: nil}, _today, _from, _to), do: []
+  defp benefit_credits(%{credit_day: nil}, _today, _from, _to), do: []
+
+  defp benefit_credits(account, today, from, to) do
+    from
+    |> months_between(to)
+    |> Enum.map(&Benefits.credit_date(account, &1))
+    |> Enum.filter(&(Date.compare(&1, today) == :gt and in_range?(&1, from, to)))
+    |> Enum.map(&%{label: "#{account.name} · crédito", date: &1, amount: account.monthly_credit})
   end
 
   # ---- Salaries and incomes ----
