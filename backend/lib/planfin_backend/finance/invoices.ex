@@ -142,6 +142,25 @@ defmodule PlanfinBackend.Finance.Invoices do
     |> Kernel.||(Decimal.new("0"))
   end
 
+  @doc """
+  The invoices of `card` due in calendar `month` that carry installments, each
+  with only its installment entries. A card closing before its due day pays in
+  the same month; one closing late (closes 28, due 5) pays next month, so the
+  invoice due in `month` can be the previous month's.
+  """
+  def with_installments_due_in(%Account{kind: "credit_card"} = card, {year, mon} = month, today) do
+    [Calendar.add_months(month, -1), month, Calendar.add_months(month, 1)]
+    |> Enum.filter(fn invoice_month ->
+      due = due_date(card, invoice_month)
+      due.year == year and due.month == mon
+    end)
+    |> Enum.map(fn invoice_month ->
+      invoice = build(card, invoice_month, today, with_entries: true)
+      %{invoice | entries: Enum.filter(invoice.entries, & &1.installment_count)}
+    end)
+    |> Enum.reject(&(&1.entries == []))
+  end
+
   @doc "The invoice currently receiving purchases."
   def current_month(card, today), do: month_for(card, today)
 

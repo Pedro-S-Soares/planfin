@@ -13,6 +13,9 @@ import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { Colors } from "../../theme/tokens";
 import { BillRow } from "./components/BillRow";
+import { InstallmentsDueCard } from "./components/InstallmentsDueCard";
+import { useFinancialAccounts } from "./use-financial-accounts";
+import { useInstallmentsDue } from "./use-installments-due";
 import { addMonths, formatMoney, formatMonth, monthOf, toNumber } from "./format";
 import type { AppStackParamList } from "../../../App";
 
@@ -34,11 +37,17 @@ function settledAmount(o: NonNullable<Occurrence>) {
   return SETTLED.includes(o.status ?? "") ? toNumber(o.amount) : 0;
 }
 
-function uniqueAccounts(items: NonNullable<Occurrence>[]) {
-  const byId = new Map<string, { id: string; name: string; kind: string }>();
+type AccountOption = { id: string; name: string; kind: string };
+
+/** Accounts with a bill this month, plus the cards with installments due in it. */
+function uniqueAccounts(items: NonNullable<Occurrence>[], installmentCards: AccountOption[]) {
+  const byId = new Map<string, AccountOption>();
   for (const o of items) {
     const a = o.bill?.account;
     if (a?.id && !byId.has(a.id)) byId.set(a.id, { id: a.id, name: a.name ?? "", kind: a.kind ?? "" });
+  }
+  for (const card of installmentCards) {
+    if (!byId.has(card.id)) byId.set(card.id, card);
   }
   return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -51,6 +60,9 @@ export function BillsScreen() {
   const { currency } = useCurrency();
   const [month, setMonth] = useState(params?.month || monthOf(new Date()));
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
+  const { cards } = useFinancialAccounts();
+  const installments = useInstallmentsDue(month);
+  const refetchInstallments = installments.refetch;
 
   const { data, loading, error, refetch } = useBillOccurrencesQuery({
     variables: { month, today: toISODate(new Date()) },
@@ -62,15 +74,29 @@ export function BillsScreen() {
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch]),
+      refetchInstallments();
+    }, [refetch, refetchInstallments]),
   );
 
   const allItems = data?.billOccurrences?.filter((o) => o !== null) ?? [];
-  const accounts = uniqueAccounts(allItems);
+  const cardNames = new Map(cards.map((c) => [c.id, c.name]));
+  const installmentCards = installments.invoices.map((invoice) => ({
+    id: invoice.cardId,
+    name: cardNames.get(invoice.cardId) ?? "Cartão",
+    kind: "credit_card",
+  }));
+  const accounts = uniqueAccounts(allItems, installmentCards);
   const items = accountFilter ? allItems.filter((o) => o.bill?.account?.id === accountFilter) : allItems;
+  const installmentInvoices = accountFilter
+    ? installments.invoices.filter((invoice) => invoice.cardId === accountFilter)
+    : installments.invoices;
   const active = items.filter((o) => o.status !== "skipped" && o.bill?.direction !== "income");
-  const total = active.reduce((acc, o) => acc + plannedAmount(o), 0);
-  const paid = active.reduce((acc, o) => acc + settledAmount(o), 0);
+  const billsTotal = active.reduce((acc, o) => acc + plannedAmount(o), 0);
+  const installmentsTotal = installmentInvoices.reduce((acc, invoice) => acc + invoice.total, 0);
+  // Installments are settled when their invoice is paid.
+  const installmentsPaid = installmentInvoices.reduce((acc, invoice) => acc + (invoice.isPaid ? invoice.total : 0), 0);
+  const total = billsTotal + installmentsTotal;
+  const paid = active.reduce((acc, o) => acc + settledAmount(o), 0) + installmentsPaid;
   const filterName = accounts.find((a) => a.id === accountFilter)?.name;
 
   return (
@@ -119,7 +145,9 @@ export function BillsScreen() {
           <InlineError onRetry={() => refetch()} />
         ) : items.length === 0 ? (
           <Text style={{ color: Colors.textTer, textAlign: "center", paddingVertical: 12 }}>
-            Nenhuma despesa fixa ainda. Cadastre aluguel, contas e assinaturas.
+            {accountFilter
+              ? `Nenhuma despesa fixa em ${filterName ?? "esta conta"}.`
+              : "Nenhuma despesa fixa ainda. Cadastre aluguel, contas e assinaturas."}
           </Text>
         ) : (
           items.map((o) => {
@@ -178,10 +206,18 @@ export function BillsScreen() {
             <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.textSec }}>
               Total {filterName ? `em ${filterName}` : "das despesas"} ({active.length})
             </Text>
-            <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>{formatMoney(total, currency.symbol)}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>{formatMoney(billsTotal, currency.symbol)}</Text>
           </View>
         ) : null}
       </Card>
+
+      <InstallmentsDueCard
+        invoices={installmentInvoices}
+        cardNames={cardNames}
+        loading={installments.loading}
+        hasError={Boolean(installments.error)}
+        onRetry={() => refetchInstallments()}
+      />
 
       <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 12, lineHeight: 17 }}>
         Toque no nome para editar ou excluir. As despesas no cartão entram sozinhas na fatura no dia; as da conta

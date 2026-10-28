@@ -45,7 +45,7 @@ defmodule PlanfinBackend.FinanceTest do
       Expenses.create_expense(
         ctx.group.id,
         ctx.user.id,
-        Map.merge(%{amount: Decimal.new("10.00"), date: ~D[2026-10-02]}, attrs)
+        Map.merge(%{amount: Decimal.new("10.00"), date: ~D[2026-10-02], today: @today}, attrs)
       )
 
     e
