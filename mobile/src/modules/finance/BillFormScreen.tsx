@@ -27,6 +27,21 @@ import type { AppStackParamList } from "../../../App";
 
 type BillFormValues = yup.InferType<typeof billFormSchema>;
 
+/** Date of a one-off item and, on a card, the invoice it lands in: the plan counts it there. */
+function oneOffLandingText(month: string, day: number, account: FinancialAccount | undefined, isIncome: boolean) {
+  const [year, mon] = month.split("-").map(Number);
+  const date = `${month}-${String(Math.min(day, new Date(year, mon, 0).getDate())).padStart(2, "0")}`;
+  const when = `${formatShortDate(date)}/${year}`;
+  if (isIncome) return `Entra em ${when}.`;
+  if (account?.kind === "credit_card" && account.closingDay && account.dueDay) {
+    const invoiceMonth = invoiceMonthFor(date, account.closingDay);
+    const due = invoiceDueDate(invoiceMonth, account.closingDay, account.dueDay);
+    const closing = `${invoiceMonth}-${String(account.closingDay).padStart(2, "0")}`;
+    return `Compra em ${when}: entra na fatura que fecha em ${formatShortDate(closing)} e vence em ${formatShortDate(due)}.`;
+  }
+  return `Sai da conta em ${when}.`;
+}
+
 /** When the last month happens and when it stops, so the end can be checked against the invoice. */
 function lastOccurrenceText(month: string, day: number, account: FinancialAccount | undefined, isIncome: boolean, isQuota: boolean) {
   const [year, mon] = month.split("-").map(Number);
@@ -232,6 +247,11 @@ export function BillFormScreen() {
           )}
         />
       )}
+      {onceMonth && !isQuota ? (
+        <Text style={{ fontSize: 12, color: Colors.primaryText, marginTop: -8, marginBottom: 16, lineHeight: 17 }}>
+          {oneOffLandingText(onceMonth, Number(watch("dueDay")) || 1, accounts.find((a) => a.id === accountId), isIncome)}
+        </Text>
+      ) : null}
       <Controller
         control={control}
         name="accountId"
