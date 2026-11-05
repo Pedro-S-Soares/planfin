@@ -84,6 +84,7 @@ defmodule PlanfinBackend.Finance.CyclePlanTest do
 
     {:ok, _} = CyclePlan.set_partner_income(group.id, {2026, 11}, Decimal.new("2700"))
     {:ok, _} = CyclePlan.set_partner_income(group.id, {2026, 12}, Decimal.new("3000"))
+    backdate_bills(group.id, @today)
 
     %{user: user, group: group, bb: bb, card: card, nubank: nubank}
   end

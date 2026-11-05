@@ -32,15 +32,16 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
     ? "cota do mês"
     : o.bill?.onceMonth
       ? `só em ${formatMonth(o.bill.onceMonth)}`
-      : `todo dia ${o.bill?.dueDay}`;
+      : `todo dia ${o.bill?.dueDay}${o.bill?.lastMonth ? ` até ${formatMonth(o.bill.lastMonth)}` : ""}`;
 
-  const next = o.bill?.onceMonth ? "" : ` · próxima ${formatShortDate(o.nextDueDate)}`;
+  const isLastMonth = !!o.bill?.lastMonth && o.bill.lastMonth === o.month;
+  const next = o.bill?.onceMonth ? "" : isLastMonth ? " · última" : ` · próxima ${formatShortDate(o.nextDueDate)}`;
   const quotaText =
     spent > quota
       ? `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · passou ${formatMoney(spent - quota, currency.symbol)}`
       : `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · ${isPaid ? "mês encerrado" : `resta ${formatMoney(quota - spent, currency.symbol)}`}`;
   const statusText = isSkipped
-    ? `Pulada neste mês${o.note ? `: ${o.note}` : ""} · próxima ${formatShortDate(o.nextDueDate)}`
+    ? `Pulada neste mês${o.note ? `: ${o.note}` : ""}${next}`
     : isQuota
       ? quotaText
       : isIncome
@@ -50,7 +51,7 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
     : isPaid
     ? `${isCard ? "✓ Na fatura" : "✓ Paga"} em ${formatShortDate(o.paidOn)}${next}`
     : isBeforeStart
-        ? `Já estava na fatura quando foi cadastrada · próxima ${formatShortDate(o.nextDueDate)}`
+        ? `Já estava na fatura quando foi cadastrada${next}`
       : isOverdue
         ? `${isCard ? "Não lançada" : "Não paga"} · venceu ${formatShortDate(o.dueDate)}`
         : isCard

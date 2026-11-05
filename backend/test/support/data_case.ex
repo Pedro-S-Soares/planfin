@@ -41,6 +41,22 @@ defmodule PlanfinBackend.DataCase do
   end
 
   @doc """
+  Moves the creation of the group's bills to `date`. A bill exists from the
+  month it was created on, so tests set on a fixed date must not depend on
+  the real clock.
+  """
+  def backdate_bills(group_id, %Date{} = date) do
+    import Ecto.Query
+
+    PlanfinBackend.Repo.update_all(
+      from(b in PlanfinBackend.Finance.RecurringBill, where: b.group_id == ^group_id),
+      set: [inserted_at: NaiveDateTime.new!(date, ~T[00:00:00])]
+    )
+
+    :ok
+  end
+
+  @doc """
   A helper that transforms changeset errors into a map of messages.
 
       assert {:error, changeset} = Accounts.create_user(%{password: "short"})

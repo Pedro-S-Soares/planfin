@@ -21,11 +21,25 @@ import { categoryColor, Colors } from "../../theme/tokens";
 import { billFormSchema } from "./bill-form-schema";
 import { AccountPicker } from "./components/AccountPicker";
 import { FormLabel } from "./components/FormLabel";
-import { addMonths, formatMonth, monthOf, toNumber } from "./format";
-import { defaultSpendingAccountId, useFinancialAccounts } from "./use-financial-accounts";
+import { addMonths, formatMonth, formatShortDate, invoiceDueDate, invoiceMonthFor, monthOf, toNumber } from "./format";
+import { defaultSpendingAccountId, useFinancialAccounts, type FinancialAccount } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
 
 type BillFormValues = yup.InferType<typeof billFormSchema>;
+
+/** When the last month happens and when it stops, so the end can be checked against the invoice. */
+function lastOccurrenceText(month: string, day: number, account: FinancialAccount | undefined, isIncome: boolean, isQuota: boolean) {
+  const [year, mon] = month.split("-").map(Number);
+  const date = `${month}-${String(Math.min(day, new Date(year, mon, 0).getDate())).padStart(2, "0")}`;
+  const stops = `A partir de ${formatMonth(addMonths(month, 1))} não entra mais.`;
+  if (isQuota) return `Última cota em ${formatMonth(month)}. ${stops}`;
+  if (isIncome) return `Última entrada em ${formatShortDate(date)}/${year}. ${stops}`;
+  if (account?.kind === "credit_card" && account.closingDay && account.dueDay) {
+    const due = invoiceDueDate(invoiceMonthFor(date, account.closingDay), account.closingDay, account.dueDay);
+    return `Última cobrança em ${formatShortDate(date)}/${year}, na fatura que vence em ${formatShortDate(due)}. ${stops}`;
+  }
+  return `Último pagamento em ${formatShortDate(date)}/${year}. ${stops}`;
+}
 
 export function BillFormScreen() {
   const navigation = useNavigation();
@@ -53,24 +67,27 @@ export function BillFormScreen() {
           subcategoryId: editing.subcategory?.id ?? "",
           direction: initialDirection,
           onceMonth: editing.onceMonth ?? "",
+          lastMonth: editing.lastMonth ?? "",
           kind: editing.kind === "quota" ? "quota" : "fixed",
         }
       : undefined,
     defaultValues: {
       name: "",
       amount: "0,00",
-      dueDay: "10",
+      dueDay: String(params.dueDay ?? 10),
       accountId: undefined,
       categoryId: "",
       subcategoryId: "",
       direction: params.direction ?? "expense",
-      onceMonth: params.once ? monthOf(new Date()) : "",
+      onceMonth: params.once ? params.month ?? monthOf(new Date()) : "",
+      lastMonth: "",
       kind: "fixed",
     },
   });
   const direction = watch("direction");
   const isIncome = direction === "income";
   const onceMonth = watch("onceMonth");
+  const lastMonth = watch("lastMonth");
   const isQuota = !isIncome && watch("kind") === "quota";
   const categories = allCategories.filter((c) => c.type === (isIncome ? "income" : "expense"));
   const chosenAccount = watch("accountId");
@@ -78,7 +95,7 @@ export function BillFormScreen() {
   const accountId = chosenAccount === undefined ? defaultAccount : chosenAccount;
   const subcategories = categories.find((c) => c.id === watch("categoryId"))?.subcategories?.filter((s) => s !== null) ?? [];
 
-  const refetchQueries = ["RecurringBills", "BillOccurrences", "FinancePanel", "MonthPlan", "AllowancePlan"];
+  const refetchQueries = ["RecurringBills", "BillOccurrences", "FinancePanel", "MonthPlan", "AllowancePlan", "CyclePlan"];
   const onCompleted = () => navigation.goBack();
   const onError = (e: Error) => setError("root", { message: e.message });
   const [createBill, { loading: creating }] = useCreateRecurringBillMutation({ refetchQueries, onCompleted, onError });
@@ -98,6 +115,7 @@ export function BillFormScreen() {
       subcategoryId: values.subcategoryId || null,
       direction: values.direction,
       onceMonth: values.onceMonth ?? "",
+      lastMonth: values.onceMonth ? "" : values.lastMonth ?? "",
     };
     if (editing?.id) updateBill({ variables: { id: editing.id, ...variables } });
     else createBill({ variables });
@@ -149,6 +167,32 @@ export function BillFormScreen() {
                   Um valor reservado no mês e gasto aos poucos, como R$ 350 de unhas. Os gastos da subcategoria escolhida
                   abaixo vão abatendo a cota e não mexem no limite diário. Nada é lançado sozinho.
                 </Text>
+              ) : null}
+            </View>
+          )}
+        />
+      )}
+      {onceMonth ? null : (
+        <Controller
+          control={control}
+          name="lastMonth"
+          render={({ field: { onChange, value } }) => (
+            <View style={{ marginBottom: 16 }}>
+              <View style={{ flexDirection: "row", gap: 7 }}>
+                <Chip label="Sem fim" selected={!value} onPress={() => onChange("")} />
+                <Chip label="Termina em" selected={!!value} onPress={() => onChange(value || monthOf(new Date()))} />
+              </View>
+              {value ? (
+                <>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }}>
+                    <Text onPress={() => onChange(addMonths(value, -1))} style={{ fontSize: 22, color: Colors.primary }}>‹</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.primaryText }}>{formatMonth(value)}</Text>
+                    <Text onPress={() => onChange(addMonths(value, 1))} style={{ fontSize: 22, color: Colors.primary }}>›</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 6, lineHeight: 17 }}>
+                    {lastOccurrenceText(value, Number(watch("dueDay")) || 1, accounts.find((a) => a.id === accountId), isIncome, isQuota)}
+                  </Text>
+                </>
               ) : null}
             </View>
           )}

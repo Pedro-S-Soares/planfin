@@ -12,7 +12,9 @@ defmodule PlanfinBackend.Finance.RecurringBill do
   payment. It is never paid nor charged: its purchases are the real entries.
 
   Recurring items happen every month; with `once_month` the item happens only
-  in that month (a one-off boleto or a one-off expected income). Each month
+  in that month (a one-off boleto or a one-off expected income). With
+  `last_month` a recurring item stops after that month (an installment plan
+  or a subscription that ends). Each month
   becomes an occurrence that is pending until a `BillPayment` exists.
 
   `partner_income` marks the one-off expected income holding the partner's
@@ -31,6 +33,7 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     field :active, :boolean, default: true
     field :direction, :string, default: "expense"
     field :once_month, :date
+    field :last_month, :date
     field :kind, :string, default: "fixed"
     field :partner_income, :boolean, default: false
 
@@ -54,10 +57,12 @@ defmodule PlanfinBackend.Finance.RecurringBill do
       :subcategory_id,
       :direction,
       :once_month,
+      :last_month,
       :kind,
       :partner_income
     ])
-    |> update_change(:once_month, &Date.beginning_of_month/1)
+    |> update_change(:once_month, &first_of_month/1)
+    |> update_change(:last_month, &first_of_month/1)
     |> update_change(:name, &String.trim/1)
     |> validate_required([:name, :amount, :due_day, :group_id, :account_id])
     |> validate_length(:name, min: 1, max: 60)
@@ -67,6 +72,9 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     |> validate_inclusion(:kind, ["fixed", "quota"])
     |> validate_quota()
   end
+
+  defp first_of_month(nil), do: nil
+  defp first_of_month(date), do: Date.beginning_of_month(date)
 
   defp validate_quota(changeset) do
     if get_field(changeset, :kind) == "quota" do

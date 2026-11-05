@@ -110,6 +110,7 @@ mutation CreateRecurringBill(
   $subcategoryId: ID
   $direction: String
   $onceMonth: String
+  $lastMonth: String
   $kind: String
 ) {
   createRecurringBill(
@@ -120,6 +121,7 @@ mutation CreateRecurringBill(
     subcategoryId: $subcategoryId
     direction: $direction
     onceMonth: $onceMonth
+    lastMonth: $lastMonth
     kind: $kind
   ) {
     id
@@ -135,6 +137,7 @@ mutation UpdateRecurringBill(
   $subcategoryId: ID
   $direction: String
   $onceMonth: String
+  $lastMonth: String
   $kind: String
 ) {
   updateRecurringBill(
@@ -146,6 +149,7 @@ mutation UpdateRecurringBill(
     subcategoryId: $subcategoryId
     direction: $direction
     onceMonth: $onceMonth
+    lastMonth: $lastMonth
     kind: $kind
   ) {
     id

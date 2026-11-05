@@ -17,4 +17,6 @@ export const billFormSchema = yup.object({
   kind: yup.mixed<"fixed" | "quota">().oneOf(["fixed", "quota"]).default("fixed"),
   // "" = every month; "YYYY-MM" = only in that month
   onceMonth: yup.string().default(""),
+  // "" = no end; "YYYY-MM" = last month of a recurring item
+  lastMonth: yup.string().default(""),
 });

@@ -17,6 +17,10 @@ defmodule PlanfinBackend.Finance.Bills do
   `paid` once used up or when the month ends, with `amount` = what was spent.
   It is never charged nor paid.
 
+  A recurring bill with `last_month` has no occurrence after that month: it
+  leaves the plan, the commitments and the automatic charge from then on,
+  while the months up to it stay as they were.
+
   Any bill can be skipped in one month (`skip/5`, with an optional note): the
   month leaves the commitments, the plan and the automatic charge, and the
   bill comes back the following month.
@@ -147,20 +151,28 @@ defmodule PlanfinBackend.Finance.Bills do
     |> Enum.reduce(Decimal.new("0"), &Decimal.add(&2, &1.amount))
   end
 
-  @doc "Active recurring (every month) expense bills paid from `account_kinds`."
-  def recurring_expenses(group_id, account_kinds) do
+  @doc """
+  Recurring (every month) expense bills paid from `account_kinds` that still
+  happen in the month of `today`.
+  """
+  def recurring_expenses(group_id, account_kinds, today \\ Date.utc_today()) do
+    month = {today.year, today.month}
+
     group_id
     |> list_bills()
     |> Enum.filter(fn b ->
-      b.direction == "expense" and is_nil(b.once_month) and b.account.kind in account_kinds
+      b.direction == "expense" and is_nil(b.once_month) and b.account.kind in account_kinds and
+        (is_nil(b.last_month) or month <= {b.last_month.year, b.last_month.month})
     end)
   end
 
   defp exists_in?(%RecurringBill{once_month: %Date{} = once}, month),
     do: {once.year, once.month} == month
 
-  defp exists_in?(%RecurringBill{inserted_at: inserted_at}, month),
-    do: {inserted_at.year, inserted_at.month} <= month
+  defp exists_in?(%RecurringBill{inserted_at: inserted_at, last_month: last}, month) do
+    {inserted_at.year, inserted_at.month} <= month and
+      (is_nil(last) or month <= {last.year, last.month})
+  end
 
   # A due date that passed before the bill was registered may already be on
   # the card; it is shown as pending but never charged automatically.

@@ -183,4 +183,35 @@ defmodule PlanfinBackend.Finance.CardBillChargeTest do
 
     assert [%{status: "overdue"}] = Bills.occurrences(ctx.group.id, {2026, 10}, ~D[2026-10-03])
   end
+
+  test "a bill with a last month is charged up to it and then stops" do
+    ctx = setup_group()
+
+    med =
+      bill(ctx, %{
+        name: "MED",
+        amount: Decimal.new("300"),
+        due_day: 10,
+        account_id: ctx.card.id,
+        last_month: ~D[2026-12-20]
+      })
+
+    assert med.last_month == ~D[2026-12-01]
+
+    for day <- [~D[2026-09-30], ~D[2026-10-31], ~D[2026-11-30], ~D[2026-12-31], ~D[2027-01-31]],
+        do: :ok = Bills.charge_due_card_bills(ctx.group.id, day)
+
+    assert Enum.map(charges(ctx.card), & &1.date) ==
+             [~D[2026-09-10], ~D[2026-10-10], ~D[2026-11-10], ~D[2026-12-10]]
+
+    assert [%{bill: %{name: "MED"}}] = Bills.occurrences(ctx.group.id, {2026, 12}, ~D[2027-01-31])
+    assert Bills.occurrences(ctx.group.id, {2027, 1}, ~D[2027-01-31]) == []
+    assert Bills.recurring_expenses(ctx.group.id, ["credit_card"], ~D[2026-12-31]) != []
+    assert Bills.recurring_expenses(ctx.group.id, ["credit_card"], ~D[2027-01-01]) == []
+
+    # Clearing the end brings the bill back every month
+    {:ok, med} = Bills.update_bill(med, %{last_month: nil})
+    assert med.last_month == nil
+    assert [_] = Bills.occurrences(ctx.group.id, {2027, 1}, ~D[2027-01-31])
+  end
 end

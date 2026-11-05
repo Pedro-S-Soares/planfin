@@ -70,6 +70,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :direction, :string
     @desc "YYYY-MM when it happens only in that month"
     field :once_month, :string
+    @desc "YYYY-MM: last month of a recurring item; null when it has no end"
+    field :last_month, :string
     field :name, :string
     @desc "Estimated monthly amount"
     field :amount, :string
@@ -466,6 +468,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       arg(:kind, :string)
       @desc "YYYY-MM to make it a one-month item; empty string clears"
       arg(:once_month, :string)
+      @desc "YYYY-MM: last month of a recurring item; empty string clears"
+      arg(:last_month, :string)
       arg(:name, non_null(:string))
       arg(:amount, non_null(:string))
       arg(:due_day, non_null(:integer))
@@ -480,6 +484,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       arg(:kind, :string)
       @desc "YYYY-MM to make it a one-month item; empty string clears"
       arg(:once_month, :string)
+      @desc "YYYY-MM: last month of a recurring item; empty string clears"
+      arg(:last_month, :string)
       arg(:id, non_null(:id))
       arg(:name, :string)
       arg(:amount, :string)

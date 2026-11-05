@@ -15,12 +15,14 @@ type CycleBlockCardProps = {
   today: string;
   /** Extra actions under the result (links to add one-off items). */
   footer?: ReactNode;
+  /** The next invoice already takes today's purchases (the current one closed). */
+  isTakingPurchases?: boolean;
 };
 
 const lines = (items: (PlanLine | null)[] | null | undefined): PlanLine[] =>
   (items ?? []).filter((i): i is PlanLine => i !== null);
 
-function headerTexts(block: CycleBlockFieldsFragment, cardName: string) {
+function headerTexts(block: CycleBlockFieldsFragment, cardName: string, isTakingPurchases: boolean) {
   const due = formatShortDate(block.dueDate);
   const salary = formatShortDate(block.salaryDate);
 
@@ -39,7 +41,7 @@ function headerTexts(block: CycleBlockFieldsFragment, cardName: string) {
       };
     default:
       return {
-        title: `PRÓXIMA FATURA · ${cardName}`,
+        title: `${isTakingPurchases ? "FATURA ABERTA" : "PRÓXIMA FATURA"} · ${cardName}`,
         subtitle: `Compras de ${formatShortDate(block.purchaseStart)} a ${formatShortDate(block.lastPurchaseDate)} · vence ${due} · paga com o salário de ${salary}`,
         resultLabel: "LIVRE PARA GASTOS VARIÁVEIS NO CICLO",
       };
@@ -47,10 +49,10 @@ function headerTexts(block: CycleBlockFieldsFragment, cardName: string) {
 }
 
 /** One invoice of the cycle card and the money that pays it, as on paper. */
-export function CycleBlockCard({ block, cardName, today, footer }: CycleBlockCardProps) {
+export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchases = false }: CycleBlockCardProps) {
   const { currency } = useCurrency();
   const money = (v: number | string | null | undefined) => formatMoney(v, currency.symbol);
-  const { title, subtitle, resultLabel } = headerTexts(block, cardName);
+  const { title, subtitle, resultLabel } = headerTexts(block, cardName, isTakingPurchases);
   const result = toNumber(block.result);
   const isPositive = result >= 0;
   const isClosed = block.status === "closed";
