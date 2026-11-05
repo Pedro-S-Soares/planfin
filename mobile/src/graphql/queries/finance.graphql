@@ -291,6 +291,7 @@ fragment CycleBlockFields on CycleBlock {
   otherCards { label date amount }
   fixedBills { label date amount }
   oneOffBills { label date amount }
+  carry { label date amount }
   result
   goalStart
   days
