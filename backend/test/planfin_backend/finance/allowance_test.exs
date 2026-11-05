@@ -113,6 +113,7 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
         account_id: ctx.checking.id
       })
 
+    backdate_bills(ctx.group.id, Date.add(@closing, -20))
     plan = Allowance.build(ctx.group.id, @closing)
     assert Decimal.equal?(plan.amount, Decimal.new("0"))
     refute plan.can_distribute

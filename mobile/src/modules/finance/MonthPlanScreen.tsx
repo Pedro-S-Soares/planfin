@@ -14,6 +14,27 @@ import type { AppStackParamList } from "../../../App";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
+type OneOffLinksProps = {
+  /** YYYY-MM and day the new item starts with; defaults to this month. */
+  month?: string;
+  dueDay?: number;
+};
+
+/** Links to add a one-off expense or expected income to a block of the plan. */
+function OneOffLinks({ month, dueDay }: OneOffLinksProps) {
+  const navigation = useNavigation<Navigation>();
+  return (
+    <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
+      <TouchableOpacity onPress={() => navigation.navigate("BillForm", { direction: "expense", once: true, month, dueDay })}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>+ Gasto avulso</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => navigation.navigate("BillForm", { direction: "income", once: true, month, dueDay })}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>+ Entrada prevista</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 /** The plan around the main card's invoice: the current one and the next one. */
 export function MonthPlanScreen() {
   usePageTitle("Planfin - Planejamento");
@@ -52,25 +73,25 @@ export function MonthPlanScreen() {
   }
 
   const cardName = plan.cardName ?? "Cartão";
+  const isCurrentClosed = plan.current.status === "closed";
+  const nextSalaryDate = plan.next.salaryDate;
+  const currentBlock = <CycleBlockCard key="current" block={plan.current} cardName={cardName} today={today} footer={<OneOffLinks />} />;
+  const nextBlock = (
+    <CycleBlockCard
+      key="next"
+      block={plan.next}
+      cardName={cardName}
+      today={today}
+      isTakingPurchases={isCurrentClosed}
+      // One-offs from the salary that pays this invoice on fall in its window.
+      footer={<OneOffLinks month={nextSalaryDate?.slice(0, 7)} dueDay={nextSalaryDate ? Number(nextSalaryDate.slice(8, 10)) : undefined} />}
+    />
+  );
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      <CycleBlockCard
-        block={plan.current}
-        cardName={cardName}
-        today={today}
-        footer={
-          <View style={{ flexDirection: "row", gap: 16, marginTop: 10 }}>
-            <TouchableOpacity onPress={() => navigation.navigate("BillForm", { direction: "expense", once: true })}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>+ Gasto avulso</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate("BillForm", { direction: "income", once: true })}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>+ Entrada prevista</Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
-      <CycleBlockCard block={plan.next} cardName={cardName} today={today} />
+      {/* Once the invoice closes, the open one is the cycle being managed: it comes first. */}
+      {isCurrentClosed ? [nextBlock, currentBlock] : [currentBlock, nextBlock]}
       <Text style={{ fontSize: 12, color: Colors.textTer, lineHeight: 17 }}>
         O ciclo segue o fechamento do {cardName}: o que você compra até a véspera do fechamento é pago com o salário do mês
         em que a fatura vence. Troque o cartão do ciclo em Salário e ciclo.

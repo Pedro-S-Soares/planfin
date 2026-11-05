@@ -49,6 +49,7 @@ defmodule PlanfinBackend.Finance.MonthPlanTest do
 
     bill = fn attrs ->
       {:ok, _} = Bills.create_bill(group.id, Map.merge(%{account_id: bb.id}, attrs))
+      backdate_bills(group.id, @today)
     end
 
     # Boletos fixos até o salário de novembro
@@ -123,6 +124,8 @@ defmodule PlanfinBackend.Finance.MonthPlanTest do
         direction: "income",
         once_month: ~D[2026-10-01]
       })
+
+    backdate_bills(ctx.group.id, @today)
 
     {:ok, plan} = MonthPlan.build(ctx.group.id, @today)
     assert Decimal.equal?(plan.current.after_invoices, Decimal.new("2432.40"))

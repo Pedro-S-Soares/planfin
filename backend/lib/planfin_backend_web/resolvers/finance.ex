@@ -335,6 +335,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   def create_bill(_parent, args, %{context: %{current_group: group}}) do
     with {:ok, amount} <- parse_decimal(args.amount),
          {:ok, once_month} <- parse_once_month(args[:once_month]),
+         {:ok, last_month} <- parse_once_month(args[:last_month]),
          {:ok, bill} <-
            Bills.create_bill(group.id, %{
              name: args.name,
@@ -344,6 +345,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
              subcategory_id: args[:subcategory_id],
              direction: args[:direction] || "expense",
              once_month: once_month,
+             last_month: last_month,
              kind: args[:kind] || "fixed"
            }) do
       {:ok, format_bill(bill)}
@@ -813,6 +815,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       direction: bill.direction,
       once_month:
         bill.once_month && Invoices.format_month({bill.once_month.year, bill.once_month.month}),
+      last_month:
+        bill.last_month && Invoices.format_month({bill.last_month.year, bill.last_month.month}),
       name: bill.name,
       amount: Decimal.to_string(bill.amount),
       due_day: bill.due_day,
@@ -934,7 +938,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   defp bill_attrs(args) do
     base = Map.take(args, [:name, :due_day, :account_id, :subcategory_id, :direction, :kind])
 
-    with {:ok, base} <- put_once_month(base, args) do
+    with {:ok, base} <- put_month(base, args, :once_month),
+         {:ok, base} <- put_month(base, args, :last_month) do
       case args[:amount] do
         nil -> {:ok, base}
         amount -> with {:ok, d} <- parse_decimal(amount), do: {:ok, Map.put(base, :amount, d)}
@@ -942,13 +947,13 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
     end
   end
 
-  defp put_once_month(attrs, args) do
-    case Map.fetch(args, :once_month) do
+  defp put_month(attrs, args, key) do
+    case Map.fetch(args, key) do
       :error ->
         {:ok, attrs}
 
       {:ok, value} ->
-        with {:ok, m} <- parse_once_month(value), do: {:ok, Map.put(attrs, :once_month, m)}
+        with {:ok, m} <- parse_once_month(value), do: {:ok, Map.put(attrs, key, m)}
     end
   end
 

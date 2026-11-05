@@ -105,7 +105,7 @@ export type AppStackParamList = {
   Invoice: { cardId: string; month: string };
   PayInvoice: { cardId: string; month: string; remaining: string };
   Bills: { month?: string } | undefined;
-  BillForm: { billId?: string; direction?: "expense" | "income"; once?: boolean };
+  BillForm: { billId?: string; direction?: "expense" | "income"; once?: boolean; month?: string; dueDay?: number };
   PayBill: { billId: string; month: string; amount: string; name: string; isCard: boolean; isIncome?: boolean };
   SkipBill: { billId: string; month: string; name: string; isCard: boolean };
   SalarySettings: undefined;
