@@ -35,8 +35,8 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
   const colorKey = item.subcategory?.category?.name ?? item.subcategory?.name ?? "";
   const cc = categoryColor(colorKey);
   const isIncome = item.type === "income";
-  // A paid fixed bill is recognised by its name (the bill's name is stored as the note).
-  const isBillEntry = item.source === "bill" && Boolean(item.note);
+  // A paid planned item (fixed or one-off) shows its name (the bill's name is stored as the note).
+  const isBillEntry = (item.source === "bill" || item.source === "one_off_bill") && Boolean(item.note);
   const title = item.source === "invoice_adjustment"
     ? "Ajuste da fatura"
     : isBillEntry ? item.note : subcategoryLabel(item.subcategory);
