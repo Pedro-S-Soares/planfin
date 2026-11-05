@@ -63,6 +63,8 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
   const otherCards = lines(block.otherCards);
   const oneOffBills = lines(block.oneOffBills);
   const days = block.days ?? 0;
+  const carry = block.carry;
+  const carryAmount = toNumber(carry?.amount);
 
   return (
     <Card padding={16} style={{ marginBottom: 12 }}>
@@ -75,9 +77,17 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
       {block.balance != null ? (
         <PlanSection sign="+" title="Saldo na conta" items={[{ label: "Conta principal", date: today, amount: block.balance }]} hideCount />
       ) : null}
+      {carry ? (
+        <PlanSection
+          sign={carryAmount >= 0 ? "+" : "−"}
+          title={carryAmount >= 0 ? "Sobra da fatura fechada" : "Falta da fatura fechada"}
+          items={[{ ...carry, amount: String(Math.abs(carryAmount)) }]}
+          hideCount
+        />
+      ) : null}
       <PlanSection sign="+" title={block.status === "next" ? "Salário" : "Salário a receber"} items={lines(block.salaries)} emptyText="—" />
       <PartnerIncomeRow month={salaryMonth} partner={block.partner} />
-      {incomes.length > 0 ? <PlanSection sign="+" title="Entradas previstas" items={incomes} /> : null}
+      <PlanSection sign="+" title="Entradas previstas" items={incomes} emptyText="—" />
       {benefits.length > 0 ? <PlanSection sign="+" title="Vale alimentação" items={benefits} /> : null}
 
       {block.invoice ? (
@@ -94,7 +104,7 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
       {installments.length > 0 ? <PlanSection sign="−" title={`Parcelas no ${cardName}`} items={installments} /> : null}
       {otherCards.length > 0 ? <PlanSection sign="−" title="Outros cartões" items={otherCards} /> : null}
       <PlanSection sign="−" title="Fixas no boleto" items={lines(block.fixedBills)} emptyText="—" />
-      {oneOffBills.length > 0 ? <PlanSection sign="−" title="Gastos avulsos no boleto" items={oneOffBills} /> : null}
+      <PlanSection sign="−" title="Gastos avulsos" items={oneOffBills} emptyText="—" />
 
       <View style={{ marginTop: 10, borderRadius: Radius.md, padding: 12, backgroundColor: isPositive ? Colors.successLight : Colors.dangerLight }}>
         <Text style={{ fontSize: 11, fontWeight: "700", color: isPositive ? Colors.successText : Colors.danger, letterSpacing: 0.6 }}>
@@ -105,7 +115,7 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
           {!isPositive
             ? `Faltam ${money(-result)} para pagar tudo até ${formatShortDate(block.windowEnd)}.`
             : isClosed
-              ? `Mesada: ${money(result / 2)} para cada um.`
+              ? "Entra como sobra na fatura aberta, onde a mesada vira gasto avulso."
               : `${money(result / Math.max(days, 1))} por dia nos ${days} ${days === 1 ? "dia" : "dias"} de compra até o fechamento.`}
         </Text>
       </View>

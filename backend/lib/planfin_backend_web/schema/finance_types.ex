@@ -241,7 +241,11 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :installments, list_of(:plan_item)
     field :other_cards, list_of(:plan_item)
     field :fixed_bills, list_of(:plan_item)
+    @desc "One-off expenses, on accounts and on the cycle card"
     field :one_off_bills, list_of(:plan_item)
+
+    @desc "Next block only: what is left (or missing) after the closed invoice, carried into this cycle"
+    field :carry, :plan_item
 
     @desc "open: still spendable until the closing; closed: left over; next: free for variable spending"
     field :result, :string

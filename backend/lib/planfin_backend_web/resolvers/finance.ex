@@ -719,6 +719,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       other_cards: items.(b.other_cards),
       fixed_bills: items.(b.fixed_bills),
       one_off_bills: items.(b.one_off_bills),
+      carry: b |> Map.get(:carry) |> then(&(&1 && item.(&1))),
       result: Decimal.to_string(b.result),
       goal_start: date.(b.goal_start),
       days: b.days

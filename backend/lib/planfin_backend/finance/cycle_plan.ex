@@ -108,16 +108,16 @@ defmodule PlanfinBackend.Finance.CyclePlan do
         occ.status in ["pending", "overdue"] and on_or_before?(occ.due_date, dates.window_end)
       end)
 
-    card_bills =
+    {card_one_offs, card_bills} =
       if status == "open" do
         pending
         |> Enum.filter(fn occ ->
           occ.bill.account_id == card.id and occ.bill.direction == "expense" and
             in_range?(occ.due_date, today, Date.add(dates.closing_date, -1))
         end)
-        |> Enum.map(&item/1)
+        |> Enum.split_with(&one_off?/1)
       else
-        []
+        {[], []}
       end
 
     block = %{
@@ -141,13 +141,18 @@ defmodule PlanfinBackend.Finance.CyclePlan do
         date: dates.due_date,
         amount: invoice.remaining
       },
-      card_bills: card_bills,
+      card_bills: Enum.map(card_bills, &item/1),
       installments: [],
       other_cards:
         Enum.flat_map(ctx.other_cards, &other_card_items(ctx, &1, today, dates.window_end, :owed)),
       fixed_bills:
         pending |> Enum.filter(&(boleto?(&1) and not one_off?(&1))) |> Enum.map(&item/1),
-      one_off_bills: pending |> Enum.filter(&(boleto?(&1) and one_off?(&1))) |> Enum.map(&item/1)
+      one_off_bills:
+        pending
+        |> Enum.filter(&(boleto?(&1) and one_off?(&1)))
+        |> Kernel.++(card_one_offs)
+        |> sort_by_date()
+        |> Enum.map(&item/1)
     }
 
     inflows =
@@ -185,6 +190,14 @@ defmodule PlanfinBackend.Finance.CyclePlan do
 
     in_window = Enum.filter(occurrences, &in_range?(&1.due_date, from, dates.window_end))
 
+    {card_one_offs, card_bills} =
+      occurrences
+      |> Enum.filter(fn occ ->
+        occ.bill.account_id == card.id and occ.bill.direction == "expense" and
+          in_range?(occ.due_date, dates.purchase_start, Date.add(dates.closing_date, -1))
+      end)
+      |> Enum.split_with(&one_off?/1)
+
     block = %{
       status: "next",
       invoice_month: month,
@@ -217,13 +230,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
           current.status == "closed"
         ),
       invoice: nil,
-      card_bills:
-        occurrences
-        |> Enum.filter(fn occ ->
-          occ.bill.account_id == card.id and occ.bill.direction == "expense" and
-            in_range?(occ.due_date, dates.purchase_start, Date.add(dates.closing_date, -1))
-        end)
-        |> Enum.map(&planned_item/1),
+      card_bills: Enum.map(card_bills, &planned_item/1),
       installments: installment_items(card, month),
       other_cards:
         Enum.flat_map(
@@ -233,11 +240,18 @@ defmodule PlanfinBackend.Finance.CyclePlan do
       fixed_bills:
         in_window |> Enum.filter(&(boleto?(&1) and not one_off?(&1))) |> Enum.map(&planned_item/1),
       one_off_bills:
-        in_window |> Enum.filter(&(boleto?(&1) and one_off?(&1))) |> Enum.map(&planned_item/1)
+        in_window
+        |> Enum.filter(&(boleto?(&1) and one_off?(&1)))
+        |> Kernel.++(card_one_offs)
+        |> sort_by_date()
+        |> Enum.map(&planned_item/1),
+      carry: carry_item(current)
     }
 
     inflows =
-      sum(block.salaries)
+      (block.carry && block.carry.amount)
+      |> Kernel.||(zero())
+      |> Decimal.add(sum(block.salaries))
       |> Decimal.add(partner_amount(partner))
       |> Decimal.add(sum(block.incomes))
       |> Decimal.add(sum(block.benefits))
@@ -571,6 +585,20 @@ defmodule PlanfinBackend.Finance.CyclePlan do
     do: %{label: bill.name, date: occ.due_date, amount: bill.amount}
 
   defp planned_item(occ), do: item(occ)
+
+  defp sort_by_date(occurrences), do: Enum.sort_by(occurrences, & &1.due_date, Date)
+
+  # What is left after paying the closed invoice is money this cycle starts
+  # with (or, when negative, a gap it has to cover). While the current invoice
+  # is open its result is still being spent, so nothing carries over yet.
+  defp carry_item(%{status: "closed"} = current),
+    do: %{
+      label: "Sobra até #{Calendar.format_br(current.window_end)}",
+      date: current.window_end,
+      amount: current.result
+    }
+
+  defp carry_item(_current), do: nil
 
   defp in_range?(date, from, to),
     do: Date.compare(date, from) != :lt and Date.compare(date, to) != :gt

@@ -169,6 +169,43 @@ defmodule PlanfinBackend.Finance.CyclePlanTest do
     # The voucher balance (with the Nov 1 credit) goes to the invoice taking
     # purchases now; the Dec 1 credit is for the cycle after it
     assert [%{label: "Caju · saldo hoje"}] = plan.next.benefits
+
+    # What is left after paying the closed invoice starts the open one
+    assert %{date: window_end, amount: carried} = plan.next.carry
+    assert window_end == plan.current.window_end
+    assert Decimal.equal?(carried, plan.current.result)
+    {:ok, open_plan} = CyclePlan.build(ctx.group.id, @today)
+    assert open_plan.next.carry == nil
+  end
+
+  test "one-off expenses have their own list, on the card too" do
+    ctx = setup_pedro()
+
+    {:ok, _} =
+      Bills.create_bill(ctx.group.id, %{
+        name: "Presente",
+        amount: Decimal.new("250"),
+        due_day: 20,
+        account_id: ctx.card.id,
+        once_month: ~D[2026-11-01]
+      })
+
+    {:ok, _} =
+      Bills.create_bill(ctx.group.id, %{
+        name: "Mesada Dri",
+        amount: Decimal.new("400"),
+        due_day: 15,
+        account_id: ctx.bb.id,
+        once_month: ~D[2026-12-01]
+      })
+
+    backdate_bills(ctx.group.id, @today)
+    {:ok, plan} = CyclePlan.build(ctx.group.id, @today)
+
+    assert [%{label: "Presente"}, %{label: "Mesada Dri"}] = plan.next.one_off_bills
+    refute Enum.any?(plan.next.card_bills, &(&1.label == "Presente"))
+    # 12881.10 − 250 − 400
+    assert Decimal.equal?(plan.next.result, Decimal.new("12231.10"))
   end
 
   test "a received partner salary no longer counts as expected" do
