@@ -74,7 +74,8 @@ export function MonthPlanScreen() {
 
   const cardName = plan.cardName ?? "Cartão";
   const isCurrentClosed = plan.current.status === "closed";
-  const nextSalaryDate = plan.next.salaryDate;
+  // A one-off of the open cycle starts on its first purchase day (today once the invoice closed).
+  const nextStart = plan.next.goalStart ?? plan.next.purchaseStart;
   const currentBlock = <CycleBlockCard key="current" block={plan.current} cardName={cardName} today={today} footer={<OneOffLinks />} />;
   const nextBlock = (
     <CycleBlockCard
@@ -83,8 +84,7 @@ export function MonthPlanScreen() {
       cardName={cardName}
       today={today}
       isTakingPurchases={isCurrentClosed}
-      // One-offs from the salary that pays this invoice on fall in its window.
-      footer={<OneOffLinks month={nextSalaryDate?.slice(0, 7)} dueDay={nextSalaryDate ? Number(nextSalaryDate.slice(8, 10)) : undefined} />}
+      footer={<OneOffLinks month={nextStart?.slice(0, 7)} dueDay={nextStart ? Number(nextStart.slice(8, 10)) : undefined} />}
     />
   );
 
