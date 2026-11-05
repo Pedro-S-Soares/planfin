@@ -66,7 +66,7 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
     field :installment_number, :integer
     field :installment_count, :integer
 
-    @desc "What produced the entry: salary | bill | benefit_credit | invoice_adjustment | anticipation | null"
+    @desc "What produced the entry: salary | bill | one_off_bill | benefit_credit | invoice_adjustment | anticipation | null"
     field :source, :string
   end
 

@@ -338,7 +338,7 @@ defmodule PlanfinBackend.Finance.Bills do
                account_id: bill.account_id,
                subcategory_id: bill.subcategory_id,
                counts_in_budget: false,
-               source: "bill"
+               source: if(is_nil(bill.once_month), do: "bill", else: "one_off_bill")
              }),
            {:ok, _payment} <-
              (existing || %BillPayment{})

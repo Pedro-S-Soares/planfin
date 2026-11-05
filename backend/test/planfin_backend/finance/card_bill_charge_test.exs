@@ -214,4 +214,32 @@ defmodule PlanfinBackend.Finance.CardBillChargeTest do
     assert med.last_month == nil
     assert [_] = Bills.occurrences(ctx.group.id, {2027, 1}, ~D[2027-01-31])
   end
+
+  test "a one-off charge is not marked as a recurring bill" do
+    ctx = setup_group()
+
+    bill(ctx, %{
+      name: "Presente",
+      amount: Decimal.new("80"),
+      due_day: 5,
+      account_id: ctx.card.id,
+      once_month: ~D[2026-10-01]
+    })
+
+    bill(ctx, %{
+      name: "Netflix",
+      amount: Decimal.new("55.90"),
+      due_day: 5,
+      account_id: ctx.card.id
+    })
+
+    :ok = Bills.charge_due_card_bills(ctx.group.id, ~D[2026-10-05])
+
+    assert ctx.card
+           |> charges()
+           |> Enum.filter(&(&1.date == ~D[2026-10-05]))
+           |> Enum.map(&{&1.note, &1.source})
+           |> Enum.sort() ==
+             [{"Netflix", "bill"}, {"Presente", "one_off_bill"}]
+  end
 end
