@@ -1,18 +1,21 @@
 import { useCallback } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Btn } from "../../components/ui/Btn";
-import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Block } from "../../components/ui/Block";
 import { InlineError } from "../../components/ui/InlineError";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { AccountBalanceCard } from "./components/AccountBalanceCard";
 import { CardSummary } from "./components/CardSummary";
 import { ReserveCard } from "./components/ReserveCard";
-import { TabHeader } from "./components/TabHeader";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
+import { PlusIcon } from "../../components/ui/PlusIcon";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
+import { Icon } from "../../components/ui/Icon";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
@@ -30,34 +33,43 @@ export function AccountsScreen() {
   const moneyAccounts = accounts.filter((a) => a.kind !== "credit_card");
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
-      <TabHeader
+    <View style={{ flex: 1, backgroundColor: palette.paper }}>
+      <ScreenHeader
         title="Contas"
         subtitle="Saldos e faturas"
-        actionLabel="+ Adicionar"
-        onAction={() => navigation.navigate("AccountForm", {})}
+        action={
+          <Button
+            label="Adicionar"
+            size="sm"
+            variant="secondary"
+            isFullWidth={false}
+            leading={<PlusIcon tone="accent" />}
+            accessibilityLabel="Adicionar conta"
+            onPress={() => navigation.navigate("AccountForm", {})}
+          />
+        }
       />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         {loading ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginTop: 32 }} />
+          <ActivityIndicator color={palette.accent} style={{ marginTop: 32 }} />
         ) : error ? (
           <InlineError onRetry={() => refetch()} />
         ) : accounts.length === 0 ? (
-          <Card padding={20}>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.text }}>Cadastre sua conta e seu cartão</Text>
-            <Text style={{ fontSize: 14, color: Colors.textSec, marginTop: 8, lineHeight: 20 }}>
+          <Block padding={20}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: palette.ink }}>Cadastre sua conta e seu cartão</Text>
+            <Text style={{ fontSize: 14, color: palette.muted, marginTop: 8, lineHeight: 20 }}>
               Com a conta principal e o cartão cadastrados, o app mostra quanto você tem agora, quanto já está
               comprometido com a fatura e quanto ainda pode gastar.
             </Text>
             <View style={{ gap: 10, marginTop: 18 }}>
-              <Btn label="Adicionar conta corrente" onPress={() => navigation.navigate("AccountForm", { kind: "checking" })} />
-              <Btn
+              <Button label="Adicionar conta corrente" onPress={() => navigation.navigate("AccountForm", { kind: "checking" })} />
+              <Button
                 label="Adicionar cartão de crédito"
                 variant="secondary"
                 onPress={() => navigation.navigate("AccountForm", { kind: "credit_card" })}
               />
             </View>
-          </Card>
+          </Block>
         ) : (
           <>
             {moneyAccounts.map((account) => (
@@ -79,17 +91,17 @@ export function AccountsScreen() {
                 onPay={(month, remaining) => navigation.navigate("PayInvoice", { cardId: card.id, month, remaining })}
               />
             ))}
-            <Btn label="🧾 Fixas, avulsas e entradas" variant="secondary" onPress={() => navigation.navigate("Bills", {})} />
+            <Button label="Fixas, avulsas e entradas" leading={<Icon name="receipt-text-outline" size={18} tone="accent" />} variant="secondary" onPress={() => navigation.navigate("Bills", {})} />
             <View style={{ height: 10 }} />
-            <Btn label="💼 Salário e ciclo" variant="secondary" onPress={() => navigation.navigate("SalarySettings")} />
+            <Button label="Salário e ciclo" leading={<Icon name="briefcase-outline" size={18} tone="accent" />} variant="secondary" onPress={() => navigation.navigate("SalarySettings")} />
             <View style={{ height: 10 }} />
-            <Btn label="🧮 Planejamento do mês" variant="secondary" onPress={() => navigation.navigate("MonthPlan")} />
+            <Button label="Planejamento do mês" leading={<Icon name="calculator-variant-outline" size={18} tone="accent" />} variant="secondary" onPress={() => navigation.navigate("MonthPlan")} />
             <View style={{ height: 10 }} />
             {accounts.some((a) => a.kind === "reserve") ? <ReserveCard /> : null}
             {moneyAccounts.length > 0 ? (
-              <Btn
+              <Button
                 label="Transferir entre contas"
-                variant="ghost"
+                variant="secondary"
                 onPress={() => navigation.navigate("Transfer", {})}
               />
             ) : null}

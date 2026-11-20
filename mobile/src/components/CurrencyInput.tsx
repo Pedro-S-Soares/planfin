@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { formatCents } from "../lib/currency";
 import { palette, radius, space, tabularNums, textVariants } from "../theme";
 import { AppText } from "./ui/AppText";
+import { TextInput } from "./ui/TextInput";
 
 interface CurrencyInputProps {
   value: string;

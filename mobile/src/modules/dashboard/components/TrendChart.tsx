@@ -1,9 +1,10 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { AxisTextStyle, ChartColors } from "../charts/chart-tokens";
 import { circlePath, hLines, niceTicks, polyline } from "../charts/scale";
 import type { MoneyFormat } from "../use-money";
-import { Colors } from "../../../theme/tokens";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type Month = { key: string; label: string; total: number; partial: boolean };
 type TrendChartProps = { months: Month[]; color: string; width: number; format: MoneyFormat };
@@ -42,7 +43,7 @@ export function TrendChart({ months, color, width, format }: TrendChartProps) {
         ) : null}
         <Path d={`${line}L${x(last)},${y(0)}L${x(0)},${y(0)}Z`} fill={color} fillOpacity={0.07} />
         <Path d={line} stroke={color} strokeWidth={2.5} fill="none" strokeLinejoin="round" />
-        <Path d={points.map(([px, py]) => circlePath(px, py, 5)).join("")} fill={color} stroke={Colors.surface} strokeWidth={2} />
+        <Path d={points.map(([px, py]) => circlePath(px, py, 5)).join("")} fill={color} stroke={palette.sheet} strokeWidth={2} />
       </Svg>
       {ticks.map((t) => (
         <Text key={t} style={[AxisTextStyle, { left: 0, width: 48, textAlign: "right", top: y(t) - 7 }]}>
@@ -58,14 +59,14 @@ export function TrendChart({ months, color, width, format }: TrendChartProps) {
       )}
       {callouts.map(({ i, note }) => (
         <View key={i} pointerEvents="none" style={{ position: "absolute", width: 120, left: x(i) - 60, top: y(months[i].total) - 38, alignItems: "center" }}>
-          <Text style={{ fontSize: 12, fontWeight: "800", color: Colors.text }}>{format.money(months[i].total)}</Text>
-          {note ? <Text style={{ fontSize: 11, color: Colors.textSec }}>{note}</Text> : null}
+          <Text style={{ fontSize: 12, fontWeight: "800", color: palette.ink }}>{format.money(months[i].total)}</Text>
+          {note ? <Text style={{ fontSize: 12, color: palette.muted }}>{note}</Text> : null}
         </View>
       ))}
       {average > 0 && right > 12 ? (
         <View style={{ position: "absolute", left: LEFT + pw + 8, top: y(average) - 16 }}>
-          <Text style={{ fontSize: 11, color: Colors.textSec }}>média</Text>
-          <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.text }}>{format.money(average)}</Text>
+          <Text style={{ fontSize: 12, color: palette.muted }}>média</Text>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: palette.ink }}>{format.money(average)}</Text>
         </View>
       ) : null}
     </View>

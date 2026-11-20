@@ -1,9 +1,9 @@
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { CurrencyInput } from "../../components/CurrencyInput";
-import { Btn } from "../../components/ui/Btn";
+import { Button } from "../../components/ui/Button";
 import { Chip } from "../../components/ui/Chip";
 import { FieldInput } from "../../components/ui/FieldInput";
 import { useGroup } from "../../context/GroupContext";
@@ -15,13 +15,14 @@ import {
 import { displayToAPI, formatCents, parseCents } from "../../lib/currency";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { accountFormSchema, type AccountFormValues } from "./account-form-schema";
 import { FormLabel } from "./components/FormLabel";
 import { ToggleRow } from "./components/ToggleRow";
 import { ACCOUNT_KIND_ICON, ACCOUNT_KIND_LABEL, signedApiAmount, toNumber, type AccountKind } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
 
 const KINDS: AccountKind[] = ["checking", "credit_card", "benefit", "allowance", "reserve"];
 
@@ -112,7 +113,7 @@ export function AccountFormScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.surface }} contentContainerStyle={{ padding: 18, paddingBottom: 32 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.sheet }} contentContainerStyle={{ padding: 18, paddingBottom: 32 }}>
       {editing ? null : (
         <Controller
           control={control}
@@ -122,10 +123,10 @@ export function AccountFormScreen() {
               <FormLabel>Tipo</FormLabel>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
                 {KINDS.map((k) => (
-                  <Chip key={k} label={`${ACCOUNT_KIND_ICON[k]} ${ACCOUNT_KIND_LABEL[k]}`} selected={value === k} onPress={() => onChange(k)} />
+                  <Chip key={k} label={ACCOUNT_KIND_LABEL[k]} icon={ACCOUNT_KIND_ICON[k]} selected={value === k} onPress={() => onChange(k)} />
                 ))}
               </View>
-              <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 8 }}>{KIND_HINT[value]}</Text>
+              <Text style={{ fontSize: 12, color: palette.muted, marginTop: 8 }}>{KIND_HINT[value]}</Text>
             </View>
           )}
         />
@@ -238,10 +239,10 @@ export function AccountFormScreen() {
       ) : null}
 
       {errors.root ? (
-        <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>{errors.root.message}</Text>
+        <Text style={{ color: palette.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>{errors.root.message}</Text>
       ) : null}
 
-      <Btn label={editing ? "Salvar" : "Adicionar"} onPress={handleSubmit(onSubmit)} loading={creating || updating} />
+      <Button label={editing ? "Salvar" : "Adicionar"} onPress={handleSubmit(onSubmit)} isLoading={creating || updating} />
     </ScrollView>
   );
 }

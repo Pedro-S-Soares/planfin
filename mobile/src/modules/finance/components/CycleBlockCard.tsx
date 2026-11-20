@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
-import { Text, View } from "react-native";
-import { Card } from "../../../components/ui/Card";
+import { View } from "react-native";
+import { Block } from "../../../components/ui/Block";
 import { useCurrency } from "../../../context/CurrencyContext";
 import type { CycleBlockFieldsFragment } from "../../../graphql/__generated__/hooks";
-import { Colors, Radius } from "../../../theme/tokens";
 import { formatMoney, formatShortDate, toNumber } from "../format";
 import { DailyGoalForm } from "./DailyGoalForm";
 import { PartnerIncomeRow } from "./PartnerIncomeRow";
 import { PlanSection, type PlanLine } from "./PlanSection";
+import { palette, radius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type CycleBlockCardProps = {
   block: CycleBlockFieldsFragment;
@@ -29,21 +30,21 @@ function headerTexts(block: CycleBlockFieldsFragment, cardName: string, isTaking
   switch (block.status) {
     case "open":
       return {
-        title: `FATURA ATUAL · ${cardName}`,
+        title: `Fatura atual · ${cardName}`,
         subtitle: `Compras até ${formatShortDate(block.lastPurchaseDate)} · vence ${due} · paga com o salário de ${salary}`,
-        resultLabel: `AINDA DÁ PARA GASTAR ATÉ ${formatShortDate(block.lastPurchaseDate)}`,
+        resultLabel: `Ainda dá para gastar até ${formatShortDate(block.lastPurchaseDate)}`,
       };
     case "closed":
       return {
-        title: `FATURA FECHADA · ${cardName}`,
+        title: `Fatura fechada · ${cardName}`,
         subtitle: `Vence ${due} · paga com o salário de ${salary}`,
-        resultLabel: `SOBRA ATÉ ${formatShortDate(block.windowEnd)}`,
+        resultLabel: `Sobra até ${formatShortDate(block.windowEnd)}`,
       };
     default:
       return {
-        title: `${isTakingPurchases ? "FATURA ABERTA" : "PRÓXIMA FATURA"} · ${cardName}`,
+        title: `${isTakingPurchases ? "Fatura aberta" : "Próxima fatura"} · ${cardName}`,
         subtitle: `Compras de ${formatShortDate(block.purchaseStart)} a ${formatShortDate(block.lastPurchaseDate)} · vence ${due} · paga com o salário de ${salary}`,
-        resultLabel: "LIVRE PARA GASTOS VARIÁVEIS NO CICLO",
+        resultLabel: "Livre para gastos variáveis no ciclo",
       };
   }
 }
@@ -67,10 +68,10 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
   const carryAmount = toNumber(carry?.amount);
 
   return (
-    <Card padding={16} style={{ marginBottom: 12 }}>
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>{title}</Text>
-      <Text style={{ fontSize: 12, color: Colors.textTer, marginBottom: 2 }}>{subtitle}</Text>
-      <Text style={{ fontSize: 11, color: Colors.textTer, marginBottom: 6 }}>
+    <Block padding={16} style={{ marginBottom: 12 }}>
+      <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>{title}</Text>
+      <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 2 }}>{subtitle}</Text>
+      <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 6 }}>
         Conta até {formatShortDate(block.windowEnd)}, véspera do salário seguinte
       </Text>
 
@@ -106,12 +107,12 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
       <PlanSection sign="−" title="Fixas no boleto" items={lines(block.fixedBills)} emptyText="—" />
       <PlanSection sign="−" title="Gastos avulsos" items={oneOffBills} emptyText="—" />
 
-      <View style={{ marginTop: 10, borderRadius: Radius.md, padding: 12, backgroundColor: isPositive ? Colors.successLight : Colors.dangerLight }}>
-        <Text style={{ fontSize: 11, fontWeight: "700", color: isPositive ? Colors.successText : Colors.danger, letterSpacing: 0.6 }}>
+      <View style={{ marginTop: 10, borderRadius: radius.control, padding: 12, backgroundColor: isPositive ? palette.incomeSoft : palette.dangerSoft }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: isPositive ? palette.income : palette.danger }}>
           {resultLabel}
         </Text>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: isPositive ? Colors.successText : Colors.danger }}>{money(result)}</Text>
-        <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
+        <Text style={{ fontSize: 24, fontWeight: "800", color: isPositive ? palette.income : palette.danger }}>{money(result)}</Text>
+        <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>
           {!isPositive
             ? `Faltam ${money(-result)} para pagar tudo até ${formatShortDate(block.windowEnd)}.`
             : isClosed
@@ -130,6 +131,6 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
           today={today}
         />
       ) : null}
-    </Card>
+    </Block>
   );
 }

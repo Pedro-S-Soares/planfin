@@ -9,14 +9,13 @@ export type Currency = {
   code: CurrencyCode;
   symbol: string;
   label: string;
-  flag: string;
 };
 
 export const CURRENCIES: Currency[] = [
-  { code: "BRL", symbol: "R$", label: "Real",  flag: "🇧🇷" },
-  { code: "USD", symbol: "$",  label: "Dólar", flag: "🇺🇸" },
-  { code: "EUR", symbol: "€",  label: "Euro",  flag: "🇪🇺" },
-  { code: "JPY", symbol: "¥",  label: "Iene",  flag: "🇯🇵" },
+  { code: "BRL", symbol: "R$", label: "Real" },
+  { code: "USD", symbol: "$",  label: "Dólar" },
+  { code: "EUR", symbol: "€",  label: "Euro" },
+  { code: "JPY", symbol: "¥",  label: "Iene" },
 ];
 
 type CurrencyContextValue = {

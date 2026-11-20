@@ -1,8 +1,8 @@
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Btn } from "../../components/ui/Btn";
-import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Block } from "../../components/ui/Block";
 import { InlineError } from "../../components/ui/InlineError";
 import { useCurrency } from "../../context/CurrencyContext";
 import {
@@ -13,10 +13,11 @@ import {
 import { confirm } from "../../lib/alert";
 import { formatDateBR } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { ACCOUNT_KIND_LABEL, formatMoney, toNumber } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
@@ -38,71 +39,71 @@ export function AccountDetailScreen() {
     onCompleted: () => navigation.goBack(),
   });
 
-  if (!account) return <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />;
+  if (!account) return <ActivityIndicator color={palette.accent} style={{ marginTop: 40 }} />;
 
   const rows = movements.data?.accountMovements?.filter((m) => m !== null) ?? [];
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      <Card padding={18} style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 12, color: Colors.textSec }}>{ACCOUNT_KIND_LABEL[account.kind]}</Text>
-        <Text style={{ fontSize: 30, fontWeight: "800", color: toNumber(account.balance) < 0 ? Colors.danger : Colors.text, marginTop: 4 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+      <Block padding={18} style={{ marginBottom: 12 }}>
+        <Text style={{ fontSize: 12, color: palette.muted }}>{ACCOUNT_KIND_LABEL[account.kind]}</Text>
+        <Text style={{ fontSize: 30, fontWeight: "800", color: toNumber(account.balance) < 0 ? palette.danger : palette.ink, marginTop: 4 }}>
           {formatMoney(account.balance, currency.symbol)}
         </Text>
         <View style={{ gap: 8, marginTop: 14 }}>
-          <Btn
+          <Button
             label="Ajustar saldo"
             size="sm"
             onPress={() => navigation.navigate("AdjustBalance", { accountId: account.id, balance: account.balance ?? "0" })}
           />
-          <Btn label="Editar" size="sm" variant="ghost" onPress={() => navigation.navigate("AccountForm", { accountId: account.id })} />
+          <Button label="Editar" size="sm" variant="secondary" onPress={() => navigation.navigate("AccountForm", { accountId: account.id })} />
           {account.kind === "checking" && !account.isPrimary ? (
-            <Btn
+            <Button
               label="Tornar conta principal"
               size="sm"
               variant="secondary"
-              loading={makingPrimary}
+              isLoading={makingPrimary}
               onPress={() => makePrimary({ variables: { id: account.id } })}
             />
           ) : null}
         </View>
-      </Card>
+      </Block>
 
-      <Card padding={16}>
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7, marginBottom: 8 }}>
+      <Block padding={16}>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 8 }}>
           MOVIMENTAÇÕES
         </Text>
         {movements.loading && !movements.data ? (
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={palette.accent} />
         ) : movements.error ? (
           <InlineError onRetry={() => movements.refetch()} />
         ) : rows.length === 0 ? (
-          <Text style={{ color: Colors.textTer, textAlign: "center", paddingVertical: 12 }}>Nenhuma movimentação ainda.</Text>
+          <Text style={{ color: palette.muted, textAlign: "center", paddingVertical: 12 }}>Nenhuma movimentação ainda.</Text>
         ) : (
           rows.map((m) => {
             const amount = toNumber(m.amount);
             return (
               <View
                 key={`${m.kind}-${m.id}`}
-                style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border }}
+                style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: palette.rule }}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, color: Colors.text, fontWeight: "600" }} numberOfLines={1}>{m.description}</Text>
-                  <Text style={{ fontSize: 12, color: Colors.textSec }}>{m.date ? formatDateBR(m.date) : ""}</Text>
+                  <Text style={{ fontSize: 14, color: palette.ink, fontWeight: "600" }} numberOfLines={1}>{m.description}</Text>
+                  <Text style={{ fontSize: 12, color: palette.muted }}>{m.date ? formatDateBR(m.date) : ""}</Text>
                 </View>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: amount > 0 ? Colors.success : Colors.text }}>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: amount > 0 ? palette.income : palette.ink }}>
                   {formatMoney(amount, currency.symbol, { sign: "flow" })}
                 </Text>
               </View>
             );
           })
         )}
-      </Card>
+      </Block>
 
       <View style={{ marginTop: 16 }}>
-        <Btn
+        <Button
           label="Arquivar conta"
-          variant="danger"
+          variant="destructive"
           size="sm"
           onPress={() =>
             confirm(

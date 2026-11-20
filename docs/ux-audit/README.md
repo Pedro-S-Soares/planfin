@@ -162,3 +162,39 @@ Os tokens acima viraram um módulo só, `mobile/src/theme/`, e as telas mais usa
 | Folha (1280) | [antes](img/f1-antes-desktop-folha-editar.png) | [depois](img/f1-depois-desktop-folha-editar.png) |
 
 **Fica para a fase 2**: emojis ainda nas abas (🏠 📋 💳), nas contas dos chips "Pago com" (🏦 💳) e na tela de Contas; telas não migradas (Contas, detalhe de conta/cartão, Painel, Categorias, Perfil, formulários de fixas, transferência, salário, planejamento) ainda usam `Card`, `Btn` com gradiente, `FieldInput` com CAIXA ALTA e `Colors` legados. `Card`, `Btn`, `FieldInput` e `Colors` saem quando a última tela migrar. O cabeçalho das telas empilhadas (react-navigation) ainda usa a fonte do sistema.
+
+## Redesenho, fase 2 (CX-68): ícones vetoriais e tema no app inteiro
+
+- **Um conjunto de ícones**: Material Community Icons (o mesmo das categorias) via `components/ui/Icon`. Saíram todos os emojis: abas (contorno em repouso, cheio na aba atual), tipos de conta (`ACCOUNT_KIND_ICON` virou nome de ícone, usado nos chips "Pago com", em Contas e no formulário de conta), botões de Contas, Perfil, Grupos, Onboarding, Planejamentos, Categorias (lápis e lixeira), toasts, setas de mês (`MonthStepper`), "Voltar" (`BackLink`) e bandeiras de moeda (viraram o símbolo).
+- **Tema em todas as telas**: `Card` → `Block`, `Btn` com gradiente → `Button`, `Colors`/`Radius`/`Shadow` → `palette`/`radius`/`shadow`. `FieldInput` sem CAIXA ALTA (rótulo 14/600 `muted`, campo 48, borda `rule` → `accent` no foco). Nenhum rótulo em caixa alta espaçada; textos de 10–11px subiram para 12 (mínimo da escala).
+- **Manrope em tudo**: `components/ui/Text` e `TextInput` substituem os do react-native nas telas antigas (mantêm tamanho e peso, trocam a família). Cabeçalhos do react-navigation e barra de abas em Manrope e cores do tema; Perfil, Convites e Planejamentos usam o cabeçalho padrão no lugar dos cabeçalhos com gradiente.
+- **Aba "Dashboard" → "Painel"** (só o rótulo; a reorganização da navegação é a fase 3).
+- **Removidos**: `Card`, `Btn`, `ProfileMenuItem`, `TabHeader`, `PlanTotal` (sem uso), `theme/tokens.ts` e a dependência `expo-linear-gradient`. As cores de categoria foram para `theme/colors.ts` (`categoryColor`), com tokens novos `incomeSoft`, `dangerSoft`, `warning`, `warningSoft` (contraste AA anotado).
+- **Correção de passagem**: o Painel no desktop decidia o layout largo pela largura da janela (1280) e não pela coluna (560), quebrando o título letra a letra; agora usa a largura da coluna.
+
+| Tela (390px) | Capturas |
+|---|---|
+| Login | [antes](img/f2-antes-mobile-login.png) · [depois](img/f2-depois-mobile-login.png) |
+| Hoje | [antes](img/f2-antes-mobile-hoje.png) · [depois](img/f2-depois-mobile-hoje.png) |
+| Contas | [antes](img/f2-antes-mobile-contas.png) · [depois](img/f2-depois-mobile-contas.png) |
+| Conta (detalhe) | [antes](img/f2-antes-mobile-conta-detalhe.png) · [depois](img/f2-depois-mobile-conta-detalhe.png) |
+| Cartão | [antes](img/f2-antes-mobile-cartao-detalhe.png) · [depois](img/f2-depois-mobile-cartao-detalhe.png) |
+| Nova conta | [antes](img/f2-antes-mobile-conta-nova.png) · [depois](img/f2-depois-mobile-conta-nova.png) |
+| Ajustar saldo | [antes](img/f2-antes-mobile-ajustar-saldo.png) · [depois](img/f2-depois-mobile-ajustar-saldo.png) |
+| Fixas | [antes](img/f2-antes-mobile-fixas.png) · [depois](img/f2-depois-mobile-fixas.png) |
+| Item planejado | [antes](img/f2-antes-mobile-fixa-nova.png) · [depois](img/f2-depois-mobile-fixa-nova.png) |
+| Salário e ciclo | [antes](img/f2-antes-mobile-salario.png) · [depois](img/f2-depois-mobile-salario.png) |
+| Planejamento | [antes](img/f2-antes-mobile-planejamento.png) · [depois](img/f2-depois-mobile-planejamento.png) |
+| Transferir | [antes](img/f2-antes-mobile-transferir.png) · [depois](img/f2-depois-mobile-transferir.png) |
+| Pagar fatura | [antes](img/f2-antes-mobile-pagar-fatura.png) · [depois](img/f2-depois-mobile-pagar-fatura.png) |
+| Painel | [antes](img/f2-antes-mobile-dashboard.png) · [depois](img/f2-depois-mobile-dashboard.png) |
+| Painel (meio) | [antes](img/f2-antes-mobile-dashboard-meio.png) · [depois](img/f2-depois-mobile-dashboard-meio.png) |
+| Categorias | [antes](img/f2-antes-mobile-categorias.png) · [depois](img/f2-depois-mobile-categorias.png) |
+| Perfil | [antes](img/f2-antes-mobile-perfil.png) · [depois](img/f2-depois-mobile-perfil.png) |
+| Planejamentos | [antes](img/f2-antes-mobile-periodos.png) · [depois](img/f2-depois-mobile-periodos.png) |
+| Grupos | [antes](img/f2-antes-mobile-grupos.png) · [depois](img/f2-depois-mobile-grupos.png) |
+| Editar período | [antes](img/f2-antes-mobile-editar-periodo.png) · [depois](img/f2-depois-mobile-editar-periodo.png) |
+
+Desktop (1280px): login: [antes](img/f2-antes-desktop-login.png) / [depois](img/f2-depois-desktop-login.png) · hoje: [antes](img/f2-antes-desktop-hoje.png) / [depois](img/f2-depois-desktop-hoje.png) · contas: [antes](img/f2-antes-desktop-contas.png) / [depois](img/f2-depois-desktop-contas.png) · conta-detalhe: [antes](img/f2-antes-desktop-conta-detalhe.png) / [depois](img/f2-depois-desktop-conta-detalhe.png) · cartao-detalhe: [antes](img/f2-antes-desktop-cartao-detalhe.png) / [depois](img/f2-depois-desktop-cartao-detalhe.png) · dashboard: [antes](img/f2-antes-desktop-dashboard.png) / [depois](img/f2-depois-desktop-dashboard.png) · categorias: [antes](img/f2-antes-desktop-categorias.png) / [depois](img/f2-depois-desktop-categorias.png) · perfil: [antes](img/f2-antes-desktop-perfil.png) / [depois](img/f2-depois-desktop-perfil.png) · fixa-nova: [antes](img/f2-antes-desktop-fixa-nova.png) / [depois](img/f2-depois-desktop-fixa-nova.png) · grupos: [antes](img/f2-antes-desktop-grupos.png) / [depois](img/f2-depois-desktop-grupos.png).
+
+**Fica para depois**: fase 3 (navegação Hoje · Histórico · [+] · Contas · Painel, Categorias no perfil) e fase 4 (folha como único padrão de criar/editar). Os gráficos do Painel mantêm a paleta própria de séries (`chart-tokens`, `palette.ts` do dashboard), agora derivada do tema.

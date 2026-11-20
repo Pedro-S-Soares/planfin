@@ -1,14 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  Modal,
-  TextInput,
-  Share,
-} from "react-native";
+import { View, FlatList, TouchableOpacity, ActivityIndicator, Modal, Share } from "react-native";
 import { confirm } from "../lib/alert";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { useGroup } from "../context/GroupContext";
@@ -20,11 +11,14 @@ import {
   type Group,
   type GroupInvite,
 } from "../graphql/groups";
-import { Card } from "../components/ui/Card";
-import { Btn } from "../components/ui/Btn";
-import { Colors, Radius, Shadow } from "../theme/tokens";
+import { Block } from "../components/ui/Block";
+import { Button } from "../components/ui/Button";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { toast } from "../lib/toast";
+import { palette, radius } from "../theme";
+import { Text } from "../components/ui/Text";
+import { TextInput } from "../components/ui/TextInput";
+import { Icon } from "../components/ui/Icon";
 
 type GroupInvitesData = { groupInvites: GroupInvite[] };
 
@@ -65,14 +59,14 @@ export function GroupsScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: palette.paper }}>
       <FlatList
         data={groups}
         keyExtractor={(g) => g.id}
         contentContainerStyle={{ padding: 16, gap: 10 }}
         ListEmptyComponent={
           <View style={{ padding: 24, alignItems: "center" }}>
-            <Text style={{ color: Colors.textSec, fontSize: 15 }}>Nenhum grupo ainda.</Text>
+            <Text style={{ color: palette.muted, fontSize: 15 }}>Nenhum grupo ainda.</Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -80,7 +74,7 @@ export function GroupsScreen() {
           const isOwner = user && item.ownerId === Number(user.id);
 
           return (
-            <Card padding={14}>
+            <Block padding={14}>
               <TouchableOpacity
                 style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
                 onPress={() => setSelectedGroup(item)}
@@ -89,26 +83,26 @@ export function GroupsScreen() {
                 <View style={{
                   width: 42,
                   height: 42,
-                  borderRadius: Radius.md,
-                  backgroundColor: Colors.primaryLight,
+                  borderRadius: radius.control,
+                  backgroundColor: palette.accentSoft,
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
                 }}>
-                  <Text style={{ fontSize: 20 }}>🏠</Text>
+                  <Icon name="home-group" size={20} tone="accent" />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>{item.name}</Text>
+                    <Text style={{ fontSize: 15, fontWeight: "700", color: palette.ink }}>{item.name}</Text>
                     {isActive && (
-                      <View style={{ backgroundColor: Colors.primaryLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.full }}>
-                        <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.primaryText, letterSpacing: 0.4, textTransform: "uppercase" }}>
+                      <View style={{ backgroundColor: palette.accentSoft, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.full }}>
+                        <Text style={{ fontSize: 12, fontWeight: "700", color: palette.accent }}>
                           Ativo
                         </Text>
                       </View>
                     )}
                     {isOwner && (
-                      <Text style={{ fontSize: 11, color: Colors.textSec }}>· dono</Text>
+                      <Text style={{ fontSize: 12, color: palette.muted }}>· dono</Text>
                     )}
                   </View>
                 </View>
@@ -116,25 +110,25 @@ export function GroupsScreen() {
                   <TouchableOpacity
                     onPress={() => handleSwitch(item)}
                     style={{
-                      backgroundColor: Colors.primaryLight,
-                      borderRadius: Radius.sm,
+                      backgroundColor: palette.accentSoft,
+                      borderRadius: radius.control,
                       paddingHorizontal: 12,
                       paddingVertical: 6,
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primaryText }}>Ativar</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: palette.accent }}>Ativar</Text>
                   </TouchableOpacity>
                 )}
               </TouchableOpacity>
-            </Card>
+            </Block>
           );
         }}
         ListFooterComponent={
-          <Card padding={14} style={{ borderWidth: 1.5, borderColor: Colors.border, borderStyle: "dashed" }}>
-            <Btn label="+ Criar novo grupo" variant="ghost" onPress={() => setShowCreate(true)} />
+          <Block padding={14} style={{ borderWidth: 1.5, borderColor: palette.rule, borderStyle: "dashed" }}>
+            <Button label="+ Criar novo grupo" variant="secondary" onPress={() => setShowCreate(true)} />
             <View style={{ height: 8 }} />
-            <Btn label="Entrar com código" variant="secondary" size="sm" onPress={() => setShowJoin(true)} />
-          </Card>
+            <Button label="Entrar com código" variant="secondary" size="sm" onPress={() => setShowJoin(true)} />
+          </Block>
         }
       />
 
@@ -197,78 +191,78 @@ function GroupDetailModal({ group, canDelete, onClose, onLeave }: {
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <View style={{ flex: 1, backgroundColor: palette.paper }}>
         {/* Header */}
         <View style={{
-          backgroundColor: Colors.surface,
+          backgroundColor: palette.sheet,
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
           padding: 16,
           paddingTop: 56,
           borderBottomWidth: 1,
-          borderBottomColor: Colors.border,
+          borderBottomColor: palette.rule,
         }}>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.text }}>{group.name}</Text>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: palette.ink }}>{group.name}</Text>
           <TouchableOpacity onPress={onClose}>
-            <Text style={{ color: Colors.primary, fontSize: 15, fontWeight: "600" }}>Fechar</Text>
+            <Text style={{ color: palette.accent, fontSize: 15, fontWeight: "600" }}>Fechar</Text>
           </TouchableOpacity>
         </View>
 
         <View style={{ flex: 1, padding: 16 }}>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7, textTransform: "uppercase", marginBottom: 12 }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 12 }}>
             Códigos de convite
           </Text>
 
-          <Btn
+          <Button
             label="Gerar código (7 dias)"
             onPress={handleGenerate}
-            loading={generating}
+            isLoading={generating}
           />
 
           {lastGenerated && (
-            <Card padding={16} style={{ marginTop: 12 }}>
-              <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 6 }}>Código gerado</Text>
-              <View style={{ backgroundColor: Colors.primaryLight, borderRadius: Radius.lg, padding: 16, alignItems: "center", marginBottom: 12 }}>
-                <Text style={{ fontSize: 11, color: Colors.textSec, marginBottom: 6 }}>Código gerado · expira em 7 dias</Text>
-                <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: 8, color: Colors.primaryText }}>
+            <Block padding={16} style={{ marginTop: 12 }}>
+              <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 6 }}>Código gerado</Text>
+              <View style={{ backgroundColor: palette.accentSoft, borderRadius: radius.block, padding: 16, alignItems: "center", marginBottom: 12 }}>
+                <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 6 }}>Código gerado · expira em 7 dias</Text>
+                <Text style={{ fontSize: 30, fontWeight: "800", letterSpacing: 8, color: palette.accent }}>
                   {lastGenerated.code}
                 </Text>
               </View>
-              <Btn label="Compartilhar código" size="sm" onPress={() => handleShare(lastGenerated.code)} />
-            </Card>
+              <Button label="Compartilhar código" size="sm" onPress={() => handleShare(lastGenerated.code)} />
+            </Block>
           )}
 
           {loading ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: 16 }} />
+            <ActivityIndicator color={palette.accent} style={{ marginTop: 16 }} />
           ) : (
             <FlatList
               data={data?.groupInvites ?? []}
               keyExtractor={(i) => i.id}
               style={{ marginTop: 12 }}
               ListEmptyComponent={
-                <Text style={{ color: Colors.textSec, fontSize: 14, textAlign: "center", paddingVertical: 16 }}>
+                <Text style={{ color: palette.muted, fontSize: 14, textAlign: "center", paddingVertical: 16 }}>
                   Nenhum código ativo.
                 </Text>
               }
               renderItem={({ item }) => (
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: Colors.border, paddingVertical: 12 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: palette.rule, paddingVertical: 12 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: "700", letterSpacing: 2, color: Colors.text }}>{item.code}</Text>
-                    <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
+                    <Text style={{ fontSize: 15, fontWeight: "700", letterSpacing: 2, color: palette.ink }}>{item.code}</Text>
+                    <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>
                       {item.usesCount} uso(s){item.maxUses ? ` de ${item.maxUses}` : ""}
                       {item.expiresAt ? ` · expira ${new Date(item.expiresAt).toLocaleDateString("pt-BR")}` : ""}
                     </Text>
                   </View>
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     <TouchableOpacity onPress={() => handleShare(item.code)}>
-                      <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: "600" }}>Compartilhar</Text>
+                      <Text style={{ color: palette.accent, fontSize: 12, fontWeight: "600" }}>Compartilhar</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => confirm(
                       { title: "Revogar", message: `Revogar "${item.code}"?`, confirmLabel: "Revogar", destructive: true },
                       () => handleRevoke(item.id)
                     )}>
-                      <Text style={{ color: Colors.danger, fontSize: 12, fontWeight: "600" }}>Revogar</Text>
+                      <Text style={{ color: palette.danger, fontSize: 12, fontWeight: "600" }}>Revogar</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -277,8 +271,8 @@ function GroupDetailModal({ group, canDelete, onClose, onLeave }: {
           )}
         </View>
 
-        <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: Colors.border }}>
-          <Btn label={canDelete ? "Excluir grupo" : "Sair do grupo"} variant="danger" onPress={onLeave} />
+        <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: palette.rule }}>
+          <Button label={canDelete ? "Excluir grupo" : "Sair do grupo"} variant="destructive" onPress={onLeave} />
         </View>
       </View>
     </Modal>
@@ -302,32 +296,32 @@ function CreateGroupModal({ visible, onClose, onSubmit }: {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
-        <View style={{ backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.text, marginBottom: 16 }}>
+      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: palette.backdrop }}>
+        <View style={{ backgroundColor: palette.sheet, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: palette.ink, marginBottom: 16 }}>
             Criar novo grupo
           </Text>
           <TextInput
             style={{
               borderWidth: 1.5,
-              borderColor: Colors.border,
-              borderRadius: Radius.md,
+              borderColor: palette.rule,
+              borderRadius: radius.control,
               paddingHorizontal: 16,
               height: 52,
               fontSize: 16,
-              color: Colors.text,
+              color: palette.ink,
               marginBottom: 16,
             }}
             placeholder="Nome do grupo"
-            placeholderTextColor={Colors.textTer}
+            placeholderTextColor={palette.muted}
             value={name}
             onChangeText={setName}
             maxLength={80}
             autoFocus
           />
-          <Btn label="Criar" onPress={handleSubmit} loading={busy} />
+          <Button label="Criar" onPress={handleSubmit} isLoading={busy} />
           <View style={{ height: 8 }} />
-          <Btn label="Cancelar" variant="ghost" onPress={onClose} disabled={busy} />
+          <Button label="Cancelar" variant="secondary" onPress={onClose} isDisabled={busy} />
         </View>
       </View>
     </Modal>
@@ -355,26 +349,26 @@ function JoinGroupModal({ visible, onClose, onSubmit }: {
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" }}>
-        <View style={{ backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.text, marginBottom: 16 }}>
+      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: palette.backdrop }}>
+        <View style={{ backgroundColor: palette.sheet, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: palette.ink, marginBottom: 16 }}>
             Entrar com código
           </Text>
           <TextInput
             style={{
               borderWidth: 1.5,
-              borderColor: Colors.border,
-              borderRadius: Radius.md,
+              borderColor: palette.rule,
+              borderRadius: radius.control,
               height: 56,
               textAlign: "center",
               letterSpacing: 6,
               fontSize: 22,
               fontWeight: "800",
-              color: Colors.text,
+              color: palette.ink,
               marginBottom: 12,
             }}
             placeholder="AB12CD34"
-            placeholderTextColor={Colors.textTer}
+            placeholderTextColor={palette.muted}
             value={code}
             onChangeText={(v) => setCode(v.toUpperCase())}
             maxLength={8}
@@ -382,10 +376,10 @@ function JoinGroupModal({ visible, onClose, onSubmit }: {
             autoCorrect={false}
             autoFocus
           />
-          {error && <Text style={{ color: Colors.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
-          <Btn label="Entrar" onPress={handleSubmit} loading={busy} />
+          {error && <Text style={{ color: palette.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
+          <Button label="Entrar" onPress={handleSubmit} isLoading={busy} />
           <View style={{ height: 8 }} />
-          <Btn label="Cancelar" variant="ghost" onPress={onClose} disabled={busy} />
+          <Button label="Cancelar" variant="secondary" onPress={onClose} isDisabled={busy} />
         </View>
       </View>
     </Modal>

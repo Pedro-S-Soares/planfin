@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, Text } from "react-native";
+import { ActivityIndicator, ScrollView } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { CurrencyInput } from "../../components/CurrencyInput";
-import { Btn } from "../../components/ui/Btn";
-import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Block } from "../../components/ui/Block";
 import { FieldInput } from "../../components/ui/FieldInput";
 import {
   useFinancialSettingsQuery,
@@ -12,12 +12,13 @@ import {
 import { displayToAPI, formatCents, parseCents } from "../../lib/currency";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { AccountPicker } from "./components/AccountPicker";
 import { FormLabel } from "./components/FormLabel";
 import { SalaryMonthRow, type SalaryMonth } from "./components/SalaryMonthRow";
 import { toNumber } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
 
 type SalaryFormProps = {
   initialAmount: string | null | undefined;
@@ -78,8 +79,8 @@ function SalaryForm({ initialAmount, initialDay, initialAccountId, initialCycleC
         onChange={setCycleCardId}
         kinds={["credit_card"]}
       />
-      {error ? <Text style={{ color: Colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
-      <Btn label="Salvar salário" onPress={handleSave} loading={loading} />
+      {error ? <Text style={{ color: palette.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
+      <Button label="Salvar salário" onPress={handleSave} isLoading={loading} />
     </>
   );
 }
@@ -108,13 +109,13 @@ export function SalarySettingsScreen() {
   );
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.surface }} contentContainerStyle={{ padding: 18, paddingBottom: 32 }}>
-      <Text style={{ fontSize: 14, color: Colors.textSec, lineHeight: 20, marginBottom: 18 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.sheet }} contentContainerStyle={{ padding: 18, paddingBottom: 32 }}>
+      <Text style={{ fontSize: 14, color: palette.muted, lineHeight: 20, marginBottom: 18 }}>
         O planejamento segue a fatura do cartão principal: o que você compra de um fechamento ao outro é pago com o
         salário do mês em que a fatura vence.
       </Text>
       {loading && !data ? (
-        <ActivityIndicator color={Colors.primary} />
+        <ActivityIndicator color={palette.accent} />
       ) : (
         <SalaryForm
           key={settings?.salaryAmount ?? "new"}
@@ -125,17 +126,17 @@ export function SalarySettingsScreen() {
         />
       )}
       {salaries.length > 0 ? (
-        <Card padding={16} style={{ marginTop: 16 }}>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>SALÁRIOS</Text>
-          <Text style={{ fontSize: 12, color: Colors.textTer, marginTop: 2 }}>
+        <Block padding={16} style={{ marginTop: 16 }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>Salários</Text>
+          <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>
             Quando cair, marque como pago com o valor e o dia reais. Antes disso, dá para ajustar a previsão do mês.
           </Text>
           {salaries.map((salary) => (
             <SalaryMonthRow key={`${salary.month}-${salary.paid}-${salary.date}-${salary.amount}`} salary={salary} />
           ))}
-        </Card>
+        </Block>
       ) : null}
-      <Text style={{ fontSize: 12, color: Colors.textTer, marginTop: 16, lineHeight: 18 }}>
+      <Text style={{ fontSize: 12, color: palette.muted, marginTop: 16, lineHeight: 18 }}>
         Renda variável, que vai direto para a reserva, não entra no orçamento: lance como receita na conta Reserva.
       </Text>
     </ScrollView>

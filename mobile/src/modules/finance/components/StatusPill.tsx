@@ -1,17 +1,16 @@
 import { StyleSheet, View } from "react-native";
 import { AppText } from "../../../components/ui/AppText";
-import { font, radius, space } from "../../../theme";
-import { Colors } from "../../../theme/tokens";
+import { font, palette, radius, space } from "../../../theme";
 import { INVOICE_STATUS_LABEL, type InvoiceStatus } from "../format";
 
 const TONE: Record<InvoiceStatus, { bg: string; fg: string }> = {
-  upcoming: { bg: Colors.bg, fg: Colors.textSec },
-  empty: { bg: Colors.bg, fg: Colors.textSec },
-  open: { bg: Colors.primaryLight, fg: Colors.primaryText },
-  closed: { bg: "#FFF4E5", fg: "#9A5200" },
-  partial: { bg: "#FFF4E5", fg: "#9A5200" },
-  paid: { bg: Colors.successLight, fg: Colors.successText },
-  overdue: { bg: Colors.dangerLight, fg: "#B3271C" },
+  upcoming: { bg: palette.paper, fg: palette.muted },
+  empty: { bg: palette.paper, fg: palette.muted },
+  open: { bg: palette.accentSoft, fg: palette.accent },
+  closed: { bg: palette.warningSoft, fg: palette.warning },
+  partial: { bg: palette.warningSoft, fg: palette.warning },
+  paid: { bg: palette.incomeSoft, fg: palette.income },
+  overdue: { bg: palette.dangerSoft, fg: palette.danger },
 };
 
 /** Invoice status (Aberta, Fechada, Paga…) as a small tinted label. */

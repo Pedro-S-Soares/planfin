@@ -1,8 +1,9 @@
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { useCurrency } from "../../../context/CurrencyContext";
-import { Colors } from "../../../theme/tokens";
 import { formatMoney, formatMonth, formatShortDate, isInvoiceStatus } from "../format";
 import { StatusPill } from "./StatusPill";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type InvoiceRowProps = {
   month: string;
@@ -18,14 +19,14 @@ export function InvoiceRow({ month, total, dueDate, status, onPress }: InvoiceRo
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.75}
-      style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border, gap: 10 }}
+      style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: palette.rule, gap: 10 }}
     >
       <View style={{ flex: 1 }}>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>{formatMonth(month)}</Text>
-        <Text style={{ fontSize: 12, color: Colors.textSec }}>Vence {formatShortDate(dueDate)}</Text>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: palette.ink }}>{formatMonth(month)}</Text>
+        <Text style={{ fontSize: 12, color: palette.muted }}>Vence {formatShortDate(dueDate)}</Text>
       </View>
       {isInvoiceStatus(status) ? <StatusPill status={status} /> : null}
-      <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text, minWidth: 96, textAlign: "right" }}>
+      <Text style={{ fontSize: 15, fontWeight: "700", color: palette.ink, minWidth: 96, textAlign: "right" }}>
         {formatMoney(total, currency.symbol)}
       </Text>
     </TouchableOpacity>

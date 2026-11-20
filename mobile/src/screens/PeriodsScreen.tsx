@@ -1,24 +1,17 @@
-import {
-  View,
-  Text,
-  FlatList,
-  ActivityIndicator,
-  RefreshControl,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-} from "react-native";
+import { View, FlatList, ActivityIndicator, RefreshControl, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { useQuery } from "@apollo/client/react";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { GROUP_PERIODS, type GroupPeriod } from "../graphql/groups";
 import { usePeriod } from "../context/PeriodContext";
-import { Card } from "../components/ui/Card";
-import { Colors, Radius } from "../theme/tokens";
+import { Block } from "../components/ui/Block";
 import { formatDateBR } from "../lib/date";
 import { formatMoney } from "../lib/money";
 import { useCurrency } from "../context/CurrencyContext";
 import type { AppStackParamList } from "../../App";
+import { palette, radius, shadow } from "../theme";
+import { Text } from "../components/ui/Text";
+import { Icon } from "../components/ui/Icon";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
@@ -52,7 +45,7 @@ function PeriodRow({ item, isSelected, onSelect }: { item: GroupPeriod; isSelect
 
   return (
     <TouchableOpacity onPress={onSelect} activeOpacity={0.75}>
-    <Card padding={0} style={StyleSheet.flatten(isSelected ? [styles.row, styles.rowSelected] : [styles.row])}>
+    <Block padding={0} style={StyleSheet.flatten(isSelected ? [styles.row, styles.rowSelected] : [styles.row])}>
       <View style={styles.rowInner}>
         {/* Left: title + subtitle + date range */}
         <View style={styles.rowContent}>
@@ -81,7 +74,7 @@ function PeriodRow({ item, isSelected, onSelect }: { item: GroupPeriod; isSelect
           )}
         </View>
       </View>
-    </Card>
+    </Block>
     </TouchableOpacity>
   );
 }
@@ -99,32 +92,17 @@ export function PeriodsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={styles.backBtn}
-        >
-          <Text style={styles.backBtnText}>‹</Text>
-        </TouchableOpacity>
-        <View style={styles.headerText}>
-          <Text style={styles.headerTitle}>Planejamentos</Text>
-          <Text style={styles.headerSubtitle}>Histórico de períodos do grupo</Text>
-        </View>
-      </View>
-
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate("CreatePeriod")}
         activeOpacity={0.85}
       >
-        <Text style={styles.fabIcon}>+</Text>
+        <Icon name="plus" size={26} tone="onAccent" />
       </TouchableOpacity>
 
       {loading && !data ? (
         <View style={styles.centered}>
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={palette.accent} />
         </View>
       ) : error ? (
         <View style={styles.centered}>
@@ -150,12 +128,12 @@ export function PeriodsScreen() {
             <RefreshControl
               refreshing={isRefetching}
               onRefresh={() => refetch()}
-              tintColor={Colors.primary}
+              tintColor={palette.accent}
             />
           }
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>📅</Text>
+              <Icon name="calendar-blank-outline" size={40} />
               <Text style={styles.emptyTitle}>Nenhum planejamento encontrado</Text>
               <Text style={styles.emptySubtitle}>Os períodos criados aparecerão aqui.</Text>
             </View>
@@ -169,15 +147,15 @@ export function PeriodsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: palette.sheet,
   },
   header: {
-    backgroundColor: Colors.bg,
+    backgroundColor: palette.paper,
     paddingTop: Platform.OS === "ios" ? 62 : 28,
     paddingBottom: 22,
     paddingHorizontal: 22,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.rule,
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
@@ -186,15 +164,15 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: Colors.surface,
+    backgroundColor: palette.sheet,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: palette.rule,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
   },
   backBtnText: {
-    color: Colors.primary,
+    color: palette.accent,
     fontSize: 20,
     lineHeight: 22,
     marginLeft: -2,
@@ -205,12 +183,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 26,
     fontWeight: "800",
-    color: Colors.text,
+    color: palette.ink,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: Colors.textSec,
+    color: palette.muted,
     marginTop: 4,
     lineHeight: 20,
   },
@@ -227,20 +205,20 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 15,
-    color: Colors.danger,
+    color: palette.danger,
     textAlign: "center",
     marginBottom: 12,
   },
   retryBtn: {
     paddingVertical: 8,
     paddingHorizontal: 20,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primaryLight,
+    borderRadius: radius.control,
+    backgroundColor: palette.accentSoft,
   },
   retryText: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.primaryText,
+    color: palette.accent,
   },
   empty: {
     alignItems: "center",
@@ -254,11 +232,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: Colors.text,
+    color: palette.ink,
   },
   emptySubtitle: {
     fontSize: 13,
-    color: Colors.textSec,
+    color: palette.muted,
     textAlign: "center",
   },
   row: {
@@ -266,13 +244,13 @@ const styles = StyleSheet.create({
   },
   rowSelected: {
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: palette.accent,
   },
   selectedLabel: {
     marginTop: 8,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
-    color: Colors.primary,
+    color: palette.accent,
     letterSpacing: 0.3,
   },
   rowInner: {
@@ -292,19 +270,19 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: "700",
-    color: Colors.text,
+    color: palette.ink,
   },
   rowSubtitle: {
     fontSize: 12,
-    color: Colors.textSec,
+    color: palette.muted,
     marginBottom: 4,
   },
   rowMetrics: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 10,
-    backgroundColor: Colors.bg,
-    borderRadius: Radius.sm,
+    backgroundColor: palette.paper,
+    borderRadius: radius.control,
     padding: 10,
     gap: 0,
   },
@@ -315,23 +293,21 @@ const styles = StyleSheet.create({
   metricSep: {
     width: 1,
     height: 28,
-    backgroundColor: Colors.border,
+    backgroundColor: palette.rule,
   },
   metricLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
-    color: Colors.textSec,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    color: palette.muted,
     marginBottom: 2,
   },
   metricValue: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.text,
+    color: palette.ink,
   },
   metricValueDanger: {
-    color: Colors.danger,
+    color: palette.danger,
   },
   fab: {
     position: "absolute",
@@ -339,19 +315,15 @@ const styles = StyleSheet.create({
     right: 24,
     width: 56,
     height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
+    borderRadius: radius.full,
+    backgroundColor: palette.accent,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 6,
+    ...shadow.floating,
   },
   fabIcon: {
-    color: "#fff",
+    color: palette.onAccent,
     fontSize: 28,
     lineHeight: 32,
     fontWeight: "400",
@@ -362,16 +334,16 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingVertical: 3,
     paddingHorizontal: 9,
-    borderRadius: Radius.full,
+    borderRadius: radius.full,
     borderWidth: 1.5,
   },
   chipActive: {
-    backgroundColor: "#E8FBF2",
-    borderColor: "#0EAD70",
+    backgroundColor: palette.incomeSoft,
+    borderColor: palette.income,
   },
   chipClosed: {
-    backgroundColor: Colors.bg,
-    borderColor: Colors.border,
+    backgroundColor: palette.paper,
+    borderColor: palette.rule,
   },
   chipDot: {
     width: 6,
@@ -379,19 +351,19 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   chipDotActive: {
-    backgroundColor: "#0EAD70",
+    backgroundColor: palette.income,
   },
   chipDotClosed: {
-    backgroundColor: Colors.textTer,
+    backgroundColor: palette.muted,
   },
   chipLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
   },
   chipLabelActive: {
-    color: "#0A7A50",
+    color: palette.income,
   },
   chipLabelClosed: {
-    color: Colors.textSec,
+    color: palette.muted,
   },
 });

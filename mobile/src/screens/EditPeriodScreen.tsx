@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -8,10 +8,11 @@ import { usePeriod } from "../context/PeriodContext";
 import { CurrencyInput } from "../components/CurrencyInput";
 import { DatePickerField } from "../components/DatePickerField";
 import { formatDateBR } from "../lib/date";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { displayToAPI, formatCents } from "../lib/currency";
-import { Colors } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { palette } from "../theme";
+import { Text } from "../components/ui/Text";
 
 function apiToDisplay(apiAmount: string): string {
   const cents = Math.round(parseFloat(apiAmount) * 100);
@@ -115,21 +116,21 @@ export function EditPeriodScreen() {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.surface }}
+      style={{ flex: 1, backgroundColor: palette.sheet }}
       contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
     >
       {period && (
         <View style={{
-          backgroundColor: Colors.primaryLight,
+          backgroundColor: palette.accentSoft,
           borderRadius: 12,
           padding: 12,
           marginBottom: 20,
         }}>
-          <Text style={{ fontSize: 12, color: Colors.primaryText, fontWeight: "600" }}>
+          <Text style={{ fontSize: 12, color: palette.accent, fontWeight: "600" }}>
             Período: {startDate ? formatDateBR(startDate) : "—"} → {endDate ? formatDateBR(endDate) : "—"} ({periodDays} dias)
           </Text>
-          <Text style={{ fontSize: 11, color: Colors.primaryText, marginTop: 3 }}>
+          <Text style={{ fontSize: 12, color: palette.accent, marginTop: 3 }}>
             Mudar as datas ou o limite recalcula o saldo de hoje. Se você não mexer no orçamento total, ele é
             recalculado para os novos dias mantendo o extra.
           </Text>
@@ -138,7 +139,7 @@ export function EditPeriodScreen() {
 
       <View style={{ flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 7 }}>
             Início
           </Text>
           <Controller
@@ -150,7 +151,7 @@ export function EditPeriodScreen() {
           />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 7 }}>
             Fim
           </Text>
           <Controller
@@ -163,7 +164,7 @@ export function EditPeriodScreen() {
         </View>
       </View>
 
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+      <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 7 }}>
         Limite diário
       </Text>
       <Controller
@@ -174,10 +175,10 @@ export function EditPeriodScreen() {
         )}
       />
 
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>
+      <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 4 }}>
         Orçamento total
       </Text>
-      <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 7 }}>
+      <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 7 }}>
         Mínimo: R$ {minBudget} ({dailyLimit}/dia × {periodDays} dias)
       </Text>
       <Controller
@@ -188,28 +189,28 @@ export function EditPeriodScreen() {
         )}
       />
       {isReshaped && !isTotalEdited && recomputedTotal ? (
-        <Text style={{ color: Colors.primaryText, fontSize: 12, marginBottom: 12, marginTop: -8 }}>
+        <Text style={{ color: palette.accent, fontSize: 12, marginBottom: 12, marginTop: -8 }}>
           Ao salvar, o orçamento total passa a ser R$ {recomputedTotal} para os novos dias. Digite outro valor se quiser
           mudar.
         </Text>
       ) : null}
       {isBelowMin && (
-        <Text style={{ color: Colors.danger, fontSize: 12, marginBottom: 12, marginTop: -8 }}>
+        <Text style={{ color: palette.danger, fontSize: 12, marginBottom: 12, marginTop: -8 }}>
           O orçamento total deve ser ao menos R$ {minBudget}
         </Text>
       )}
 
       {errors.root && (
-        <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+        <Text style={{ color: palette.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
           {errors.root.message}
         </Text>
       )}
 
-      <Btn
+      <Button
         label="Salvar alterações"
         onPress={handleSubmit(onSubmit)}
-        loading={loading}
-        disabled={isBelowMin}
+        isLoading={loading}
+        isDisabled={isBelowMin}
       />
     </ScrollView>
   );

@@ -6,7 +6,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { enableScreens } from "react-native-screens";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { GroupProvider, useGroup } from "./src/context/GroupContext";
@@ -53,7 +53,8 @@ import { SkipBillScreen } from "./src/modules/finance/SkipBillScreen";
 import { SalarySettingsScreen } from "./src/modules/finance/SalarySettingsScreen";
 import { MonthPlanScreen } from "./src/modules/finance/MonthPlanScreen";
 import type { AccountKind } from "./src/modules/finance/format";
-import { palette, useThemeFonts } from "./src/theme";
+import { font, palette, useThemeFonts } from "./src/theme";
+import { Icon, type IconName } from "./src/components/ui/Icon";
 
 enableScreens();
 
@@ -142,16 +143,17 @@ export type MainTabParamList = {
   Categories: undefined;
 };
 
+/** Stack header in the theme: white bar, title in Manrope, back arrow in accent, a rule below. */
+const HEADER_OPTIONS = {
+  headerShown: true,
+  headerStyle: { backgroundColor: palette.sheet },
+  headerTintColor: palette.accent,
+  headerTitleStyle: { ...font("bold"), fontSize: 18, color: palette.ink },
+  headerShadowVisible: false,
+};
+
 function modalOptions(title: string) {
-  return {
-    presentation: "modal" as const,
-    headerShown: true,
-    title,
-    headerStyle: { backgroundColor: "#FFFFFF" },
-    headerTintColor: "#6255EA",
-    headerTitleStyle: { color: "#17162B", fontWeight: "700" as const },
-    headerShadowVisible: false,
-  };
+  return { ...HEADER_OPTIONS, presentation: "modal" as const, title };
 }
 
 function pushOptions(title: string) {
@@ -177,6 +179,13 @@ const linking: LinkingOptions<AuthStackParamList> = {
   },
 };
 
+/** Outline icon at rest, filled when the tab is the current one. */
+function tabIcon(outline: IconName, filled: IconName) {
+  return function TabIcon({ focused, color }: { focused: boolean; color: string }) {
+    return <Icon name={focused ? filled : outline} size={24} color={color} />;
+  };
+}
+
 function MainTabs() {
   const insets = useSafeAreaInsets();
   // On web: env(safe-area-inset-bottom) may return 0 in some Android browsers even with
@@ -194,46 +203,45 @@ function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: "#FFFFFF",
-          borderTopColor: "#E4E2F0",
+          backgroundColor: palette.sheet,
+          borderTopColor: palette.rule,
           borderTopWidth: 1,
           paddingBottom: tabBarPaddingBottom,
           paddingTop: 8,
           height: tabBarHeight,
         },
-        tabBarActiveTintColor: "#6255EA",
-        tabBarInactiveTintColor: "#ADABCA",
+        tabBarActiveTintColor: palette.accent,
+        tabBarInactiveTintColor: palette.muted,
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: "600",
-          letterSpacing: 0.1,
+          ...font("semibold"),
+          fontSize: 12,
         },
       }}
     >
       <MainTab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: "Hoje", tabBarIcon: () => <Text>🏠</Text> }}
+        options={{ tabBarLabel: "Hoje", tabBarIcon: tabIcon("home-variant-outline", "home-variant") }}
       />
       <MainTab.Screen
         name="History"
         component={HistoryScreen}
-        options={{ tabBarLabel: "Histórico", tabBarIcon: () => <Text>📋</Text> }}
+        options={{ tabBarLabel: "Histórico", tabBarIcon: tabIcon("format-list-bulleted", "format-list-bulleted") }}
       />
       <MainTab.Screen
         name="Accounts"
         component={AccountsScreen}
-        options={{ tabBarLabel: "Contas", tabBarIcon: () => <Text>💳</Text> }}
+        options={{ tabBarLabel: "Contas", tabBarIcon: tabIcon("wallet-outline", "wallet") }}
       />
       <MainTab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ tabBarLabel: "Dashboard", tabBarIcon: () => <Text>📊</Text> }}
+        options={{ tabBarLabel: "Painel", tabBarIcon: tabIcon("chart-box-outline", "chart-box") }}
       />
       <MainTab.Screen
         name="Categories"
         component={CategoriesScreen}
-        options={{ tabBarLabel: "Categorias", tabBarIcon: () => <Text>🏷️</Text> }}
+        options={{ tabBarLabel: "Categorias", tabBarIcon: tabIcon("tag-outline", "tag") }}
       />
     </MainTab.Navigator>
   );
@@ -259,37 +267,22 @@ function AppNavigator() {
           <AppStack.Screen
             name="Profile"
             component={ProfileScreen}
-            options={{ headerShown: false }}
+            options={pushOptions("Perfil")}
           />
           <AppStack.Screen
             name="AdminInvites"
             component={AdminInvitesScreen}
-            options={{ headerShown: false }}
+            options={pushOptions("Convites")}
           />
           <AppStack.Screen
             name="Groups"
             component={GroupsScreen}
-            options={{
-              headerShown: true,
-              title: "Grupos",
-              headerStyle: { backgroundColor: "#FFFFFF" },
-              headerTintColor: "#6255EA",
-              headerTitleStyle: { color: "#17162B", fontWeight: "800" },
-              headerShadowVisible: false,
-            }}
+            options={pushOptions("Grupos")}
           />
           <AppStack.Screen
             name="EditPeriod"
             component={EditPeriodScreen}
-            options={{
-              presentation: "modal",
-              headerShown: true,
-              title: "Editar período",
-              headerStyle: { backgroundColor: "#FFFFFF" },
-              headerTintColor: "#6255EA",
-              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
-              headerShadowVisible: false,
-            }}
+            options={modalOptions("Editar período")}
           />
           <AppStack.Screen
             name="CategoryDetail"
@@ -299,59 +292,27 @@ function AppNavigator() {
           <AppStack.Screen
             name="Periods"
             component={PeriodsScreen}
-            options={{ headerShown: false }}
+            options={pushOptions("Planejamentos")}
           />
           <AppStack.Screen
             name="CreatePeriod"
             component={CreatePeriodScreen}
-            options={{
-              presentation: "modal",
-              headerShown: true,
-              title: "Novo planejamento",
-              headerStyle: { backgroundColor: "#FFFFFF" },
-              headerTintColor: "#6255EA",
-              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
-              headerShadowVisible: false,
-            }}
+            options={modalOptions("Novo planejamento")}
           />
           <AppStack.Screen
             name="AddExpense"
             component={AddExpenseScreen}
-            options={{
-              presentation: "modal",
-              headerShown: true,
-              title: "Novo gasto",
-              headerStyle: { backgroundColor: "#FFFFFF" },
-              headerTintColor: "#6255EA",
-              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
-              headerShadowVisible: false,
-            }}
+            options={modalOptions("Novo gasto")}
           />
           <AppStack.Screen
             name="EditExpense"
             component={EditExpenseScreen}
-            options={{
-              presentation: "modal",
-              headerShown: true,
-              title: "Editar gasto",
-              headerStyle: { backgroundColor: "#FFFFFF" },
-              headerTintColor: "#6255EA",
-              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
-              headerShadowVisible: false,
-            }}
+            options={modalOptions("Editar gasto")}
           />
           <AppStack.Screen
             name="AddIncome"
             component={AddIncomeScreen}
-            options={{
-              presentation: "modal",
-              headerShown: true,
-              title: "Nova receita",
-              headerStyle: { backgroundColor: "#FFFFFF" },
-              headerTintColor: "#6255EA",
-              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
-              headerShadowVisible: false,
-            }}
+            options={modalOptions("Nova receita")}
           />
           <AppStack.Screen name="AccountForm" component={AccountFormScreen} options={modalOptions("Conta")} />
           <AppStack.Screen name="AccountDetail" component={AccountDetailScreen} options={pushOptions("Conta")} />
@@ -369,15 +330,7 @@ function AppNavigator() {
           <AppStack.Screen
             name="EditIncome"
             component={EditIncomeScreen}
-            options={{
-              presentation: "modal",
-              headerShown: true,
-              title: "Editar receita",
-              headerStyle: { backgroundColor: "#FFFFFF" },
-              headerTintColor: "#6255EA",
-              headerTitleStyle: { color: "#17162B", fontWeight: "700" },
-              headerShadowVisible: false,
-            }}
+            options={modalOptions("Editar receita")}
           />
         </>
       )}
@@ -432,7 +385,7 @@ function Navigation() {
 // On a wide screen (desktop browser) the app keeps a phone-like column, centered,
 // instead of stretching lists to the full window.
 const frameStyles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#E9E7F2" },
+  page: { flex: 1, backgroundColor: palette.rule },
   frame: { flex: 1, width: "100%", maxWidth: 560, alignSelf: "center", backgroundColor: palette.paper, overflow: "hidden" },
 });
 

@@ -1,9 +1,9 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, TouchableOpacity, View } from "react-native";
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Btn } from "../../components/ui/Btn";
-import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Block } from "../../components/ui/Block";
 import { Chip } from "../../components/ui/Chip";
 import { InlineError } from "../../components/ui/InlineError";
 import { useCurrency } from "../../context/CurrencyContext";
@@ -11,13 +11,15 @@ import { useBillOccurrencesQuery, useUnpayBillMutation, useUnskipBillMutation } 
 import { confirm } from "../../lib/alert";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { BillRow } from "./components/BillRow";
 import { InstallmentsDueCard } from "./components/InstallmentsDueCard";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import { useInstallmentsDue } from "./use-installments-due";
-import { addMonths, formatMoney, formatMonth, monthOf, toNumber } from "./format";
+import { addMonths, formatMoney, formatMonth, monthOf, toNumber, accountKindIcon } from "./format";
 import type { AppStackParamList } from "../../../App";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
+import { MonthStepper } from "../../components/ui/MonthStepper";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 type Occurrence = NonNullable<NonNullable<ReturnType<typeof useBillOccurrencesQuery>["data"]>["billOccurrences"]>[number];
@@ -100,29 +102,26 @@ export function BillsScreen() {
   const filterName = accounts.find((a) => a.id === accountFilter)?.name;
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <TouchableOpacity onPress={() => setMonth((m) => addMonths(m, -1))} hitSlop={12}>
-          <Text style={{ fontSize: 22, color: Colors.primary }}>‹</Text>
-        </TouchableOpacity>
-        <Text style={{ fontSize: 16, fontWeight: "800", color: Colors.text }}>{formatMonth(month)}</Text>
-        <TouchableOpacity onPress={() => setMonth((m) => addMonths(m, 1))} hitSlop={12}>
-          <Text style={{ fontSize: 22, color: Colors.primary }}>›</Text>
-        </TouchableOpacity>
-      </View>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+      <MonthStepper
+        size="title"
+        label={formatMonth(month)}
+        onPrevious={() => setMonth((m) => addMonths(m, -1))}
+        onNext={() => setMonth((m) => addMonths(m, 1))}
+      />
 
-      <Card padding={16} style={{ marginBottom: 12 }}>
+      <Block padding={16} style={{ marginBottom: 12 }}>
         <View style={{ flexDirection: "row" }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec }}>TOTAL DO MÊS</Text>
-            <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.text }}>{formatMoney(total, currency.symbol)}</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>Total do mês</Text>
+            <Text style={{ fontSize: 20, fontWeight: "800", color: palette.ink }}>{formatMoney(total, currency.symbol)}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec }}>FALTA PAGAR</Text>
-            <Text style={{ fontSize: 20, fontWeight: "800", color: Colors.text }}>{formatMoney(total - paid, currency.symbol)}</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>Falta pagar</Text>
+            <Text style={{ fontSize: 20, fontWeight: "800", color: palette.ink }}>{formatMoney(total - paid, currency.symbol)}</Text>
           </View>
         </View>
-      </Card>
+      </Block>
 
       {accounts.length > 1 ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
@@ -130,7 +129,8 @@ export function BillsScreen() {
           {accounts.map((a) => (
             <Chip
               key={a.id}
-              label={`${a.kind === "credit_card" ? "💳" : "🏦"} ${a.name}`}
+              label={a.name}
+              icon={accountKindIcon(a.kind)}
               selected={accountFilter === a.id}
               onPress={() => setAccountFilter(accountFilter === a.id ? null : a.id)}
             />
@@ -138,13 +138,13 @@ export function BillsScreen() {
         </View>
       ) : null}
 
-      <Card padding={16} style={{ marginBottom: 12 }}>
+      <Block padding={16} style={{ marginBottom: 12 }}>
         {loading && !data ? (
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={palette.accent} />
         ) : error ? (
           <InlineError onRetry={() => refetch()} />
         ) : items.length === 0 ? (
-          <Text style={{ color: Colors.textTer, textAlign: "center", paddingVertical: 12 }}>
+          <Text style={{ color: palette.muted, textAlign: "center", paddingVertical: 12 }}>
             {accountFilter
               ? `Nenhuma despesa fixa em ${filterName ?? "esta conta"}.`
               : "Nenhuma despesa fixa ainda. Cadastre aluguel, contas e assinaturas."}
@@ -203,13 +203,13 @@ export function BillsScreen() {
         )}
         {active.length > 0 ? (
           <View style={{ flexDirection: "row", justifyContent: "space-between", paddingTop: 12 }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.textSec }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: palette.muted }}>
               Total {filterName ? `em ${filterName}` : "das despesas"} ({active.length})
             </Text>
-            <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>{formatMoney(billsTotal, currency.symbol)}</Text>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: palette.ink }}>{formatMoney(billsTotal, currency.symbol)}</Text>
           </View>
         ) : null}
-      </Card>
+      </Block>
 
       <InstallmentsDueCard
         invoices={installmentInvoices}
@@ -219,11 +219,11 @@ export function BillsScreen() {
         onRetry={() => refetchInstallments()}
       />
 
-      <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 12, lineHeight: 17 }}>
+      <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 12, lineHeight: 17 }}>
         Toque no nome para editar ou excluir. As despesas no cartão entram sozinhas na fatura no dia; as da conta
         você marca como pagas.
       </Text>
-      <Btn label="+ Novo item" onPress={() => navigation.navigate("BillForm", {})} />
+      <Button label="+ Novo item" onPress={() => navigation.navigate("BillForm", {})} />
     </ScrollView>
   );
 }

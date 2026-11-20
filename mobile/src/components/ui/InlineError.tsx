@@ -1,5 +1,6 @@
-import { Text, TouchableOpacity, View } from "react-native";
-import { Colors, Radius } from "../../theme/tokens";
+import { TouchableOpacity, View } from "react-native";
+import { palette, radius } from "../../theme";
+import { Text } from "./Text";
 
 interface InlineErrorProps {
   message?: string;
@@ -12,15 +13,15 @@ export function InlineError({ message = "Erro ao carregar dados.", onRetry }: In
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      backgroundColor: Colors.dangerLight,
-      borderRadius: Radius.sm,
+      backgroundColor: palette.dangerSoft,
+      borderRadius: radius.control,
       paddingVertical: 10,
       paddingHorizontal: 12,
     }}>
-      <Text style={{ fontSize: 13, color: Colors.danger, flex: 1 }}>{message}</Text>
+      <Text style={{ fontSize: 13, color: palette.danger, flex: 1 }}>{message}</Text>
       {onRetry && (
         <TouchableOpacity onPress={onRetry} activeOpacity={0.7} style={{ marginLeft: 12 }}>
-          <Text style={{ fontSize: 13, color: Colors.primary, fontWeight: "600", textDecorationLine: "underline" }}>
+          <Text style={{ fontSize: 13, color: palette.accent, fontWeight: "600", textDecorationLine: "underline" }}>
             Tentar
           </Text>
         </TouchableOpacity>

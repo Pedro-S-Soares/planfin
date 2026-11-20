@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { useSetPartnerIncomeMutation, type CycleBlockFieldsFragment } from "../../../graphql/__generated__/hooks";
 import { displayToAPI, formatCents, parseCents } from "../../../lib/currency";
 import { toISODate } from "../../../lib/date";
-import { Colors, Radius } from "../../../theme/tokens";
 import { formatMoney, formatMonth, toNumber } from "../format";
+import { palette, radius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
+import { TextInput } from "../../../components/ui/TextInput";
 
 type PartnerIncomeRowProps = {
   /** YYYY-MM of the salary that pays the block's invoice. */
@@ -30,9 +32,9 @@ export function PartnerIncomeRow({ month, partner }: PartnerIncomeRowProps) {
 
   if (partner?.received) {
     return (
-      <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
-        <Text style={{ flex: 1, fontSize: 14, color: Colors.text }}>{label}</Text>
-        <Text style={{ fontSize: 13, color: Colors.textSec }}>✓ recebido ({formatMoney(partner.amount, currency.symbol)}, já no saldo)</Text>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: palette.rule }}>
+        <Text style={{ flex: 1, fontSize: 14, color: palette.ink }}>{label}</Text>
+        <Text style={{ fontSize: 13, color: palette.muted }}>Recebido ({formatMoney(partner.amount, currency.symbol)}, já no saldo)</Text>
       </View>
     );
   }
@@ -45,42 +47,42 @@ export function PartnerIncomeRow({ month, partner }: PartnerIncomeRowProps) {
   };
 
   return (
-    <View style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+    <View style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: palette.rule }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Text style={{ flex: 1, fontSize: 14, color: Colors.text }}>+ {label}</Text>
+        <Text style={{ flex: 1, fontSize: 14, color: palette.ink }}>+ {label}</Text>
         <View style={{
           flexDirection: "row",
           alignItems: "center",
           width: 130,
           height: 36,
-          borderRadius: Radius.sm,
+          borderRadius: radius.control,
           borderWidth: 1.5,
-          borderColor: isDirty ? Colors.primary : Colors.border,
+          borderColor: isDirty ? palette.accent : palette.rule,
           paddingHorizontal: 8,
           overflow: "hidden",
         }}>
-          <Text style={{ fontSize: 13, color: Colors.textSec, marginRight: 4 }}>{currency.symbol}</Text>
+          <Text style={{ fontSize: 13, color: palette.muted, marginRight: 4 }}>{currency.symbol}</Text>
           <TextInput
             value={value}
             placeholder="0,00"
-            placeholderTextColor={Colors.textTer}
+            placeholderTextColor={palette.muted}
             keyboardType="numeric"
             onChangeText={(raw) => setDraft(formatCents(parseInt(raw.replace(/\D/g, ""), 10) || 0))}
             // On web a TextInput keeps its intrinsic width and overflows the row without minWidth/width.
-            style={{ flex: 1, minWidth: 0, width: "100%", fontSize: 14, fontWeight: "700", color: Colors.successText, textAlign: "right" }}
+            style={{ flex: 1, minWidth: 0, width: "100%", fontSize: 14, fontWeight: "700", color: palette.income, textAlign: "right" }}
           />
         </View>
       </View>
       {isDirty ? (
         <TouchableOpacity onPress={handleSave} disabled={loading} style={{ alignSelf: "flex-end", marginTop: 6 }}>
           {loading ? (
-            <ActivityIndicator size="small" color={Colors.primary} />
+            <ActivityIndicator size="small" color={palette.accent} />
           ) : (
-            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>Salvar valor previsto</Text>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: palette.accent }}>Salvar valor previsto</Text>
           )}
         </TouchableOpacity>
       ) : !partner ? (
-        <Text style={{ fontSize: 11, color: Colors.textTer, marginTop: 2 }}>Digite o valor previsto deste mês.</Text>
+        <Text style={{ fontSize: 12, color: palette.muted, marginTop: 2 }}>Digite o valor previsto deste mês.</Text>
       ) : null}
     </View>
   );

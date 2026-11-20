@@ -1,16 +1,16 @@
 import { useState, type ReactNode } from "react";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "../../../components/ui/AppText";
 import { Button } from "../../../components/ui/Button";
 import { Chip } from "../../../components/ui/Chip";
 import { SheetFooter } from "../../../components/ui/Sheet";
 import { confirm } from "../../../lib/alert";
-import { layout, palette, radius, space, textVariants } from "../../../theme";
-import { categoryColor } from "../../../theme/tokens";
+import { categoryColor, layout, palette, radius, space, textVariants } from "../../../theme";
 import { FormLabel as FieldLabel } from "../../finance/components/FormLabel";
 import { ToggleRow } from "../../finance/components/ToggleRow";
 import type { CategoriesQuery } from "../../../graphql/__generated__/graphql";
+import { TextInput } from "../../../components/ui/TextInput";
 
 type Category = NonNullable<NonNullable<CategoriesQuery["categories"]>[number]>;
 type Subcategory = NonNullable<NonNullable<Category["subcategories"]>[number]>;

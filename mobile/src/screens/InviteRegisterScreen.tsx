@@ -1,14 +1,16 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, TouchableOpacity, ScrollView } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useRegisterUserMutation } from "../graphql/__generated__/hooks";
 import { useAuth } from "../context/AuthContext";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { FieldInput } from "../components/ui/FieldInput";
-import { Colors } from "../theme/tokens";
 import type { AuthStackParamList } from "../../App";
+import { palette } from "../theme";
+import { Text } from "../components/ui/Text";
+import { BackLink } from "../components/ui/BackLink";
 
 const schema = yup.object({
   email: yup.string().email("Email inválido").required("Email é obrigatório"),
@@ -55,26 +57,20 @@ export function InviteRegisterScreen({ navigation, route }: Props) {
     });
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
+    <View style={{ flex: 1, backgroundColor: palette.sheet }}>
       <View style={{
-        backgroundColor: Colors.bg,
+        backgroundColor: palette.paper,
         paddingTop: 62,
         paddingBottom: 22,
         paddingHorizontal: 22,
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
+        borderBottomWidth: 1,
+        borderBottomColor: palette.rule,
       }}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate("Login")}
-          style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 16 }}
-        >
-          <Text style={{ color: Colors.primary, fontSize: 18 }}>‹</Text>
-          <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "600" }}>Voltar</Text>
-        </TouchableOpacity>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.text, letterSpacing: -0.5 }}>
+        <BackLink onPress={() => navigation.navigate("Login")} />
+        <Text style={{ fontSize: 26, fontWeight: "800", color: palette.ink, letterSpacing: -0.5 }}>
           Criar conta
         </Text>
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 3 }}>
+        <Text style={{ fontSize: 13, color: palette.muted, marginTop: 3 }}>
           Você foi convidado para o Planfin
         </Text>
       </View>
@@ -134,17 +130,17 @@ export function InviteRegisterScreen({ navigation, route }: Props) {
         />
 
         {errors.root && (
-          <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+          <Text style={{ color: palette.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
             {errors.root.message}
           </Text>
         )}
 
-        <Btn label="Criar conta" onPress={handleSubmit(onSubmit)} loading={loading} />
+        <Button label="Criar conta" onPress={handleSubmit(onSubmit)} isLoading={loading} />
 
         <View style={{ marginTop: 20, flexDirection: "row", justifyContent: "center", gap: 4 }}>
-          <Text style={{ color: Colors.textSec, fontSize: 14 }}>Já tem conta?</Text>
+          <Text style={{ color: palette.muted, fontSize: 14 }}>Já tem conta?</Text>
           <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-            <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "700" }}>Entrar</Text>
+            <Text style={{ color: palette.accent, fontSize: 14, fontWeight: "700" }}>Entrar</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

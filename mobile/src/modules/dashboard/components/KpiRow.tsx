@@ -1,10 +1,11 @@
 import { ReactNode } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import type { PeriodPace } from "../analytics";
 import { ChartColors } from "../charts/chart-tokens";
 import { percent, type MoneyFormat } from "../use-money";
-import { Card } from "../../../components/ui/Card";
-import { Colors } from "../../../theme/tokens";
+import { Block } from "../../../components/ui/Block";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type Tone = "bad" | "good" | "neutral";
 
@@ -16,21 +17,21 @@ function Kpi({ label, value, hint, note, tone = "neutral", children }: {
   tone?: Tone;
   children?: ReactNode;
 }) {
-  const color = tone === "bad" ? ChartColors.overText : tone === "good" ? Colors.successText : Colors.textSec;
+  const color = tone === "bad" ? ChartColors.overText : tone === "good" ? palette.income : palette.muted;
   const icon = tone === "bad" ? "▲ " : tone === "good" ? "▼ " : "";
   return (
-    <Card padding={22} style={{ flexGrow: 1, flexBasis: 220, gap: 8 }}>
-      <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.textSec }}>{label}</Text>
+    <Block padding={22} style={{ flexGrow: 1, flexBasis: 220, gap: 8 }}>
+      <Text style={{ fontSize: 13, fontWeight: "600", color: palette.muted }}>{label}</Text>
       <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-        <Text style={{ fontSize: 28, fontWeight: "800", color: Colors.text }}>{value}</Text>
-        {hint ? <Text style={{ fontSize: 14, color: Colors.textSec }}>{hint}</Text> : null}
+        <Text style={{ fontSize: 28, fontWeight: "800", color: palette.ink }}>{value}</Text>
+        {hint ? <Text style={{ fontSize: 14, color: palette.muted }}>{hint}</Text> : null}
       </View>
       {children}
       <Text style={{ fontSize: 13, fontWeight: tone === "neutral" ? "400" : "700", color }}>
         {icon}
         {note}
       </Text>
-    </Card>
+    </Block>
   );
 }
 
@@ -49,16 +50,16 @@ export function KpiRow({ pace, format }: { pace: PeriodPace; format: MoneyFormat
         hint={`de ${format.money(pace.budget)}`}
         note={`${percent(used)} usado · traço = ${percent(elapsed)} do período`}
       >
-        <View style={{ height: 8, borderRadius: 4, backgroundColor: Colors.primaryLight, marginVertical: 4 }}>
+        <View style={{ height: 8, borderRadius: 4, backgroundColor: palette.accentSoft, marginVertical: 4 }}>
           <View
             style={{
               width: `${Math.min(used, 1) * 100}%`,
               height: 8,
               borderRadius: 4,
-              backgroundColor: used > elapsed ? ChartColors.over : Colors.primary,
+              backgroundColor: used > elapsed ? ChartColors.over : palette.accent,
             }}
           />
-          <View style={{ position: "absolute", top: -4, left: `${elapsed * 100}%`, width: 2, height: 16, backgroundColor: Colors.text }} />
+          <View style={{ position: "absolute", top: -4, left: `${elapsed * 100}%`, width: 2, height: 16, backgroundColor: palette.ink }} />
         </View>
       </Kpi>
       <Kpi

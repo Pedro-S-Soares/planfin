@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { CurrencyInput } from "../../../components/CurrencyInput";
 import { DatePickerField } from "../../../components/DatePickerField";
-import { Btn } from "../../../components/ui/Btn";
+import { Button } from "../../../components/ui/Button";
 import { useCurrency } from "../../../context/CurrencyContext";
 import {
   useRegisterSalaryMutation,
@@ -13,9 +13,10 @@ import {
 import { confirm } from "../../../lib/alert";
 import { displayToAPI, formatCents, parseCents } from "../../../lib/currency";
 import { formatDateBR, toISODate } from "../../../lib/date";
-import { Colors, Radius } from "../../../theme/tokens";
 import { formatMoney, formatMonth, toNumber } from "../format";
 import { FormLabel } from "./FormLabel";
+import { palette, radius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 export type SalaryMonth = {
   month: string;
@@ -32,13 +33,7 @@ const toDisplay = (value: string | null) => formatCents(Math.round(toNumber(valu
 
 function Pill({ label, onPress, strong }: { label: string; onPress: () => void; strong?: boolean }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.75}
-      style={{ backgroundColor: strong ? Colors.primary : Colors.bg, borderRadius: Radius.full, paddingHorizontal: 12, paddingVertical: 6 }}
-    >
-      <Text style={{ fontSize: 12, fontWeight: "700", color: strong ? "#fff" : Colors.primaryText }}>{label}</Text>
-    </TouchableOpacity>
+    <Button label={label} size="sm" variant={strong ? "primary" : "secondary"} isFullWidth={false} onPress={onPress} />
   );
 }
 
@@ -64,14 +59,14 @@ export function SalaryMonthRow({ salary }: { salary: SalaryMonth }) {
   };
 
   return (
-    <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
-      <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.text }}>{formatMonth(salary.month)}</Text>
+    <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: palette.rule }}>
+      <Text style={{ fontSize: 14, fontWeight: "700", color: palette.ink }}>{formatMonth(salary.month)}</Text>
       {salary.paid ? (
-        <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.successText, marginTop: 2 }}>
-          ✓ Pago em {salary.paidOn ? formatDateBR(salary.paidOn) : "—"} · {money(salary.paidAmount)}
+        <Text style={{ fontSize: 13, fontWeight: "600", color: palette.income, marginTop: 2 }}>
+          Pago em {salary.paidOn ? formatDateBR(salary.paidOn) : "—"} · {money(salary.paidAmount)}
         </Text>
       ) : (
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 2 }}>
+        <Text style={{ fontSize: 13, color: palette.muted, marginTop: 2 }}>
           Previsto para {formatDateBR(salary.date)}
           {salary.isManual ? " (data ajustada)" : ""} · {money(salary.amount)}
         </Text>
@@ -101,7 +96,7 @@ export function SalaryMonthRow({ salary }: { salary: SalaryMonth }) {
       </View>
 
       {mode ? (
-        <View style={{ marginTop: 12, backgroundColor: Colors.bg, borderRadius: Radius.md, padding: 12 }}>
+        <View style={{ marginTop: 12, backgroundColor: palette.paper, borderRadius: radius.control, padding: 12 }}>
           <FormLabel>{mode === "pay" ? "Valor que caiu" : "Valor previsto"}</FormLabel>
           <CurrencyInput value={amount} onChange={setAmount} />
           <FormLabel>{mode === "pay" ? "Dia em que caiu" : "Data prevista"}</FormLabel>
@@ -109,34 +104,34 @@ export function SalaryMonthRow({ salary }: { salary: SalaryMonth }) {
           <View style={{ flexDirection: "row", gap: 8 }}>
             <View style={{ flex: 1 }}>
               {mode === "pay" ? (
-                <Btn
+                <Button
                   label="Confirmar pagamento"
                   size="sm"
-                  loading={paying}
-                  disabled={parseCents(amount) === 0}
+                  isLoading={paying}
+                  isDisabled={parseCents(amount) === 0}
                   onPress={() => register({ variables: { month: salary.month, amount: displayToAPI(amount), date } })}
                 />
               ) : (
-                <Btn
+                <Button
                   label="Salvar previsão"
                   size="sm"
-                  loading={saving}
-                  disabled={parseCents(amount) === 0}
+                  isLoading={saving}
+                  isDisabled={parseCents(amount) === 0}
                   onPress={() => setExpected({ variables: { month: salary.month, date, amount: displayToAPI(amount) } })}
                 />
               )}
             </View>
             <View style={{ flex: 1 }}>
-              <Btn label="Cancelar" size="sm" variant="ghost" onPress={close} />
+              <Button label="Cancelar" size="sm" variant="secondary" onPress={close} />
             </View>
           </View>
           {mode === "edit" && salary.isManual ? (
             <TouchableOpacity onPress={() => resetDate({ variables: { month: salary.month } })} style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 12, color: Colors.textSec, textDecorationLine: "underline" }}>Voltar à data automática</Text>
+              <Text style={{ fontSize: 12, color: palette.muted, textDecorationLine: "underline" }}>Voltar à data automática</Text>
             </TouchableOpacity>
           ) : null}
           {mode === "pay" ? (
-            <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 10, lineHeight: 17 }}>
+            <Text style={{ fontSize: 12, color: palette.muted, marginTop: 10, lineHeight: 17 }}>
               O valor entra no saldo da conta do salário e o ciclo passa a começar nesse dia.
             </Text>
           ) : null}

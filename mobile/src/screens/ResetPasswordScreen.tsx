@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useResetPasswordMutation } from "../graphql/__generated__/hooks";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { FieldInput } from "../components/ui/FieldInput";
-import { Colors } from "../theme/tokens";
 import type { AuthStackParamList } from "../../App";
+import { palette } from "../theme";
+import { Text } from "../components/ui/Text";
 
 const schema = yup.object({
   password: yup.string().min(8, "A senha deve ter pelo menos 8 caracteres").required("Senha é obrigatória"),
@@ -35,32 +36,32 @@ export function ResetPasswordScreen({ route, navigation }: Props) {
 
   if (done) {
     return (
-      <View style={{ flex: 1, padding: 24, justifyContent: "center", backgroundColor: Colors.surface }}>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: Colors.text, textAlign: "center", marginBottom: 12 }}>
+      <View style={{ flex: 1, padding: 24, justifyContent: "center", backgroundColor: palette.sheet }}>
+        <Text style={{ fontSize: 24, fontWeight: "800", color: palette.ink, textAlign: "center", marginBottom: 12 }}>
           Senha redefinida
         </Text>
-        <Text style={{ fontSize: 14, color: Colors.textSec, textAlign: "center", marginBottom: 32, lineHeight: 22 }}>
+        <Text style={{ fontSize: 14, color: palette.muted, textAlign: "center", marginBottom: 32, lineHeight: 22 }}>
           Sua senha foi atualizada com sucesso. Faça login com a nova senha.
         </Text>
-        <Btn label="Ir para login" onPress={() => navigation.navigate("Login")} />
+        <Button label="Ir para login" onPress={() => navigation.navigate("Login")} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
+    <View style={{ flex: 1, backgroundColor: palette.sheet }}>
       <View style={{
-        backgroundColor: Colors.bg,
+        backgroundColor: palette.paper,
         paddingTop: 62,
         paddingBottom: 22,
         paddingHorizontal: 22,
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
+        borderBottomWidth: 1,
+        borderBottomColor: palette.rule,
       }}>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.text, letterSpacing: -0.5 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: palette.ink, letterSpacing: -0.5 }}>
           Nova senha
         </Text>
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 3 }}>
+        <Text style={{ fontSize: 13, color: palette.muted, marginTop: 3 }}>
           Escolha uma nova senha para sua conta.
         </Text>
       </View>
@@ -101,15 +102,15 @@ export function ResetPasswordScreen({ route, navigation }: Props) {
         />
 
         {errors.root && (
-          <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+          <Text style={{ color: palette.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
             {errors.root.message}
           </Text>
         )}
 
-        <Btn label="Redefinir senha" onPress={handleSubmit(onSubmit)} loading={loading} />
+        <Button label="Redefinir senha" onPress={handleSubmit(onSubmit)} isLoading={loading} />
         <View style={{ height: 12 }} />
         <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-          <Text style={{ color: Colors.primary, textAlign: "center", fontSize: 14 }}>Voltar para login</Text>
+          <Text style={{ color: palette.accent, textAlign: "center", fontSize: 14 }}>Voltar para login</Text>
         </TouchableOpacity>
       </View>
     </View>

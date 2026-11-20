@@ -1,6 +1,7 @@
-import { ActivityIndicator, Text, View } from "react-native";
-import { Colors } from "../../theme/tokens";
+import { ActivityIndicator, View } from "react-native";
 import { Logo } from "./Logo";
+import { palette } from "../../theme";
+import { Text } from "./Text";
 
 interface LoadingScreenProps {
   message?: string;
@@ -8,11 +9,11 @@ interface LoadingScreenProps {
 
 export function LoadingScreen({ message }: LoadingScreenProps) {
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg, alignItems: "center", justifyContent: "center", gap: 20 }}>
+    <View style={{ flex: 1, backgroundColor: palette.paper, alignItems: "center", justifyContent: "center", gap: 20 }}>
       <Logo size={56} />
-      <ActivityIndicator color={Colors.primary} size="large" />
+      <ActivityIndicator color={palette.accent} size="large" />
       {message && (
-        <Text style={{ fontSize: 14, color: Colors.textSec }}>{message}</Text>
+        <Text style={{ fontSize: 14, color: palette.muted }}>{message}</Text>
       )}
     </View>
   );

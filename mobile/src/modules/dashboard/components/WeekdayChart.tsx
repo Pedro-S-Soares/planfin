@@ -1,8 +1,9 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import type { WeekdayAverage } from "../analytics";
 import { ChartColors } from "../charts/chart-tokens";
 import { percent, type MoneyFormat } from "../use-money";
-import { Colors } from "../../../theme/tokens";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 const NAMES = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 const LONG = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
@@ -26,7 +27,7 @@ export function WeekdayChart({ data, format }: WeekdayChartProps) {
   return (
     <View style={{ gap: 16 }}>
       {total > 0 ? (
-        <Text style={{ fontSize: 15, lineHeight: 21, fontWeight: "600", color: Colors.text }}>
+        <Text style={{ fontSize: 15, lineHeight: 21, fontWeight: "600", color: palette.ink }}>
           {ratio !== null ? (
             <>
               {capitalize(WITH_ARTICLE[top.weekday])} custa{" "}
@@ -47,7 +48,7 @@ export function WeekdayChart({ data, format }: WeekdayChartProps) {
           alignItems: "flex-end",
           gap: 10,
           borderBottomWidth: 1,
-          borderBottomColor: Colors.border,
+          borderBottomColor: palette.rule,
         }}
       >
         {ORDER.map((i) => {
@@ -59,7 +60,7 @@ export function WeekdayChart({ data, format }: WeekdayChartProps) {
               accessibilityLabel={`${LONG[i]}: média ${format.money(d.average)}`}
               style={{ flex: 1, alignItems: "center", justifyContent: "flex-end", gap: 6 }}
             >
-              <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.text, minHeight: 16 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", color: palette.ink, minHeight: 16 }}>
                 {highlight ? format.money(d.average) : ""}
               </Text>
               <View
@@ -77,7 +78,7 @@ export function WeekdayChart({ data, format }: WeekdayChartProps) {
       </View>
       <View style={{ flexDirection: "row", gap: 10, marginTop: -8 }}>
         {ORDER.map((i) => (
-          <Text key={i} style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: "600", color: Colors.textSec }}>
+          <Text key={i} style={{ flex: 1, textAlign: "center", fontSize: 12, fontWeight: "600", color: palette.muted }}>
             {NAMES[i]}
           </Text>
         ))}

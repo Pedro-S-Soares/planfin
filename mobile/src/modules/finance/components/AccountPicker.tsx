@@ -27,7 +27,8 @@ export function AccountPicker({ label = "Pago com", accounts, value, onChange, k
         {options.map((account) => (
           <Chip
             key={account.id}
-            label={`${ACCOUNT_KIND_ICON[account.kind]} ${account.name}`}
+            label={account.name}
+            icon={ACCOUNT_KIND_ICON[account.kind]}
             selected={value === account.id}
             onPress={() => onChange(account.id)}
           />

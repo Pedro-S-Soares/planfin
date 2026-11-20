@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Platform,
-} from "react-native";
+import { View, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { confirm } from "../lib/alert";
 import { useNavigation } from "@react-navigation/native";
@@ -16,11 +9,13 @@ import {
   useRevokeInviteMutation,
   ListInvitesQuery,
 } from "../graphql/__generated__/hooks";
-import { Card } from "../components/ui/Card";
-import { Btn } from "../components/ui/Btn";
-import { Colors, Radius } from "../theme/tokens";
+import { Block } from "../components/ui/Block";
+import { Button } from "../components/ui/Button";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { toast } from "../lib/toast";
+import { palette, radius } from "../theme";
+import { Text } from "../components/ui/Text";
+import { AppText } from "../components/ui/AppText";
 
 type Invite = NonNullable<NonNullable<ListInvitesQuery["listInvites"]>[number]>;
 
@@ -31,11 +26,11 @@ function inviteUrl(token: string) {
 }
 
 function inviteStatus(invite: Invite): { label: string; color: string } {
-  if (invite.revokedAt) return { label: "Revogado", color: Colors.danger };
-  if (invite.usedAt) return { label: "Utilizado", color: "#16a34a" };
+  if (invite.revokedAt) return { label: "Revogado", color: palette.danger };
+  if (invite.usedAt) return { label: "Utilizado", color: palette.income };
   if (invite.expiresAt && new Date(invite.expiresAt) < new Date())
-    return { label: "Expirado", color: Colors.textSec };
-  return { label: "Pendente", color: "#d97706" };
+    return { label: "Expirado", color: palette.muted };
+  return { label: "Pendente", color: palette.warning };
 }
 
 function formatDate(iso: string | null | undefined) {
@@ -89,57 +84,37 @@ export function AdminInvitesScreen() {
   const invites = data?.listInvites ?? [];
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
-      {/* Header */}
-      <View style={{
-        backgroundColor: Colors.bg,
-        paddingTop: 62,
-        paddingBottom: 22,
-        paddingHorizontal: 22,
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
-      }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 16 }}
-        >
-          <Text style={{ color: Colors.primary, fontSize: 18 }}>‹</Text>
-          <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "600" }}>Voltar</Text>
-        </TouchableOpacity>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.text, letterSpacing: -0.5 }}>
-          Convites
-        </Text>
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 3 }}>
-          Gerencie quem pode criar conta
-        </Text>
-      </View>
+    <View style={{ flex: 1, backgroundColor: palette.paper }}>
+      <AppText variant="body" tone="muted" style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+        Gerencie quem pode criar conta.
+      </AppText>
 
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Generated link card */}
         {creatingLink && (
-          <Card padding={16} style={{ marginBottom: 12, borderWidth: 1, borderColor: Colors.primary }}>
-            <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 4 }}>
+          <Block padding={16} style={{ marginBottom: 12, borderWidth: 1, borderColor: palette.accent }}>
+            <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 4 }}>
               Novo convite gerado — copie e envie:
             </Text>
-            <Text style={{ fontSize: 12, color: Colors.text, fontFamily: "monospace", marginBottom: 12 }} selectable>
+            <Text style={{ fontSize: 12, color: palette.ink, fontFamily: "monospace", marginBottom: 12 }} selectable>
               {creatingLink}
             </Text>
-            <Btn label="Copiar link" onPress={() => handleCopy(creatingLink)} />
-          </Card>
+            <Button label="Copiar link" onPress={() => handleCopy(creatingLink)} />
+          </Block>
         )}
 
         <View style={{ marginBottom: 20 }}>
-          <Btn
+          <Button
             label="Gerar novo convite"
             onPress={() => { setCreatingLink(null); createInvite(); }}
-            loading={creating}
+            isLoading={creating}
           />
         </View>
 
-        {loading && <ActivityIndicator color={Colors.primary} />}
+        {loading && <ActivityIndicator color={palette.accent} />}
 
         {invites.length === 0 && !loading && (
-          <Text style={{ textAlign: "center", color: Colors.textSec, marginTop: 20 }}>
+          <Text style={{ textAlign: "center", color: palette.muted, marginTop: 20 }}>
             Nenhum convite gerado ainda.
           </Text>
         )}
@@ -150,35 +125,35 @@ export function AdminInvitesScreen() {
           const isPending = status.label === "Pendente";
 
           return (
-            <Card key={invite.id} padding={14} style={{ marginBottom: 10 }}>
+            <Block key={invite.id} padding={14} style={{ marginBottom: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <View style={{
                   backgroundColor: status.color + "20",
                   paddingHorizontal: 8,
                   paddingVertical: 3,
-                  borderRadius: Radius.sm,
+                  borderRadius: radius.control,
                 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: status.color }}>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: status.color }}>
                     {status.label}
                   </Text>
                 </View>
-                <Text style={{ fontSize: 11, color: Colors.textSec }}>
+                <Text style={{ fontSize: 12, color: palette.muted }}>
                   {formatDate(invite.insertedAt)}
                 </Text>
               </View>
 
               {invite.usedByEmail ? (
-                <Text style={{ fontSize: 13, color: Colors.text }}>
+                <Text style={{ fontSize: 13, color: palette.ink }}>
                   Usado por: <Text style={{ fontWeight: "600" }}>{invite.usedByEmail}</Text>
                 </Text>
               ) : (
-                <Text style={{ fontSize: 12, color: Colors.textSec, fontFamily: "monospace" }} numberOfLines={1}>
+                <Text style={{ fontSize: 12, color: palette.muted, fontFamily: "monospace" }} numberOfLines={1}>
                   {invite.token ? inviteUrl(invite.token) : "—"}
                 </Text>
               )}
 
               {invite.expiresAt && (
-                <Text style={{ fontSize: 11, color: Colors.textSec, marginTop: 4 }}>
+                <Text style={{ fontSize: 12, color: palette.muted, marginTop: 4 }}>
                   Expira: {formatDate(invite.expiresAt)}
                 </Text>
               )}
@@ -190,30 +165,30 @@ export function AdminInvitesScreen() {
                     style={{
                       flex: 1,
                       paddingVertical: 8,
-                      borderRadius: Radius.md,
+                      borderRadius: radius.control,
                       borderWidth: 1,
-                      borderColor: Colors.primary,
+                      borderColor: palette.accent,
                       alignItems: "center",
                     }}
                   >
-                    <Text style={{ color: Colors.primary, fontWeight: "600", fontSize: 13 }}>Copiar</Text>
+                    <Text style={{ color: palette.accent, fontWeight: "600", fontSize: 13 }}>Copiar</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleRevoke(invite.id!)}
                     style={{
                       flex: 1,
                       paddingVertical: 8,
-                      borderRadius: Radius.md,
+                      borderRadius: radius.control,
                       borderWidth: 1,
-                      borderColor: Colors.danger,
+                      borderColor: palette.danger,
                       alignItems: "center",
                     }}
                   >
-                    <Text style={{ color: Colors.danger, fontWeight: "600", fontSize: 13 }}>Revogar</Text>
+                    <Text style={{ color: palette.danger, fontWeight: "600", fontSize: 13 }}>Revogar</Text>
                   </TouchableOpacity>
                 </View>
               )}
-            </Card>
+            </Block>
           );
         })}
       </ScrollView>

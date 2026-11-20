@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { formatDay, type PeriodPace } from "../analytics";
 import { AxisTextStyle, ChartColors } from "../charts/chart-tokens";
 import { barPath, hLines, niceTicks } from "../charts/scale";
 import type { MoneyFormat } from "../use-money";
-import { Colors, Radius } from "../../../theme/tokens";
 import { PACE_LEFT, paceRight } from "./CumulativeChart";
+import { palette, radius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type DailyBarsChartProps = { pace: PeriodPace; width: number; format: MoneyFormat };
 
@@ -63,7 +64,7 @@ export function DailyBarsChart({ pace, width, format }: DailyBarsChartProps) {
         <Path d={over} fill={ChartColors.over} />
         <Path
           d={hLines([limit], y, PACE_LEFT, PACE_LEFT + pw + 4)}
-          stroke={Colors.text}
+          stroke={palette.ink}
           strokeWidth={1.5}
           strokeDasharray="4 3"
         />
@@ -75,7 +76,7 @@ export function DailyBarsChart({ pace, width, format }: DailyBarsChartProps) {
         </Text>
       ))}
       {right > 12 ? (
-        <Text style={[AxisTextStyle, { left: PACE_LEFT + pw + 8, top: y(limit) - 7, fontWeight: "700", color: Colors.text }]}>
+        <Text style={[AxisTextStyle, { left: PACE_LEFT + pw + 8, top: y(limit) - 7, fontWeight: "700", color: palette.ink }]}>
           limite {format.money(limit)}/dia
         </Text>
       ) : null}
@@ -110,12 +111,12 @@ export function DailyBarsChart({ pace, width, format }: DailyBarsChartProps) {
             left: tipLeft,
             width: TOOLTIP_W,
             padding: 10,
-            borderRadius: Radius.sm,
+            borderRadius: radius.control,
             backgroundColor: ChartColors.tooltipBg,
           }}
         >
           <Text style={{ fontSize: 12, color: ChartColors.tooltipMuted }}>{formatDay(tip.date, true)}</Text>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.surface }}>{format.money(tip.total)}</Text>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: palette.sheet }}>{format.money(tip.total)}</Text>
           <Text
             style={{
               fontSize: 12,

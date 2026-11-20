@@ -1,10 +1,11 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import type { PeriodPace } from "../analytics";
 import { AxisTextStyle, ChartColors } from "../charts/chart-tokens";
 import { hLines, niceTicks, polyline } from "../charts/scale";
 import type { MoneyFormat } from "../use-money";
-import { Colors } from "../../../theme/tokens";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 export const PACE_LEFT = 56;
 export const paceRight = (width: number) => (width >= 560 ? 104 : 12);
@@ -66,13 +67,13 @@ export function CumulativeChart({ pace, width, format }: CumulativeChartProps) {
           />
         ) : null}
         <Path d={line} stroke={ChartColors.series} strokeWidth={2.5} fill="none" strokeLinejoin="round" />
-        <Circle cx={todayX} cy={todayY} r={6} fill={ChartColors.series} stroke={Colors.surface} strokeWidth={2} />
+        <Circle cx={todayX} cy={todayY} r={6} fill={ChartColors.series} stroke={palette.sheet} strokeWidth={2} />
         {hasFuture ? (
           <Circle
             cx={x(pace.totalDays)}
             cy={y(pace.projection)}
             r={5}
-            fill={Colors.surface}
+            fill={palette.sheet}
             stroke={ChartColors.series}
             strokeWidth={2}
           />
@@ -98,10 +99,10 @@ export function CumulativeChart({ pace, width, format }: CumulativeChartProps) {
           alignItems: labelOnRight ? "flex-start" : "flex-end",
         }}
       >
-        <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.text }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: palette.ink }}>
           {hasFuture ? "Hoje" : "Fim"} · {format.money(today)}
         </Text>
-        <Text style={{ fontSize: 12, fontWeight: "700", color: gap > 0 ? ChartColors.overText : Colors.successText }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: gap > 0 ? ChartColors.overText : palette.income }}>
           {gap > 0 ? "+" : "−"}
           {format.money(Math.abs(gap))} vs ritmo ideal
         </Text>
@@ -112,7 +113,7 @@ export function CumulativeChart({ pace, width, format }: CumulativeChartProps) {
           <Text style={{ fontSize: 12, fontWeight: "700", color: ChartColors.seriesText }}>
             {format.money(pace.projection)}
           </Text>
-          <Text style={{ fontSize: 11, color: Colors.textSec }}>projeção</Text>
+          <Text style={{ fontSize: 12, color: palette.muted }}>projeção</Text>
         </View>
       ) : null}
     </View>

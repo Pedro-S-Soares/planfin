@@ -1,8 +1,10 @@
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { useCurrency } from "../../../context/CurrencyContext";
 import type { BillOccurrencesQuery } from "../../../graphql/__generated__/hooks";
-import { Colors, Radius } from "../../../theme/tokens";
 import { formatMoney, formatMonth, formatShortDate, toNumber } from "../format";
+import { palette, radius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
+import { Button } from "../../../components/ui/Button";
 
 export type BillOccurrence = NonNullable<NonNullable<BillOccurrencesQuery["billOccurrences"]>[number]>;
 
@@ -46,10 +48,10 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
       ? quotaText
       : isIncome
     ? isPaid
-      ? `✓ Recebida em ${formatShortDate(o.paidOn)}${next}`
+      ? `Recebida em ${formatShortDate(o.paidOn)}${next}`
       : `A receber em ${formatShortDate(o.dueDate)}`
     : isPaid
-    ? `${isCard ? "✓ Na fatura" : "✓ Paga"} em ${formatShortDate(o.paidOn)}${next}`
+    ? `${isCard ? "Na fatura" : "Paga"} em ${formatShortDate(o.paidOn)}${next}`
     : isBeforeStart
         ? `Já estava na fatura quando foi cadastrada${next}`
       : isOverdue
@@ -60,13 +62,13 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
 
   const statusColor = isQuota
     ? spent > quota
-      ? Colors.danger
-      : Colors.textSec
+      ? palette.danger
+      : palette.muted
     : isPaid
-      ? Colors.successText
+      ? palette.income
       : isOverdue
-        ? Colors.danger
-        : Colors.textSec;
+        ? palette.danger
+        : palette.muted;
   const actionLabel = isQuota && !isSkipped
     ? "+ Gasto"
     : isPaid
@@ -86,15 +88,15 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
   const onAction = isSkipped ? onUnskip : isQuota ? onAddPurchase : isPaid ? onUndo : onPay;
 
   return (
-    <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
+    <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: palette.rule }}>
       <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
         <TouchableOpacity onPress={onEdit} activeOpacity={0.7} style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>{o.bill?.name}</Text>
-          <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 1 }}>
-            {isIncome ? "⬇️" : isCard ? "💳" : "🏦"} {o.bill?.account?.name} · {recurrence}
+          <Text style={{ fontSize: 15, fontWeight: "700", color: palette.ink }}>{o.bill?.name}</Text>
+          <Text style={{ fontSize: 12, color: palette.muted, marginTop: 1 }}>
+            {isIncome ? "Entra em" : isCard ? "Cartão" : "Conta"} {o.bill?.account?.name} · {recurrence}
           </Text>
         </TouchableOpacity>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: isIncome ? Colors.successText : Colors.text }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: isIncome ? palette.income : palette.ink }}>
           {isIncome ? "+" : ""}
           {formatMoney(isQuota ? o.bill?.amount : o.amount, currency.symbol)}
         </Text>
@@ -103,21 +105,16 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
         <Text style={{ flex: 1, fontSize: 12, fontWeight: "600", color: statusColor }}>{statusText}</Text>
         {canSkip ? (
           <TouchableOpacity onPress={onSkip} activeOpacity={0.75} hitSlop={8}>
-            <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.textSec }}>Pular mês</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>Pular mês</Text>
           </TouchableOpacity>
         ) : null}
-        <TouchableOpacity
+        <Button
+          label={actionLabel}
+          size="sm"
+          variant={isPrimaryAction ? "primary" : "secondary"}
+          isFullWidth={false}
           onPress={onAction}
-          activeOpacity={0.75}
-          style={{
-            borderRadius: Radius.full,
-            paddingHorizontal: 14,
-            paddingVertical: 6,
-            backgroundColor: isPrimaryAction ? Colors.primary : Colors.bg,
-          }}
-        >
-          <Text style={{ fontSize: 12, fontWeight: "700", color: isPrimaryAction ? "#fff" : Colors.textSec }}>{actionLabel}</Text>
-        </TouchableOpacity>
+        />
       </View>
     </View>
   );

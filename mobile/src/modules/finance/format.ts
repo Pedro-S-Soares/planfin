@@ -1,5 +1,6 @@
 import { formatDateBR } from "../../lib/date";
 import { toNumber } from "../../lib/money";
+import type { IconName } from "../../components/ui/Icon";
 
 export { formatMoney, toNumber } from "../../lib/money";
 
@@ -14,13 +15,19 @@ export const ACCOUNT_KIND_LABEL: Record<AccountKind, string> = {
   benefit: "Vale alimentação",
 };
 
-export const ACCOUNT_KIND_ICON: Record<AccountKind, string> = {
-  checking: "🏦",
-  credit_card: "💳",
-  allowance: "👛",
-  reserve: "🛟",
-  benefit: "🍽️",
-};
+/** Vector icon (Material Community Icons) of each kind of account. */
+export const ACCOUNT_KIND_ICON = {
+  checking: "bank-outline",
+  credit_card: "credit-card-outline",
+  allowance: "wallet-outline",
+  reserve: "lifebuoy",
+  benefit: "silverware-fork-knife",
+} as const satisfies Record<AccountKind, IconName>;
+
+/** Icon of an account whose kind may be unknown (an older or partial query). */
+export function accountKindIcon(kind: string | null | undefined): IconName {
+  return isAccountKind(kind) ? ACCOUNT_KIND_ICON[kind] : "bank-outline";
+}
 
 export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   upcoming: "Futura",
