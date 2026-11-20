@@ -1,4 +1,5 @@
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Btn } from "../../components/ui/Btn";
@@ -7,11 +8,14 @@ import { ExpenseRow } from "../../components/ui/ExpenseRow";
 import { InlineError } from "../../components/ui/InlineError";
 import { useCurrency } from "../../context/CurrencyContext";
 import { useInvoiceQuery } from "../../graphql/__generated__/hooks";
-import { toISODate } from "../../lib/date";
+import { formatWeekdayDate, toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { Colors } from "../../theme/tokens";
 import { AdjustInvoiceTotal } from "./components/AdjustInvoiceTotal";
 import { StatusPill } from "./components/StatusPill";
+import { groupInvoiceByDay } from "./invoice-days";
+import { EntrySheet } from "../history/components/EntrySheet";
+import { CLOSED_SHEET, createEntryState, editEntryState, type EntrySheetState } from "../history/entry-sheet";
 import { formatMoney, formatMonth, formatShortDate, isInvoiceStatus, toNumber } from "./format";
 import type { AppStackParamList } from "../../../App";
 
@@ -26,6 +30,7 @@ export function InvoiceScreen() {
     variables: { cardId: params.cardId, month: params.month, today: toISODate(new Date()) },
     fetchPolicy: "cache-and-network",
   });
+  const [sheet, setSheet] = useState<EntrySheetState>(CLOSED_SHEET);
 
   if (loading && !data) return <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />;
   if (error || !data?.invoice) {
@@ -38,6 +43,8 @@ export function InvoiceScreen() {
 
   const invoice = data.invoice;
   const entries = invoice.entries?.filter((e) => e !== null) ?? [];
+  const days = groupInvoiceByDay(entries, invoice.startDate ?? params.month);
+  const openCreate = (date: string) => setSheet(createEntryState(date, { kind: "account", id: params.cardId }));
   const canPay = toNumber(invoice.remaining) > 0;
   const isEarly = invoice.status === "open" || invoice.status === "upcoming";
 
@@ -82,34 +89,67 @@ export function InvoiceScreen() {
       </Card>
 
       <Card padding={16}>
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7, marginBottom: 4 }}>
-          LANÇAMENTOS ({entries.length})
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>
+            LANÇAMENTOS ({entries.length})
+          </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => openCreate(toISODate(new Date()))}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>+ Lançar</Text>
+          </TouchableOpacity>
+        </View>
         {entries.length === 0 ? (
           <Text style={{ color: Colors.textTer, textAlign: "center", paddingVertical: 12 }}>Nenhum lançamento nesta fatura.</Text>
         ) : (
-          entries.map((item) => (
-            <ExpenseRow
-              key={item.id ?? ""}
-              item={{ ...item, id: item.id ?? "", amount: item.amount ?? "0" }}
-              onPress={() =>
-                navigation.navigate(item.type === "income" ? "EditIncome" : "EditExpense", {
-                  id: item.id ?? "",
-                  amount: item.amount ?? "0",
-                  date: item.date ?? params.month,
-                  note: item.note ?? undefined,
-                  isExtra: item.isExtra ?? undefined,
-                  subcategoryId: item.subcategory?.id ?? undefined,
-                  categoryId: undefined,
-                  accountId: item.account?.id ?? undefined,
-                  countsInBudget: item.countsInBudget ?? undefined,
-                  installmentCount: item.installmentCount ?? undefined,
-                })
-              }
-            />
+          days.map((day) => (
+            <View key={day.date}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  paddingTop: 14,
+                  paddingBottom: 2,
+                }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.text }}>{formatWeekdayDate(day.date)}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  {day.entries.length > 1 ? (
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: Colors.textSec }}>
+                      {formatMoney(day.total, currency.symbol)}
+                    </Text>
+                  ) : null}
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Lançar neste dia"
+                    onPress={() => openCreate(day.date)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primaryText }}>+ Lançar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {day.entries.map((item) => (
+                <ExpenseRow
+                  key={item.id ?? ""}
+                  item={{ ...item, id: item.id ?? "", amount: item.amount ?? "0" }}
+                  onPress={() =>
+                    setSheet(editEntryState({ ...item, id: item.id ?? "", amount: item.amount ?? "0" }, day.date))
+                  }
+                />
+              ))}
+            </View>
           ))
         )}
       </Card>
+      <EntrySheet
+        state={sheet}
+        onClose={() => setSheet(CLOSED_SHEET)}
+        onTypeChange={(type) => setSheet((current) => (current.mode === "create" ? { ...current, type } : current))}
+      />
     </ScrollView>
   );
 }

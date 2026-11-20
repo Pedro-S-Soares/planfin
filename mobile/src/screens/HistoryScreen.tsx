@@ -1,16 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "@apollo/client/react";
 import {
   useDeleteExpenseMutation,
   ActivePeriodDocument,
 } from "../graphql/__generated__/hooks";
+import { toast } from "../lib/toast";
 import { usePeriod } from "../context/PeriodContext";
 import { useAuth } from "../context/AuthContext";
 import { useCurrency } from "../context/CurrencyContext";
-import { formatDateBR } from "../lib/date";
+import { formatWeekdayDate, toISODate } from "../lib/date";
+import { confirm } from "../lib/alert";
 import {
   EXPENSE_HISTORY_WITH_AUTHORS,
   type ExpenseDayWithAuthors,
@@ -33,13 +34,46 @@ import {
 import { HistoryFilterBar } from "../modules/history/components/HistoryFilterBar";
 import { HistorySummaryCard } from "../modules/history/components/HistorySummaryCard";
 import { TransferRow } from "../modules/history/components/TransferRow";
-import type { AppStackParamList } from "../../App";
-
-type Navigation = NativeStackNavigationProp<AppStackParamList>;
+import { EntrySheet } from "../modules/history/components/EntrySheet";
+import {
+  CLOSED_SHEET,
+  createEntryState,
+  editEntryState,
+  type EntrySheetState,
+} from "../modules/history/entry-sheet";
 type ExpenseHistoryData = { expenseHistory: ExpenseDayWithAuthors[] };
 
 function dayTotalColor(total: number) {
   return total > 0 ? Colors.success : Colors.textSec;
+}
+
+/** Today, kept inside the period so a budget entry can be saved without touching the date. */
+function defaultEntryDate(startDate?: string | null, endDate?: string | null) {
+  const today = toISODate(new Date());
+  if (startDate && today < startDate) return startDate;
+  if (endDate && today > endDate) return endDate;
+  return today;
+}
+
+function AddDayButton({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel="Lançar neste dia"
+      onPress={onPress}
+      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{
+        height: 26,
+        paddingHorizontal: 10,
+        borderRadius: 999,
+        backgroundColor: Colors.primaryLight,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primaryText }}>+ Lançar</Text>
+    </TouchableOpacity>
+  );
 }
 
 function authorLabel(author: ExpenseWithAuthor["createdBy"], currentUserId?: string) {
@@ -50,12 +84,12 @@ function authorLabel(author: ExpenseWithAuthor["createdBy"], currentUserId?: str
 
 export function HistoryScreen() {
   usePageTitle("Planfin - Histórico");
-  const navigation = useNavigation<Navigation>();
   const { period, refetch: refetchPeriod } = usePeriod();
   const { user } = useAuth();
   const { currency } = useCurrency();
   const { accounts } = useFinancialAccounts();
   const [filters, setFilters] = useState<HistoryFilters>(DEFAULT_HISTORY_FILTERS);
+  const [sheet, setSheet] = useState<EntrySheetState>(CLOSED_SHEET);
 
   const { data, loading, error, refetch } = useQuery<ExpenseHistoryData>(
     EXPENSE_HISTORY_WITH_AUTHORS,
@@ -74,7 +108,8 @@ export function HistoryScreen() {
   );
 
   const [deleteExpense] = useDeleteExpenseMutation({
-    onCompleted: () => { refetch(); refetchPeriod(); },
+    onCompleted: () => { refetch(); refetchPeriod(); toast.success("Lançamento excluído"); },
+    onError: (deleteError) => { console.error(deleteError); toast.error("Não foi possível excluir. Tente de novo."); },
     refetchQueries: [{ query: ActivePeriodDocument }],
   });
 
@@ -95,6 +130,16 @@ export function HistoryScreen() {
     return `${months[start.getMonth()]} ${start.getFullYear()} – ${months[end.getMonth()]} ${end.getFullYear()}`;
   })();
 
+  const openCreate = (date: string) => setSheet(createEntryState(date, filters.account));
+  const closeSheet = () => setSheet(CLOSED_SHEET);
+  const entrySheet = (
+    <EntrySheet
+      state={sheet}
+      onClose={closeSheet}
+      onTypeChange={(type) => setSheet((current) => (current.mode === "create" ? { ...current, type } : current))}
+    />
+  );
+
   const header = (
     <View style={{
       backgroundColor: Colors.surface,
@@ -104,14 +149,34 @@ export function HistoryScreen() {
       borderBottomWidth: 1,
       borderBottomColor: Colors.border,
     }}>
-      <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.text, letterSpacing: -0.4 }}>
-        Histórico
-      </Text>
-      {periodLabel && (
-        <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
-          Período: {periodLabel}
-        </Text>
-      )}
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <View style={{ flexShrink: 1 }}>
+          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.text, letterSpacing: -0.4 }}>
+            Histórico
+          </Text>
+          {periodLabel && (
+            <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
+              Período: {periodLabel}
+            </Text>
+          )}
+        </View>
+        {period ? (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => openCreate(defaultEntryDate(period.startDate, period.endDate))}
+            style={{
+              height: 40,
+              paddingHorizontal: 16,
+              borderRadius: 999,
+              backgroundColor: Colors.primary,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>+ Lançar</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     </View>
   );
 
@@ -119,7 +184,8 @@ export function HistoryScreen() {
     <HistoryFilterBar filters={filters} accounts={accounts} onChange={setFilters} />
   );
 
-  if (loading) {
+  // Only the first load replaces the list: refetches after a save keep it (and its scroll) on screen.
+  if (loading && !data) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.bg }}>
         {header}
@@ -151,6 +217,7 @@ export function HistoryScreen() {
             {hasActiveFilters(filters) ? "Nenhum lançamento com esses filtros." : "Nenhum gasto registrado ainda."}
           </Text>
         </View>
+        {entrySheet}
       </View>
     );
   }
@@ -170,11 +237,14 @@ export function HistoryScreen() {
           <View style={{ marginBottom: 14 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8, paddingHorizontal: 2 }}>
               <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.text }}>
-                {formatDateBR(day.date)}
+                {formatWeekdayDate(day.date)}
               </Text>
-              <Text style={{ fontSize: 12, color: dayTotalColor(day.total), fontWeight: "600" }}>
-                Total: {formatMoney(day.total, currency.symbol, true)}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Text style={{ fontSize: 12, color: dayTotalColor(day.total), fontWeight: "600" }}>
+                  Total: {formatMoney(day.total, currency.symbol, true)}
+                </Text>
+                <AddDayButton onPress={() => openCreate(day.date)} />
+              </View>
             </View>
             <Card padding={12}>
               {day.items.map((historyItem) => historyItem.kind === "transfer" ? (
@@ -188,27 +258,11 @@ export function HistoryScreen() {
                 <ExpenseRow
                   key={historyItem.entry.id}
                   item={historyItem.entry}
-                  onPress={() => {
-                    const item = historyItem.entry;
-                    const params = {
-                      id: item.id,
-                      amount: item.amount,
-                      date: item.date ?? day.date,
-                      note: item.note ?? undefined,
-                      isExtra: item.isExtra ?? undefined,
-                      subcategoryId: item.subcategory?.id ?? undefined,
-                      categoryId: undefined,
-                  accountId: item.account?.id ?? undefined,
-                  countsInBudget: item.countsInBudget ?? undefined,
-                  installmentCount: item.installmentCount ?? undefined,
-                    };
-                    if (item.type === "income") {
-                      navigation.navigate("EditIncome", params);
-                    } else {
-                      navigation.navigate("EditExpense", params);
-                    }
-                  }}
-                  onDelete={(id) => deleteExpense({ variables: { id } })}
+                  onPress={() => setSheet(editEntryState(historyItem.entry, day.date))}
+                  onDelete={(id) => confirm(
+                    { title: "Excluir este lançamento?", confirmLabel: "Excluir", destructive: true },
+                    () => deleteExpense({ variables: { id } }),
+                  )}
                   authorLabel={authorLabel(historyItem.entry.createdBy, user?.id)}
                 />
               ))}
@@ -216,6 +270,7 @@ export function HistoryScreen() {
           </View>
         )}
       />
+      {entrySheet}
     </View>
   );
 }

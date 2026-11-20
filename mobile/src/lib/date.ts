@@ -17,3 +17,10 @@ export function parseISODate(iso: string): Date {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
+
+const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+
+/** "qua, 05/11": how a day reads on a bank statement. */
+export function formatWeekdayDate(iso: string): string {
+  return `${WEEKDAYS[parseISODate(iso).getDay()]}, ${formatDateBR(iso).slice(0, 5)}`;
+}

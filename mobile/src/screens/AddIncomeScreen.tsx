@@ -22,7 +22,8 @@ import { AccountPicker } from "../modules/finance/components/AccountPicker";
 import { ToggleRow } from "../modules/finance/components/ToggleRow";
 import { defaultSpendingAccountId, useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import { parseCents } from "../lib/currency";
-import type { AppStackParamList } from "../../App";
+import { toast } from "../lib/toast";
+import type { AppStackParamList, EntryFormParams } from "../../App";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -47,6 +48,17 @@ export function AddIncomeScreen() {
   usePageTitle("Planfin - Nova receita");
   const navigation = useNavigation();
   const { params } = useRoute<RouteProp<AppStackParamList, "AddIncome">>();
+  return <AddIncomeForm params={params} onDone={() => navigation.goBack()} />;
+}
+
+interface AddIncomeFormProps {
+  params?: EntryFormParams;
+  /** Called once the entry is saved. */
+  onDone: () => void;
+}
+
+/** The new-income form: its own screen, and the sheet opened over the history. */
+export function AddIncomeForm({ params, onDone }: AddIncomeFormProps) {
   const { period, refetch } = usePeriod();
   const { accounts } = useFinancialAccounts();
 
@@ -82,7 +94,7 @@ export function AddIncomeScreen() {
     categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
 
   const [createExpense, { loading }] = useCreateExpenseMutation({
-    onCompleted: () => { refetch(); navigation.goBack(); },
+    onCompleted: () => { refetch(); toast.success("Receita registrada"); onDone(); },
     onError: (error) => setError("root", { message: error.message }),
     refetchQueries: [
       { query: ActivePeriodDocument },
