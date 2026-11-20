@@ -1,4 +1,5 @@
 import type { AppStackParamList, EntryFormParams } from "../../../App";
+import { toISODate } from "../../lib/date";
 import type { AccountFilter } from "./history-filters";
 
 export type EntryType = "expense" | "income";
@@ -20,6 +21,14 @@ export const CLOSED_SHEET: EntrySheetState = { mode: "closed" };
 export function createEntryState(date: string, account: AccountFilter, type: EntryType = "expense"): EntrySheetState {
   const accountId = account.kind === "account" ? account.id : account.kind === "none" ? null : undefined;
   return { mode: "create", type, params: { date, accountId } };
+}
+
+/** Today, kept inside the period so a budget entry can be saved without touching the date. */
+export function defaultEntryDate(startDate?: string | null, endDate?: string | null): string {
+  const today = toISODate(new Date());
+  if (startDate && today < startDate) return startDate;
+  if (endDate && today > endDate) return endDate;
+  return today;
 }
 
 /** The fields of a history or invoice entry that the edit form needs. */

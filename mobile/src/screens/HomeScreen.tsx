@@ -31,11 +31,20 @@ import { TotalBalanceCard } from "../components/ui/TotalBalanceCard";
 import { Card } from "../components/ui/Card";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { InlineError } from "../components/ui/InlineError";
-import { Colors, Radius, Shadow } from "../theme/tokens";
+import { Colors, Ledger, Radius } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { FinancePanel } from "../modules/finance/components/FinancePanel";
 import { MonthPlanCard } from "../modules/finance/components/MonthPlanCard";
 import { AllowanceCard } from "../modules/finance/components/AllowanceCard";
+import { SpendableLine } from "../modules/finance/components/SpendableLine";
+import { EntrySheet } from "../modules/history/components/EntrySheet";
+import {
+  CLOSED_SHEET,
+  createEntryState,
+  defaultEntryDate,
+  editEntryState,
+  type EntrySheetState,
+} from "../modules/history/entry-sheet";
 import type { AppStackParamList } from "../../App";
 import type { GroupPeriod } from "../context/PeriodContext";
 
@@ -202,6 +211,7 @@ export function HomeScreen() {
   const { activeGroup } = useGroup();
   const navigation = useNavigation<Navigation>();
   const [balanceView, setBalanceView] = useState<BalanceView>("daily");
+  const [sheet, setSheet] = useState<EntrySheetState>(CLOSED_SHEET);
 
   const balance = period?.today?.availableBalance ?? "0.00";
 
@@ -279,9 +289,7 @@ export function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <FinancePanel />
-
-        {/* Balance card */}
+        {/* The one hero number: what can be spent today (or in the period, on "Total") */}
         <BalanceViewToggle value={balanceView} onChange={setBalanceView} />
         {balanceView === "daily" ? (
           <DailyBalanceCard
@@ -290,11 +298,13 @@ export function HomeScreen() {
             dailyLimit={period?.dailyLimit ?? "0.00"}
             extraBudget={period?.extraBudget ?? "0.00"}
             extraSpent={period?.extraSpent ?? "0.00"}
+            footer={<SpendableLine />}
           />
         ) : (
           <TotalBalanceCard
             remainingTotal={period?.remainingTotal ?? "0.00"}
             extraRemaining={period?.extraRemaining ?? "0.00"}
+            footer={<SpendableLine />}
           />
         )}
 
@@ -321,6 +331,7 @@ export function HomeScreen() {
           </TouchableOpacity>
         )}
 
+        <FinancePanel />
         <MonthPlanCard />
         <AllowanceCard />
 
@@ -341,18 +352,7 @@ export function HomeScreen() {
               <ExpenseRow
                 key={item.id}
                 item={item}
-                onPress={() => navigation.navigate("EditExpense", {
-                  id: item.id,
-                  amount: item.amount,
-                  date: item.date ?? todayStr,
-                  note: item.note ?? undefined,
-                  isExtra: item.isExtra ?? undefined,
-                  subcategoryId: item.subcategory?.id ?? undefined,
-                  categoryId: undefined,
-                  accountId: item.account?.id ?? undefined,
-                  countsInBudget: item.countsInBudget ?? undefined,
-                  installmentCount: item.installmentCount ?? undefined,
-                })}
+                onPress={() => setSheet(editEntryState(item, todayStr))}
                 authorLabel={authorLabel(item.createdBy, user?.id)}
               />
             ))
@@ -360,30 +360,22 @@ export function HomeScreen() {
         </Card>
       </ScrollView>
 
-      {/* FAB row */}
-      <View style={styles.fabRow}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate("AddIncome")}
-          activeOpacity={0.85}
-          style={styles.fabIncome}
-        >
-          <Text style={styles.fabLabel}>+ Receita</Text>
-        </TouchableOpacity>
+      {/* One floating action: the same entry sheet as the history (Gasto/Receita inside) */}
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Lançar gasto ou receita"
+        onPress={() => setSheet(createEntryState(defaultEntryDate(period?.startDate, period?.endDate), { kind: "all" }))}
+        activeOpacity={0.85}
+        style={styles.fab}
+      >
+        <Text style={styles.fabLabel}>+ Lançar</Text>
+      </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => navigation.navigate("AddExpense")}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={[Colors.gradStart, Colors.gradEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.fabGradient}
-          >
-            <Text style={styles.fabIcon}>+</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+      <EntrySheet
+        state={sheet}
+        onClose={() => setSheet(CLOSED_SHEET)}
+        onTypeChange={(type) => setSheet((current) => (current.mode === "create" ? { ...current, type } : current))}
+      />
     </View>
   );
 }
@@ -464,7 +456,8 @@ const styles = StyleSheet.create({
   // Scroll content
   scrollContent: {
     padding: 16,
-    paddingBottom: 24,
+    // Room for the floating "+ Lançar" (52 + 24 from the bottom) so it never covers the last card.
+    paddingBottom: 100,
   },
   // Period info
   periodInfoRow: {
@@ -512,51 +505,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingVertical: 16,
   },
-  // FAB row
-  fabRow: {
+  // Floating "+ Lançar"
+  fab: {
     position: "absolute",
     bottom: 24,
-    right: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  fabIncome: {
-    backgroundColor: Colors.success,
-    borderRadius: 26,
-    paddingHorizontal: 18,
+    right: 16,
     height: 52,
+    paddingHorizontal: 22,
+    borderRadius: Radius.full,
+    backgroundColor: Ledger.accent,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: Colors.success,
+    shadowColor: Ledger.accent,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.3,
     shadowRadius: 14,
     elevation: 6,
   },
   fabLabel: {
     color: "#fff",
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-  fabGradient: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Colors.fabShadow,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  fabIcon: {
-    color: "#fff",
-    fontSize: 26,
-    lineHeight: 32,
-    fontWeight: "300",
   },
   // Android period picker modal
   modalOverlay: {

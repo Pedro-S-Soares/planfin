@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Switch, ScrollView } from "react-native";
+import { Text, ScrollView } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -10,25 +10,27 @@ import {
   useUpdateExpenseMutation,
   useDeleteExpenseMutation,
   ActivePeriodDocument,
-  CategoriesQuery,
 } from "../graphql/__generated__/hooks";
 import { usePeriod } from "../context/PeriodContext";
 import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
 import { Btn } from "../components/ui/Btn";
-import { Chip } from "../components/ui/Chip";
 import { displayToAPI, formatCents } from "../lib/currency";
-import { categoryColor, Colors, Radius } from "../theme/tokens";
+import { Ledger } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { confirm } from "../lib/alert";
 import { AccountPicker } from "../modules/finance/components/AccountPicker";
 import { InstallmentsSection } from "../modules/finance/components/InstallmentsSection";
 import { useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import { toast } from "../lib/toast";
+import {
+  CategoryField,
+  DeleteEntryButton,
+  ExtraToggle,
+  FieldLabel,
+  MoreOptions,
+  NoteField,
+} from "../modules/history/components/entry-form-parts";
 import type { AppStackParamList } from "../../App";
-
-type Category = NonNullable<CategoriesQuery["categories"]>[number];
-type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
 
 const schema = yup.object({
   amount: yup
@@ -103,8 +105,6 @@ export function EditExpenseForm({ entry, onDone }: EditExpenseFormProps) {
   }, [subcategoryCategoryId, getValues, setValue]);
 
   const selectedCategoryId = watch("categoryId");
-  const subcategories: NonNullable<Subcategory>[] =
-    categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
 
   const [updateExpense, { loading: updating }] = useUpdateExpenseMutation({
     onCompleted: () => { refetch(); toast.success("Alteração salva"); onDone(); },
@@ -154,13 +154,12 @@ export function EditExpenseForm({ entry, onDone }: EditExpenseFormProps) {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.surface }}
-      contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
+      style={{ flex: 1, backgroundColor: Ledger.sheet }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
-        Valor
-      </Text>
+      <FieldLabel>Valor</FieldLabel>
       <Controller
         control={control}
         name="amount"
@@ -169,9 +168,26 @@ export function EditExpenseForm({ entry, onDone }: EditExpenseFormProps) {
         )}
       />
 
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
-        Data
-      </Text>
+      <CategoryField
+        categories={categories}
+        categoryId={selectedCategoryId ?? ""}
+        subcategoryId={watch("subcategoryId") ?? ""}
+        onCategoryChange={(categoryIdValue) => {
+          setValue("categoryId", categoryIdValue);
+          setValue("subcategoryId", "");
+        }}
+        onSubcategoryChange={(subcategoryIdValue) => setValue("subcategoryId", subcategoryIdValue)}
+      />
+
+      <Controller
+        control={control}
+        name="accountId"
+        render={({ field: { onChange, value } }) => (
+          <AccountPicker label="Pago com" accounts={accounts} value={value ?? null} onChange={onChange} allowNone />
+        )}
+      />
+
+      <FieldLabel>Data</FieldLabel>
       <Controller
         control={control}
         name="date"
@@ -186,154 +202,46 @@ export function EditExpenseForm({ entry, onDone }: EditExpenseFormProps) {
         )}
       />
 
-      {installmentCount ? <InstallmentsSection expenseId={id} onAnticipated={onDone} /> : null}
+      <MoreOptions
+        summary={installmentCount ? "Parcelas, gasto extra, nota" : "Gasto extra, nota"}
+        isInitiallyOpen={Boolean(installmentCount || note || isExtra)}
+      >
+        {installmentCount ? <InstallmentsSection expenseId={id} onAnticipated={onDone} /> : null}
 
-      <Controller
-        control={control}
-        name="accountId"
-        render={({ field: { onChange, value } }) => (
-          <AccountPicker label="Pago com" accounts={accounts} value={value ?? null} onChange={onChange} allowNone />
-        )}
-      />
+        <Controller
+          control={control}
+          name="isExtra"
+          render={({ field: { onChange, value } }) => (
+            <ExtraToggle title="Gasto extra" value={value ?? false} onChange={onChange} />
+          )}
+        />
 
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 }}>
-        Categoria
-      </Text>
-      <Controller
-        control={control}
-        name="categoryId"
-        render={({ field: { onChange, value } }) => (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 16 }}>
-            {(categories as NonNullable<Category>[]).map((cat) => (
-              <Chip
-                key={cat.id}
-                label={cat.name ?? ""}
-                selected={value === cat.id}
-                dot={categoryColor(cat.name ?? "").dot}
-                icon={cat.icon}
-                onPress={() => onChange(value === cat.id ? "" : cat.id)}
-              />
-            ))}
-          </View>
-        )}
-      />
-
-      {subcategories.length > 0 && (
-        <>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 }}>
-            Subcategoria de {categories.find((c) => c?.id === selectedCategoryId)?.name ?? "categoria"}
-          </Text>
-          <Controller
-            control={control}
-            name="subcategoryId"
-            render={({ field: { onChange, value } }) => (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 16 }}>
-                {subcategories.map((sub) => (
-                  <Chip
-                    key={sub.id}
-                    label={sub.name ?? ""}
-                    selected={value === sub.id}
-                    onPress={() => onChange(value === sub.id ? "" : sub.id)}
-                  />
-                ))}
-              </View>
-            )}
-          />
-        </>
-      )}
-
-      <Controller
-        control={control}
-        name="isExtra"
-        render={({ field: { onChange, value } }) => (
-          <TouchableOpacity
-            onPress={() => onChange(!value)}
-            activeOpacity={0.8}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              backgroundColor: value ? Colors.primaryLight : Colors.bg,
-              borderRadius: Radius.md,
-              borderWidth: 1.5,
-              borderColor: value ? Colors.primary : Colors.border,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              marginBottom: 16,
-            }}
-          >
-            <View style={{ flex: 1, marginRight: 12 }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: value ? Colors.primaryText : Colors.text }}>
-                Gasto extra
-              </Text>
-              <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
-                Não conta no limite diário, só no orçamento total
-              </Text>
-            </View>
-            <Switch
-              value={value ?? false}
-              onValueChange={onChange}
-              trackColor={{ false: Colors.border, true: Colors.primary }}
-              thumbColor="#fff"
-            />
-          </TouchableOpacity>
-        )}
-      />
-
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
-        Nota (opcional)
-      </Text>
-      <Controller
-        control={control}
-        name="note"
-        render={({ field: { onChange, onBlur, value } }) => (
-          <View style={{ marginBottom: 16 }}>
-            <TextInput
-              style={{
-                height: 52,
-                borderWidth: 1.5,
-                borderColor: Colors.border,
-                borderRadius: Radius.md,
-                paddingHorizontal: 16,
-                fontSize: 16,
-                color: Colors.text,
-                backgroundColor: Colors.surface,
-              }}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              placeholder="Ex: almoço com amigos"
-              placeholderTextColor={Colors.textTer}
-            />
-          </View>
-        )}
-      />
+        <Controller
+          control={control}
+          name="note"
+          render={({ field: { onChange, onBlur, value } }) => (
+            <NoteField value={value ?? ""} onChange={onChange} onBlur={onBlur} placeholder="Ex: almoço com amigos" />
+          )}
+        />
+      </MoreOptions>
 
       {errors.root && (
-        <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+        <Text style={{ color: Ledger.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
           {errors.root.message}
         </Text>
       )}
 
       <Btn label="Salvar alterações" onPress={handleSubmit(onSubmit)} loading={isLoading} />
-      <View style={{ height: 12 }} />
-      <Btn
+      <DeleteEntryButton
         label={installmentCount ? "Excluir compra parcelada" : "Excluir gasto"}
-        variant="danger"
-        onPress={() =>
+        confirmTitle={installmentCount ? "Excluir compra parcelada?" : "Excluir este gasto?"}
+        confirmMessage={
           installmentCount
-            ? confirm(
-                {
-                  title: "Excluir compra parcelada",
-                  message: "Todas as parcelas desta compra serão apagadas, inclusive as de faturas futuras.",
-                  confirmLabel: "Excluir",
-                  destructive: true,
-                },
-                () => deleteExpense({ variables: { id } }),
-              )
-            : deleteExpense({ variables: { id } })
+            ? "Todas as parcelas desta compra serão apagadas, inclusive as de faturas futuras."
+            : undefined
         }
-        loading={isLoading}
+        isDisabled={isLoading}
+        onConfirm={() => deleteExpense({ variables: { id } })}
       />
     </ScrollView>
   );

@@ -24,3 +24,20 @@ const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 export function formatWeekdayDate(iso: string): string {
   return `${WEEKDAYS[parseISODate(iso).getDay()]}, ${formatDateBR(iso).slice(0, 5)}`;
 }
+
+const SHORT_MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+/**
+ * Months a period covers, without repeating what is shared:
+ * "Nov 2026" · "Nov – Dez 2026" · "Dez 2026 – Jan 2027". Null without both dates.
+ */
+export function formatPeriodMonths(startISO?: string | null, endISO?: string | null): string | null {
+  if (!startISO || !endISO) return null;
+  const [startYear, startMonth] = startISO.split("-").map(Number);
+  const [endYear, endMonth] = endISO.split("-").map(Number);
+  const start = SHORT_MONTHS[startMonth - 1];
+  const end = SHORT_MONTHS[endMonth - 1];
+  if (startYear !== endYear) return `${start} ${startYear} – ${end} ${endYear}`;
+  if (startMonth !== endMonth) return `${start} – ${end} ${endYear}`;
+  return `${start} ${endYear}`;
+}

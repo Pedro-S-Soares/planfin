@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import * as SecureStore from "expo-secure-store";
+import { storage } from "../lib/storage";
 
 const STORE_KEY = "pf_currency";
 
@@ -30,16 +30,22 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
   const [code, setCode] = useState<CurrencyCode>("BRL");
 
   useEffect(() => {
-    SecureStore.getItemAsync(STORE_KEY).then((stored) => {
-      if (stored && CURRENCIES.find((c) => c.code === stored)) {
-        setCode(stored as CurrencyCode);
-      }
-    });
+    // Through `storage`: expo-secure-store has no web implementation (it threw
+    // "ExpoSecureStore.getValueWithKeyAsync is not a function" on every web load).
+    storage
+      .getItem(STORE_KEY)
+      .then((stored) => {
+        const match = CURRENCIES.find((c) => c.code === stored);
+        if (match) setCode(match.code);
+      })
+      .catch((error: unknown) => console.error("Failed to read the saved currency", error));
   }, []);
 
   const setCurrencyCode = useCallback((next: CurrencyCode) => {
     setCode(next);
-    SecureStore.setItemAsync(STORE_KEY, next);
+    storage
+      .setItem(STORE_KEY, next)
+      .catch((error: unknown) => console.error("Failed to save the currency", error));
   }, []);
 
   const currency = CURRENCIES.find((c) => c.code === code) ?? CURRENCIES[0];

@@ -6,7 +6,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { enableScreens } from "react-native-screens";
-import { Text, Platform } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { GroupProvider, useGroup } from "./src/context/GroupContext";
@@ -428,17 +428,28 @@ function Navigation() {
   );
 }
 
+// On a wide screen (desktop browser) the app keeps a phone-like column, centered,
+// instead of stretching lists to the full window.
+const frameStyles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: "#E9E7F2" },
+  frame: { flex: 1, width: "100%", maxWidth: 560, alignSelf: "center", backgroundColor: "#F6F5FA", overflow: "hidden" },
+});
+
 export default function App() {
   return (
     <SafeAreaProvider>
       <ApolloProvider client={apolloClient}>
         <CurrencyProvider>
           <AuthProvider>
-            <NavigationContainer linking={linking}>
-              <Navigation />
-            </NavigationContainer>
+            <View style={frameStyles.page}>
+              <View style={frameStyles.frame}>
+                <NavigationContainer linking={linking}>
+                  <Navigation />
+                </NavigationContainer>
+                <ToastHost />
+              </View>
+            </View>
             <StatusBar style="auto" />
-            <ToastHost />
           </AuthProvider>
         </CurrencyProvider>
       </ApolloProvider>

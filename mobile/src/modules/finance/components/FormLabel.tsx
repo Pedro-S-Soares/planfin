@@ -1,19 +1,7 @@
 import { Text } from "react-native";
-import { Colors } from "../../../theme/tokens";
+import { Ledger } from "../../../theme/tokens";
 
+/** Field label in sentence case (no spaced capitals), as in the "extrato da casa" direction. */
 export function FormLabel({ children }: { children: string }) {
-  return (
-    <Text
-      style={{
-        fontSize: 11,
-        fontWeight: "700",
-        color: Colors.textSec,
-        letterSpacing: 0.8,
-        textTransform: "uppercase",
-        marginBottom: 8,
-      }}
-    >
-      {children}
-    </Text>
-  );
+  return <Text style={{ fontSize: 14, fontWeight: "600", color: Ledger.muted, marginBottom: 8 }}>{children}</Text>;
 }

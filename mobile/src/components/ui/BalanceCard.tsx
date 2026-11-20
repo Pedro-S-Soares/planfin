@@ -1,13 +1,8 @@
 import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
-import { Colors, Radius } from "../../theme/tokens";
 import { useCurrency } from "../../context/CurrencyContext";
-
-export function formatAmount(value: string | number): string {
-  const num = typeof value === "number" ? value : parseFloat(value || "0");
-  return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { formatMoney, toNumber } from "../../lib/money";
+import { Ledger, TABULAR_NUMS } from "../../theme/tokens";
 
 interface BalanceCardProps {
   title: string;
@@ -15,34 +10,24 @@ interface BalanceCardProps {
   children?: ReactNode;
 }
 
-/** Gradient card shell: title + big amount, turning red when the amount is negative. */
+/** The one big number of the Home: label + amount in tabular digits, red when negative. */
 export function BalanceCard({ title, amount, children }: BalanceCardProps) {
   const { currency } = useCurrency();
-  const amountNum = parseFloat(amount || "0");
-  const isPositive = amountNum >= 0;
-
-  const gradColors = isPositive
-    ? ([Colors.gradStart, Colors.gradEnd] as const)
-    : ([Colors.dangerGradStart, Colors.dangerGradEnd] as const);
+  const isNegative = toNumber(amount) < 0;
 
   return (
-    <LinearGradient
-      colors={gradColors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.card, { shadowColor: isPositive ? Colors.fabShadow : "rgba(229,57,43,0.35)" }]}
-    >
+    <View style={styles.card}>
       <Text style={styles.title}>{title}</Text>
-
-      <View style={styles.amountRow}>
-        <Text style={styles.currency}>
-          {!isPositive ? "- " : ""}{currency.symbol}
-        </Text>
-        <Text style={styles.amount}>{formatAmount(Math.abs(amountNum))}</Text>
-      </View>
-
+      <Text
+        style={[styles.amount, isNegative && styles.amountNegative]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        accessibilityRole="header"
+      >
+        {formatMoney(amount, currency.symbol)}
+      </Text>
       {children}
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -59,7 +44,7 @@ export function BalanceStat({ label, value, isFlexible = false }: BalanceStatPro
     <View style={isFlexible ? styles.statFlex : undefined}>
       <Text style={styles.statLabel}>{label}</Text>
       <Text style={styles.statValue} numberOfLines={1}>
-        {currency.symbol} {formatAmount(value)}
+        {formatMoney(value, currency.symbol)}
       </Text>
     </View>
   );
@@ -75,66 +60,56 @@ export function BalanceStatDivider() {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Radius.xl,
-    padding: 22,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 1,
-    shadowRadius: 28,
-    elevation: 8,
-    overflow: "hidden",
+    backgroundColor: Ledger.sheet,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Ledger.rule,
+    padding: 16,
   },
   title: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.75)",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  amountRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 2,
-    marginBottom: 14,
-  },
-  currency: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.8)",
-    paddingTop: 6,
-    marginRight: 2,
+    color: Ledger.muted,
   },
   amount: {
-    fontSize: 48,
+    fontSize: 44,
     fontWeight: "800",
-    color: "#fff",
-    letterSpacing: -1.5,
-    lineHeight: 56,
+    color: Ledger.ink,
+    letterSpacing: -1,
+    lineHeight: 52,
+    marginTop: 2,
+    marginBottom: 12,
+    ...TABULAR_NUMS,
+  },
+  amountNegative: {
+    color: Ledger.danger,
   },
   statRow: {
     flexDirection: "row",
     gap: 12,
     alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: Ledger.rule,
+    paddingTop: 12,
   },
   statFlex: {
     flex: 1,
   },
   statLabel: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.65)",
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    fontSize: 12,
+    color: Ledger.muted,
+    fontWeight: "500",
     marginBottom: 2,
   },
   statValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#fff",
+    color: Ledger.ink,
+    ...TABULAR_NUMS,
   },
   statDivider: {
     width: 1,
     height: 32,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: Ledger.rule,
   },
 });

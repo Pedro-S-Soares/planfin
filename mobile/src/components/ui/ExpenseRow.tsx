@@ -5,6 +5,7 @@ import { CategoryIcon } from "./CategoryIcon";
 import { useCurrency } from "../../context/CurrencyContext";
 import { subcategoryLabel } from "../../lib/category-label";
 import { isRecurringEntry } from "../../modules/history/history-filters";
+import { formatMoney, toNumber } from "../../lib/money";
 
 interface ExpenseItem {
   id: string;
@@ -26,11 +27,10 @@ interface ExpenseItem {
 interface ExpenseRowProps {
   item: ExpenseItem;
   onPress?: () => void;
-  onDelete?: (id: string) => void;
   authorLabel?: string | null;
 }
 
-export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowProps) {
+export function ExpenseRow({ item, onPress, authorLabel }: ExpenseRowProps) {
   const { currency } = useCurrency();
   const colorKey = item.subcategory?.category?.name ?? item.subcategory?.name ?? "";
   const cc = categoryColor(colorKey);
@@ -81,7 +81,7 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
 
       <View style={{ flex: 1, minWidth: 0 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: Colors.text }} numberOfLines={2}>
+          <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: Colors.text }} numberOfLines={1}>
             {title}
           </Text>
           {isIncome && (
@@ -115,27 +115,10 @@ export function ExpenseRow({ item, onPress, onDelete, authorLabel }: ExpenseRowP
         ) : null}
       </View>
 
-      <Text style={{ fontSize: 15, fontWeight: "700", color: isIncome ? Colors.success : Colors.text, flexShrink: 0, marginRight: onDelete ? 8 : 0 }}>
-        {isIncome ? "+" : ""}{currency.symbol} {parseFloat(item.amount).toFixed(2).replace(".", ",")}
+      <Text style={{ fontSize: 15, fontWeight: "700", color: isIncome ? Colors.success : Colors.text, flexShrink: 0, fontVariant: ["tabular-nums"] }}>
+        {formatMoney(isIncome ? item.amount : -toNumber(item.amount), currency.symbol, { sign: "flow" })}
       </Text>
 
-      {onDelete && (
-        <TouchableOpacity
-          onPress={() => onDelete(item.id)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 999,
-            backgroundColor: Colors.dangerLight,
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <Text style={{ color: Colors.danger, fontSize: 12, fontWeight: "700", lineHeight: 14 }}>✕</Text>
-        </TouchableOpacity>
-      )}
     </TouchableOpacity>
   );
 }

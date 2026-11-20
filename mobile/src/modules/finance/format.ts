@@ -1,4 +1,7 @@
 import { formatDateBR } from "../../lib/date";
+import { toNumber } from "../../lib/money";
+
+export { formatMoney, toNumber } from "../../lib/money";
 
 export type AccountKind = "checking" | "credit_card" | "allowance" | "reserve" | "benefit";
 export type InvoiceStatus = "upcoming" | "open" | "closed" | "partial" | "paid" | "overdue" | "empty";
@@ -51,19 +54,6 @@ export function isInvoiceStatus(value: string | null | undefined): value is Invo
     value === "paid" ||
     value === "overdue"
   );
-}
-
-export function toNumber(value: string | null | undefined): number {
-  const n = parseFloat(value ?? "0");
-  return Number.isFinite(n) ? n : 0;
-}
-
-/** "R$ 1.234,56" — `signed` adds "+" to positive values; negatives always get "-". */
-export function formatMoney(value: number | string | null | undefined, symbol: string, signed = false): string {
-  const n = typeof value === "number" ? value : toNumber(value);
-  const abs = Math.abs(n).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const sign = n < -0.004 ? "-" : signed && n > 0.004 ? "+" : "";
-  return `${sign}${symbol} ${abs}`;
 }
 
 /** "2026-10" → "Out/2026" */

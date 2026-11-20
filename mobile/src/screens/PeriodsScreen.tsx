@@ -16,6 +16,8 @@ import { usePeriod } from "../context/PeriodContext";
 import { Card } from "../components/ui/Card";
 import { Colors, Radius } from "../theme/tokens";
 import { formatDateBR } from "../lib/date";
+import { formatMoney } from "../lib/money";
+import { useCurrency } from "../context/CurrencyContext";
 import type { AppStackParamList } from "../../App";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
@@ -24,11 +26,10 @@ type GroupPeriodsData = {
   groupPeriods: GroupPeriod[];
 };
 
-function formatMoney(value: string | null | undefined): string {
-  if (!value) return "—";
-  const num = parseFloat(value);
-  if (isNaN(num)) return "—";
-  return "R$ " + num.toFixed(2).replace(".", ",");
+/** Planned amounts of a period; "—" when it was never set. */
+function formatPlanned(value: string | null | undefined, symbol: string): string {
+  if (!value || Number.isNaN(parseFloat(value))) return "—";
+  return formatMoney(value, symbol);
 }
 
 function PeriodStatusChip({ status }: { status: string }) {
@@ -47,6 +48,7 @@ function PeriodRow({ item, isSelected, onSelect }: { item: GroupPeriod; isSelect
   const dateRange = `${formatDateBR(item.startDate)} → ${formatDateBR(item.endDate)}`;
   const title = item.name?.trim() ? item.name : dateRange;
   const subtitle = item.name?.trim() ? dateRange : null;
+  const { currency } = useCurrency();
 
   return (
     <TouchableOpacity onPress={onSelect} activeOpacity={0.75}>
@@ -64,13 +66,13 @@ function PeriodRow({ item, isSelected, onSelect }: { item: GroupPeriod; isSelect
           <View style={styles.rowMetrics}>
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>Limite diário</Text>
-              <Text style={styles.metricValue}>{formatMoney(item.dailyLimit)}</Text>
+              <Text style={styles.metricValue}>{formatPlanned(item.dailyLimit, currency.symbol)}</Text>
             </View>
             <View style={styles.metricSep} />
             <View style={styles.metric}>
               <Text style={styles.metricLabel}>Saldo disponível</Text>
               <Text style={[styles.metricValue, item.availableBalance && parseFloat(item.availableBalance) < 0 ? styles.metricValueDanger : null]}>
-                {formatMoney(item.availableBalance)}
+                {formatPlanned(item.availableBalance, currency.symbol)}
               </Text>
             </View>
           </View>

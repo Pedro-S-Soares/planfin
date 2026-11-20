@@ -91,7 +91,7 @@ export function AccountDetailScreen() {
                   <Text style={{ fontSize: 12, color: Colors.textSec }}>{m.date ? formatDateBR(m.date) : ""}</Text>
                 </View>
                 <Text style={{ fontSize: 14, fontWeight: "700", color: amount > 0 ? Colors.success : Colors.text }}>
-                  {formatMoney(amount, currency.symbol, true)}
+                  {formatMoney(amount, currency.symbol, { sign: "flow" })}
                 </Text>
               </View>
             );

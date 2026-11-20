@@ -61,7 +61,7 @@ export function TransferRow({ transfer, signedAmount, currencySymbol }: Transfer
       <Text style={{ fontSize: 15, fontWeight: "700", color: amountColor, flexShrink: 0 }}>
         {signedAmount === null
           ? formatMoney(transfer.amount, currencySymbol)
-          : formatMoney(signedAmount, currencySymbol, true)}
+          : formatMoney(signedAmount, currencySymbol, { sign: "flow" })}
       </Text>
     </View>
   );

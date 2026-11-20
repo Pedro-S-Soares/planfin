@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useCurrency } from "../../context/CurrencyContext";
+import { formatMoney } from "../../lib/money";
 
 export type MoneyFormat = {
   /** "R$ 1.480" */
@@ -21,7 +22,7 @@ export function signedPercent(value: number): string {
 export function useMoney(): MoneyFormat {
   const { currency } = useCurrency();
   return useMemo(() => {
-    const money = (value: number) => `${currency.symbol} ${Math.round(value).toLocaleString("pt-BR")}`;
+    const money = (value: number) => formatMoney(value, currency.symbol, { decimals: 0 });
     const compact = (value: number) => {
       if (value === 0) return `${currency.symbol} 0`;
       if (Math.abs(value) >= 1000) {
