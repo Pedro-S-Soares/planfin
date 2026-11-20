@@ -6,8 +6,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Card } from "../../../components/ui/Card";
 import { InlineError } from "../../../components/ui/InlineError";
 import { useCurrency } from "../../../context/CurrencyContext";
-import { Colors, Radius } from "../../../theme/tokens";
-import { formatMoney, formatShortDate, toNumber } from "../format";
+import { Colors, Ledger, TABULAR_NUMS } from "../../../theme/tokens";
+import { formatMoney, formatShortDate } from "../format";
 import { useFinancePanel } from "../use-finance-panel";
 import { CommitmentList } from "./CommitmentList";
 import { SalaryBanner } from "./SalaryBanner";
@@ -21,8 +21,8 @@ type Navigation = CompositeNavigationProp<
 function Figure({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
     <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.6 }}>{label}</Text>
-      <Text style={{ fontSize: 16, fontWeight: "800", color: tone ?? Colors.text, marginTop: 3 }} numberOfLines={1} adjustsFontSizeToFit>
+      <Text style={{ fontSize: 12, color: Ledger.muted }}>{label}</Text>
+      <Text style={{ fontSize: 16, fontWeight: "700", color: tone ?? Ledger.ink, marginTop: 2, ...TABULAR_NUMS }} numberOfLines={1} adjustsFontSizeToFit>
         {value}
       </Text>
     </View>
@@ -58,7 +58,6 @@ export function FinancePanel() {
     );
   }
 
-  const free = toNumber(panel.free);
   const commitments = panel.commitments?.filter((c) => c !== null) ?? [];
   const salary = panel.salary;
   const horizonLabel = salary?.configured
@@ -68,32 +67,12 @@ export function FinancePanel() {
   return (
     <Card padding={16} style={{ marginBottom: 12 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>DINHEIRO NA CONTA</Text>
-        <Text style={{ fontSize: 11, color: Colors.textTer }}>{horizonLabel}</Text>
+        <Text style={{ fontSize: 14, fontWeight: "600", color: Ledger.ink }}>Dinheiro na conta</Text>
+        <Text style={{ fontSize: 12, color: Ledger.muted }}>{horizonLabel}</Text>
       </View>
       <View style={{ flexDirection: "row", gap: 10 }}>
-        <Figure label="TENHO" value={formatMoney(panel.available, currency.symbol)} />
-        <Figure label="COMPROMETIDO" value={formatMoney(panel.committed, currency.symbol)} tone={Colors.textSec} />
-      </View>
-      <View
-        style={{
-          marginTop: 12,
-          borderRadius: Radius.md,
-          padding: 12,
-          backgroundColor: free < 0 ? Colors.dangerLight : Colors.successLight,
-        }}
-      >
-        <Text style={{ fontSize: 11, fontWeight: "700", color: free < 0 ? Colors.danger : Colors.successText, letterSpacing: 0.6 }}>
-          POSSO GASTAR
-        </Text>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: free < 0 ? Colors.danger : Colors.successText, marginTop: 2 }}>
-          {formatMoney(free, currency.symbol)}
-        </Text>
-        {free < 0 ? (
-          <Text style={{ fontSize: 12, color: Colors.danger, marginTop: 2 }}>
-            Falta dinheiro para cobrir o que vence antes do próximo salário.
-          </Text>
-        ) : null}
+        <Figure label="Tenho" value={formatMoney(panel.available, currency.symbol)} />
+        <Figure label="Comprometido" value={formatMoney(panel.committed, currency.symbol)} tone={Ledger.muted} />
       </View>
       <TouchableOpacity onPress={() => setExpanded((v) => !v)} activeOpacity={0.7} style={{ paddingTop: 10 }}>
         <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>

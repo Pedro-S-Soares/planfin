@@ -40,7 +40,7 @@ export function PlanSection({ sign, title, items, emptyText, hideCount }: PlanSe
         <Text style={{ fontSize: 14, fontWeight: "700", color }}>
           {items.length === 0 && emptyText
             ? emptyText
-            : formatMoney(sign === "+" ? total : -total, currency.symbol, true).replace(/^-/, "− ")
+            : formatMoney(sign === "+" ? total : -total, currency.symbol, { sign: "always" }).replace(/^-/, "− ")
                 .replace(/^\+/, "+ ")}
         </Text>
       </TouchableOpacity>

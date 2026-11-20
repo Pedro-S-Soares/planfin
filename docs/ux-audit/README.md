@@ -54,7 +54,7 @@ App rodando local (Postgres em docker, dados falsos de um casal: conta corrente,
 - Fatura do cartão: lançamentos **agrupados por dia** ("qua, 05/11"), mais recente primeiro, parcela "2/10" visível, + Lançar por dia e edição na folha.
 - Confirmação antes de excluir pelo ✕; toasts de "Gasto registrado", "Alteração salva", "Lançamento excluído".
 
-### Ganhos rápidos (1–2 dias cada)
+### Ganhos rápidos (1–2 dias cada) — entregues no CX-66, ver [abaixo](#ganhos-rápidos-cx-66)
 1. Uma função só de moeda (`formatMoney`) em todo lugar, com milhar; sinal só em entradas.
 2. Tirar o ✕ das linhas do histórico (excluir fica dentro da folha de edição, que já confirma).
 3. Filtros do histórico numa linha só: "Conta ▾ · Tipo ▾" com um seletor compacto; chips só quando há filtro ativo, com "limpar".
@@ -119,3 +119,16 @@ Gastos ficam em `ink` (são a regra); só a entrada ganha cor e sinal "+".
 | Desktop | — | [folha centralizada](img/desktop-depois-2-folha-novo-lancamento.png) |
 
 GIF do fluxo de conciliação: [depois-fluxo-conciliacao.gif](img/depois-fluxo-conciliacao.gif)
+
+## Ganhos rápidos (CX-66)
+
+| | Antes | Depois |
+|---|---|---|
+| Home: um número herói, "Posso gastar" como linha, um só "+ Lançar" | [antes](img/ganhos-antes-home.png) | [depois](img/ganhos-depois-home.png) · [fim da rolagem, nada cobre a Mesada](img/ganhos-depois-home-fim.png) · [+ Lançar abre a folha](img/ganhos-depois-home-folha.png) |
+| Histórico: filtros numa linha, sem ✕, "Período: Nov 2026" | [antes](img/ganhos-antes-historico.png) | [depois](img/ganhos-depois-historico.png) · [seletor "Tipo"](img/ganhos-depois-filtro-tipo.png) · [chips só dos filtros ativos + limpar](img/ganhos-depois-filtros-rolado.png) |
+| Formulário: valor → categoria → conta → data → Mais opções | — | [editar (abre "Mais opções" quando há nota/extra/parcelas)](img/ganhos-depois-editar.png) · [parcelas dentro de "Mais opções"](img/ganhos-depois-mais-opcoes.png) |
+| Desktop: coluna de 560px centralizada | [Home](img/ganhos-antes-desktop-home.png) · [Histórico](img/ganhos-antes-desktop-historico.png) | [Home](img/ganhos-depois-desktop-home.png) · [Histórico](img/ganhos-depois-desktop-historico.png) · [folha](img/ganhos-depois-desktop-folha.png) |
+
+- **Moeda**: `formatMoney` (em `src/lib/money.ts`) é o único formatador, com milhar. Modos de sinal: `auto` (saldos, "-" só se negativo), `flow` (lançamentos: "+" na entrada, gasto sem sinal) e `always` (diferenças e conta do planejamento).
+- **Excluir**: só dentro da folha de edição, como texto vermelho e sempre com confirmação (antes o gasto avulso era excluído sem perguntar).
+- **Console web**: a moeda escolhida era lida direto do `expo-secure-store`, que não existe no web; agora passa por `storage.ts`.

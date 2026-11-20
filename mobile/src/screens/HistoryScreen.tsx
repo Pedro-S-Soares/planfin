@@ -2,16 +2,10 @@ import { useCallback, useMemo, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "@apollo/client/react";
-import {
-  useDeleteExpenseMutation,
-  ActivePeriodDocument,
-} from "../graphql/__generated__/hooks";
-import { toast } from "../lib/toast";
 import { usePeriod } from "../context/PeriodContext";
 import { useAuth } from "../context/AuthContext";
 import { useCurrency } from "../context/CurrencyContext";
-import { formatWeekdayDate, toISODate } from "../lib/date";
-import { confirm } from "../lib/alert";
+import { formatPeriodMonths, formatWeekdayDate } from "../lib/date";
 import {
   EXPENSE_HISTORY_WITH_AUTHORS,
   type ExpenseDayWithAuthors,
@@ -38,6 +32,7 @@ import { EntrySheet } from "../modules/history/components/EntrySheet";
 import {
   CLOSED_SHEET,
   createEntryState,
+  defaultEntryDate,
   editEntryState,
   type EntrySheetState,
 } from "../modules/history/entry-sheet";
@@ -45,14 +40,6 @@ type ExpenseHistoryData = { expenseHistory: ExpenseDayWithAuthors[] };
 
 function dayTotalColor(total: number) {
   return total > 0 ? Colors.success : Colors.textSec;
-}
-
-/** Today, kept inside the period so a budget entry can be saved without touching the date. */
-function defaultEntryDate(startDate?: string | null, endDate?: string | null) {
-  const today = toISODate(new Date());
-  if (startDate && today < startDate) return startDate;
-  if (endDate && today > endDate) return endDate;
-  return today;
 }
 
 function AddDayButton({ onPress }: { onPress: () => void }) {
@@ -107,12 +94,6 @@ export function HistoryScreen() {
     }, [refetchPeriod, refetch, period?.id]),
   );
 
-  const [deleteExpense] = useDeleteExpenseMutation({
-    onCompleted: () => { refetch(); refetchPeriod(); toast.success("Lançamento excluído"); },
-    onError: (deleteError) => { console.error(deleteError); toast.error("Não foi possível excluir. Tente de novo."); },
-    refetchQueries: [{ query: ActivePeriodDocument }],
-  });
-
   const rawDays = data?.expenseHistory;
   // Day totals are recomputed from what the filters leave visible, so they always match the list.
   const days = useMemo(() => filterHistory(rawDays ?? [], filters), [rawDays, filters]);
@@ -122,13 +103,7 @@ export function HistoryScreen() {
     ? accounts.find((a) => a.id === accountFilter.id) ?? null
     : null;
 
-  const periodLabel = (() => {
-    if (!period?.startDate || !period?.endDate) return null;
-    const months = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-    const start = new Date(period.startDate + "T00:00:00");
-    const end = new Date(period.endDate + "T00:00:00");
-    return `${months[start.getMonth()]} ${start.getFullYear()} – ${months[end.getMonth()]} ${end.getFullYear()}`;
-  })();
+  const periodLabel = formatPeriodMonths(period?.startDate, period?.endDate);
 
   const openCreate = (date: string) => setSheet(createEntryState(date, filters.account));
   const closeSheet = () => setSheet(CLOSED_SHEET);
@@ -241,7 +216,7 @@ export function HistoryScreen() {
               </Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Text style={{ fontSize: 12, color: dayTotalColor(day.total), fontWeight: "600" }}>
-                  Total: {formatMoney(day.total, currency.symbol, true)}
+                  Total: {formatMoney(day.total, currency.symbol, { sign: "flow" })}
                 </Text>
                 <AddDayButton onPress={() => openCreate(day.date)} />
               </View>
@@ -259,10 +234,6 @@ export function HistoryScreen() {
                   key={historyItem.entry.id}
                   item={historyItem.entry}
                   onPress={() => setSheet(editEntryState(historyItem.entry, day.date))}
-                  onDelete={(id) => confirm(
-                    { title: "Excluir este lançamento?", confirmLabel: "Excluir", destructive: true },
-                    () => deleteExpense({ variables: { id } }),
-                  )}
                   authorLabel={authorLabel(historyItem.entry.createdBy, user?.id)}
                 />
               ))}

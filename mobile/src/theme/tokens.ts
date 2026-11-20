@@ -75,3 +75,22 @@ export const CategoryColors: Record<string, { dot: string; bg: string }> = {
 export function categoryColor(name: string) {
   return CategoryColors[name] ?? { dot: "#94A3B8", bg: "#F1F5F9" };
 }
+
+/**
+ * "Extrato da casa" palette (docs/ux-audit): the app as a well-printed bank statement.
+ * New and reworked components use these; the rest migrates in the redesign.
+ */
+export const Ledger = {
+  ink: "#1C1A2E",
+  paper: "#F6F5FA",
+  sheet: "#FFFFFF",
+  rule: "#E4E1EE",
+  muted: "#6A6785",
+  accent: "#4B3FD1",
+  accentSoft: "#ECEAFC",
+  income: "#0E7F57",
+  danger: "#C2372C",
+};
+
+/** Digits of equal width, so amounts line up in a column like on a statement. */
+export const TABULAR_NUMS = { fontVariant: ["tabular-nums" as const] };

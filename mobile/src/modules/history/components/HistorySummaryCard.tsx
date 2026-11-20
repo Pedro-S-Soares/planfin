@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 import { Card } from "../../../components/ui/Card";
-import { Colors } from "../../../theme/tokens";
+import { Colors, Ledger, TABULAR_NUMS } from "../../../theme/tokens";
 import { formatMoney } from "../../finance/format";
 import type { FinancialAccount } from "../../finance/use-financial-accounts";
 import type { HistorySummary } from "../history-filters";
@@ -15,8 +15,10 @@ interface HistorySummaryCardProps {
 function SummaryValue({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec }}>{label}</Text>
-      <Text style={{ fontSize: 15, fontWeight: "800", color }}>{value}</Text>
+      <Text style={{ fontSize: 12, color: Ledger.muted }}>{label}</Text>
+      <Text style={{ fontSize: 15, fontWeight: "700", color, ...TABULAR_NUMS }} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -27,11 +29,11 @@ export function HistorySummaryCard({ summary, account, currencySymbol }: History
   return (
     <Card padding={14} style={{ marginBottom: 14 }}>
       <View style={{ flexDirection: "row", gap: 10 }}>
-        <SummaryValue label="ENTRADAS" value={formatMoney(summary.incoming, currencySymbol)} color={Colors.success} />
-        <SummaryValue label="SAÍDAS" value={formatMoney(summary.outgoing, currencySymbol)} color={Colors.text} />
+        <SummaryValue label="Entradas" value={formatMoney(summary.incoming, currencySymbol)} color={Colors.success} />
+        <SummaryValue label="Saídas" value={formatMoney(summary.outgoing, currencySymbol)} color={Colors.text} />
         <SummaryValue
-          label="RESULTADO"
-          value={formatMoney(summary.net, currencySymbol, true)}
+          label="Resultado"
+          value={formatMoney(summary.net, currencySymbol, { sign: "always" })}
           color={summary.net >= 0 ? Colors.success : Colors.danger}
         />
       </View>

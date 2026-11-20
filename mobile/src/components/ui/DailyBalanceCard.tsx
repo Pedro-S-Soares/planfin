@@ -1,12 +1,9 @@
+import type { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useCurrency } from "../../context/CurrencyContext";
-import {
-  BalanceCard,
-  BalanceStat,
-  BalanceStatDivider,
-  BalanceStatRow,
-  formatAmount,
-} from "./BalanceCard";
+import { formatMoney, toNumber } from "../../lib/money";
+import { Ledger, TABULAR_NUMS } from "../../theme/tokens";
+import { BalanceCard, BalanceStat, BalanceStatDivider, BalanceStatRow } from "./BalanceCard";
 
 interface DailyBalanceCardProps {
   available: string;
@@ -14,6 +11,8 @@ interface DailyBalanceCardProps {
   dailyLimit: string;
   extraBudget: string;
   extraSpent: string;
+  /** Secondary lines under the stats (e.g. "Posso gastar"). */
+  footer?: ReactNode;
 }
 
 export function DailyBalanceCard({
@@ -22,10 +21,11 @@ export function DailyBalanceCard({
   dailyLimit,
   extraBudget,
   extraSpent,
+  footer,
 }: DailyBalanceCardProps) {
   const { currency } = useCurrency();
-  const extraBudgetNum = parseFloat(extraBudget || "0");
-  const extraSpentNum = parseFloat(extraSpent || "0");
+  const extraBudgetNum = toNumber(extraBudget);
+  const extraSpentNum = toNumber(extraSpent);
   const hasExtra = extraBudgetNum > 0;
   const isExtraOver = extraSpentNum > extraBudgetNum;
   const extraProgress = hasExtra ? Math.min(1, Math.max(0, extraSpentNum / extraBudgetNum)) : 0;
@@ -38,13 +38,14 @@ export function DailyBalanceCard({
         <BalanceStat label="Limite diário" value={dailyLimit} />
       </BalanceStatRow>
 
+      {footer}
+
       {hasExtra ? (
         <View style={styles.extraBlock}>
           <View style={styles.extraHeader}>
             <Text style={styles.extraLabel}>Extra do período</Text>
             <Text style={styles.extraValue} numberOfLines={1}>
-              {currency.symbol} {formatAmount(extraSpentNum)} usado de {currency.symbol}{" "}
-              {formatAmount(extraBudgetNum)}
+              {formatMoney(extraSpentNum, currency.symbol)} de {formatMoney(extraBudgetNum, currency.symbol)}
             </Text>
           </View>
           <View style={styles.extraTrack}>
@@ -64,43 +65,38 @@ export function DailyBalanceCard({
 
 const styles = StyleSheet.create({
   extraBlock: {
-    marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.2)",
+    marginTop: 12,
   },
   extraHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   extraLabel: {
-    fontSize: 11,
-    color: "rgba(255,255,255,0.65)",
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    fontSize: 14,
+    color: Ledger.muted,
   },
   extraValue: {
     flexShrink: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#fff",
+    color: Ledger.ink,
+    ...TABULAR_NUMS,
   },
   extraTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: Ledger.accentSoft,
     overflow: "hidden",
   },
   extraFill: {
     height: "100%",
     borderRadius: 3,
-    backgroundColor: "#fff",
+    backgroundColor: Ledger.accent,
   },
   extraFillOver: {
-    backgroundColor: "#FFD2CE",
+    backgroundColor: Ledger.danger,
   },
 });
