@@ -198,3 +198,18 @@ Os tokens acima viraram um módulo só, `mobile/src/theme/`, e as telas mais usa
 Desktop (1280px): login: [antes](img/f2-antes-desktop-login.png) / [depois](img/f2-depois-desktop-login.png) · hoje: [antes](img/f2-antes-desktop-hoje.png) / [depois](img/f2-depois-desktop-hoje.png) · contas: [antes](img/f2-antes-desktop-contas.png) / [depois](img/f2-depois-desktop-contas.png) · conta-detalhe: [antes](img/f2-antes-desktop-conta-detalhe.png) / [depois](img/f2-depois-desktop-conta-detalhe.png) · cartao-detalhe: [antes](img/f2-antes-desktop-cartao-detalhe.png) / [depois](img/f2-depois-desktop-cartao-detalhe.png) · dashboard: [antes](img/f2-antes-desktop-dashboard.png) / [depois](img/f2-depois-desktop-dashboard.png) · categorias: [antes](img/f2-antes-desktop-categorias.png) / [depois](img/f2-depois-desktop-categorias.png) · perfil: [antes](img/f2-antes-desktop-perfil.png) / [depois](img/f2-depois-desktop-perfil.png) · fixa-nova: [antes](img/f2-antes-desktop-fixa-nova.png) / [depois](img/f2-depois-desktop-fixa-nova.png) · grupos: [antes](img/f2-antes-desktop-grupos.png) / [depois](img/f2-depois-desktop-grupos.png).
 
 **Fica para depois**: fase 3 (navegação Hoje · Histórico · [+] · Contas · Painel, Categorias no perfil) e fase 4 (folha como único padrão de criar/editar). Os gráficos do Painel mantêm a paleta própria de séries (`chart-tokens`, `palette.ts` do dashboard), agora derivada do tema.
+
+## Redesenho, fase 3 (CX-69): navegação Hoje · Histórico · [+] · Contas · Painel
+
+- A barra de abas ficou **Hoje · Histórico · [+] · Contas · Painel**. O [+] do meio não é uma tela: abre a mesma folha de lançamento do histórico (Gasto/Receita) por cima da aba atual, com a data de hoje dentro do período (`modules/history/use-quick-entry.tsx`, `AddTabButton`). Salvar fecha a folha e mostra o toast; o lançamento aparece no histórico.
+- O botão flutuante "Lançar" da Home saiu (o [+] faz o mesmo); tocar num gasto de hoje continua editando na folha.
+- **Categorias** saiu das abas e foi para o Perfil ("Planejamento → Categorias"), como rota de pilha `Categories` com cabeçalho padrão. Nenhuma rota sumiu: `CategoryDetail` (a partir do Painel) segue igual.
+- Fluxos de #53–#56 conferidos: no histórico, filtro por conta + rolagem + "+" do dia abre a folha com o dia e a conta; fechar mantém a rolagem; excluir pede confirmação e mantém o filtro; na fatura o "+" do dia abre com o cartão marcado.
+
+| Tela | Antes | Depois |
+|---|---|---|
+| Hoje (390) | [antes](img/f3-antes-mobile-hoje.png) | [depois](img/f3-depois-mobile-hoje.png) |
+| [+] abre a folha (390) | [antes: botão flutuante](img/f3-antes-mobile-lancar.png) | [depois](img/f3-depois-mobile-lancar.png) · [salvo a partir do Painel](img/f3-depois-mobile-lancar-salvo-no-painel.png) |
+| Histórico (390) | [antes](img/f3-antes-mobile-historico.png) | [depois](img/f3-depois-mobile-historico.png) · [+ do dia](img/f3-depois-mobile-historico-lancar-no-dia.png) |
+| Categorias | [aba](img/f3-antes-mobile-categorias-aba.png) | [no Perfil](img/f3-depois-mobile-perfil.png) · [tela](img/f3-depois-mobile-categorias-perfil.png) |
+| Desktop | [Hoje](img/f3-antes-desktop-hoje.png) · [Lançar](img/f3-antes-desktop-lancar.png) | [Hoje](img/f3-depois-desktop-hoje.png) · [Lançar](img/f3-depois-desktop-lancar.png) · [Categorias](img/f3-depois-desktop-categorias-perfil.png) |

@@ -16,16 +16,14 @@ import {
 } from "../graphql/expenses";
 import { AppText } from "../components/ui/AppText";
 import { Block, ListBlock } from "../components/ui/Block";
-import { Button } from "../components/ui/Button";
 import { ChipGroup } from "../components/ui/Chip";
 import { DailyBalanceCard } from "../components/ui/DailyBalanceCard";
 import { SectionHeader } from "../components/ui/DayHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { InlineError } from "../components/ui/InlineError";
-import { PlusIcon } from "../components/ui/PlusIcon";
 import { TotalBalanceCard } from "../components/ui/TotalBalanceCard";
-import { layout, palette, radius, shadow, space } from "../theme";
+import { layout, palette, radius, space } from "../theme";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { FinancePanel } from "../modules/finance/components/FinancePanel";
 import { MonthPlanCard } from "../modules/finance/components/MonthPlanCard";
@@ -35,8 +33,6 @@ import { EntrySheet } from "../modules/history/components/EntrySheet";
 import { OptionSheet, type SheetSection } from "../modules/history/components/OptionSheet";
 import {
   CLOSED_SHEET,
-  createEntryState,
-  defaultEntryDate,
   editEntryState,
   type EntrySheetState,
 } from "../modules/history/entry-sheet";
@@ -180,8 +176,6 @@ export function HomeScreen() {
 
   const todayStr = toISODate(new Date());
   const todayExpenses = data?.expenseHistory?.find((d) => d.date === todayStr)?.expenses ?? [];
-  const openCreate = () =>
-    setSheet(createEntryState(defaultEntryDate(period?.startDate, period?.endDate), { kind: "all" }));
 
   const [logout] = useLogoutMutation({
     onCompleted: () => signOut(),
@@ -296,16 +290,6 @@ export function HomeScreen() {
         )}
       </ScrollView>
 
-      {/* One floating action: the same entry sheet as the history (Gasto/Receita inside) */}
-      <Button
-        label="Lançar"
-        isFullWidth={false}
-        leading={<PlusIcon />}
-        accessibilityLabel="Lançar gasto ou receita"
-        onPress={openCreate}
-        style={styles.fab}
-      />
-
       <EntrySheet
         state={sheet}
         onClose={() => setSheet(CLOSED_SHEET)}
@@ -364,8 +348,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: layout.gutter,
-    // Room for the floating "Lançar" (48 + 24 from the bottom) so it never covers the last block.
-    paddingBottom: 96,
+    paddingBottom: space.xxl,
   },
   viewToggle: {
     marginBottom: space.md,
@@ -385,12 +368,5 @@ const styles = StyleSheet.create({
   },
   activityIndicator: {
     marginVertical: space.xl,
-  },
-  fab: {
-    position: "absolute",
-    bottom: space.xl,
-    right: layout.gutter,
-    paddingHorizontal: space.xl,
-    ...shadow.floating,
   },
 });
