@@ -55,6 +55,8 @@ import { MonthPlanScreen } from "./src/modules/finance/MonthPlanScreen";
 import type { AccountKind } from "./src/modules/finance/format";
 import { font, palette, useThemeFonts } from "./src/theme";
 import { Icon, type IconName } from "./src/components/ui/Icon";
+import { AddTabButton } from "./src/modules/history/components/AddTabButton";
+import { useQuickEntry } from "./src/modules/history/use-quick-entry";
 
 enableScreens();
 
@@ -121,6 +123,7 @@ export type AppStackParamList = {
     note?: string;
   };
   CategoryDetail: { categoryId: string; range: RangeKey };
+  Categories: undefined;
   EditIncome: {
     id: string;
     amount: string;
@@ -138,9 +141,9 @@ export type AppStackParamList = {
 export type MainTabParamList = {
   Home: undefined;
   History: undefined;
+  Add: undefined;
   Accounts: undefined;
   Dashboard: undefined;
-  Categories: undefined;
 };
 
 /** Stack header in the theme: white bar, title in Manrope, back arrow in accent, a rule below. */
@@ -197,8 +200,10 @@ function MainTabs() {
   // after accounting for both the outer tabBarStyle padding (8+paddingBottom)
   // and the BottomTabBar internal button padding (7.5+7.5).
   const tabBarHeight = 64 + tabBarPaddingBottom;
+  const quickEntry = useQuickEntry();
 
   return (
+    <>
     <MainTab.Navigator
       screenOptions={{
         headerShown: false,
@@ -229,6 +234,16 @@ function MainTabs() {
         options={{ tabBarLabel: "Histórico", tabBarIcon: tabIcon("format-list-bulleted", "format-list-bulleted") }}
       />
       <MainTab.Screen
+        name="Add"
+        component={EmptyTab}
+        options={{
+          tabBarLabel: "Lançar",
+          tabBarAccessibilityLabel: "Lançar gasto ou receita",
+          tabBarButton: () => <AddTabButton onPress={quickEntry.open} />,
+        }}
+        listeners={{ tabPress: (event) => event.preventDefault() }}
+      />
+      <MainTab.Screen
         name="Accounts"
         component={AccountsScreen}
         options={{ tabBarLabel: "Contas", tabBarIcon: tabIcon("wallet-outline", "wallet") }}
@@ -238,13 +253,15 @@ function MainTabs() {
         component={DashboardScreen}
         options={{ tabBarLabel: "Painel", tabBarIcon: tabIcon("chart-box-outline", "chart-box") }}
       />
-      <MainTab.Screen
-        name="Categories"
-        component={CategoriesScreen}
-        options={{ tabBarLabel: "Categorias", tabBarIcon: tabIcon("tag-outline", "tag") }}
-      />
     </MainTab.Navigator>
+    {quickEntry.sheetElement}
+    </>
   );
+}
+
+/** The [+] tab never shows a screen: its button opens the entry sheet instead. */
+function EmptyTab() {
+  return null;
 }
 
 function AppNavigator() {
@@ -314,6 +331,7 @@ function AppNavigator() {
             component={AddIncomeScreen}
             options={modalOptions("Nova receita")}
           />
+          <AppStack.Screen name="Categories" component={CategoriesScreen} options={pushOptions("Categorias")} />
           <AppStack.Screen name="AccountForm" component={AccountFormScreen} options={modalOptions("Conta")} />
           <AppStack.Screen name="AccountDetail" component={AccountDetailScreen} options={pushOptions("Conta")} />
           <AppStack.Screen name="AdjustBalance" component={AdjustBalanceScreen} options={modalOptions("Ajustar saldo")} />

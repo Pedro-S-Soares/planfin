@@ -22,7 +22,6 @@ import { TextInput } from "../components/ui/TextInput";
 import { Icon } from "../components/ui/Icon";
 import { AppText } from "../components/ui/AppText";
 import { ChipGroup } from "../components/ui/Chip";
-import { ScreenHeader } from "../components/ui/ScreenHeader";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -109,7 +108,7 @@ export function CategoriesScreen() {
 
   const categories = (data?.categories ?? []).filter(Boolean) as NonNullable<Category>[];
 
-  const header = <ScreenHeader title="Categorias" subtitle="Organize seus gastos" />;
+  const header = null;
 
   if (loading) {
     return (

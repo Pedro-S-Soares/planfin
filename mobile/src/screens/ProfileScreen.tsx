@@ -150,6 +150,12 @@ export function ProfileScreen() {
           onPress={() => navigation.navigate("EditPeriod")}
         />
         <MenuRow
+          icon="tag-outline"
+          title="Categorias"
+          detail="Organize categorias e subcategorias"
+          onPress={() => navigation.navigate("Categories")}
+        />
+        <MenuRow
           icon="calendar-multiple"
           title="Gerenciar períodos"
           detail="Ver histórico e planejamentos do grupo"
