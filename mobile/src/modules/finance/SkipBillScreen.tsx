@@ -1,14 +1,15 @@
 import { useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { ScrollView } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
-import { Btn } from "../../components/ui/Btn";
+import { Button } from "../../components/ui/Button";
 import { FieldInput } from "../../components/ui/FieldInput";
 import { useSkipBillMutation } from "../../graphql/__generated__/hooks";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { formatMonth } from "./format";
 import type { AppStackParamList } from "../../../App";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
 
 /** Skips one month of a fixed bill without deleting it. */
 export function SkipBillScreen() {
@@ -25,9 +26,9 @@ export function SkipBillScreen() {
   });
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.surface }} contentContainerStyle={{ padding: 18 }}>
-      <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>{params.name}</Text>
-      <Text style={{ fontSize: 13, color: Colors.textSec, marginBottom: 18, lineHeight: 19 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.sheet }} contentContainerStyle={{ padding: 18 }}>
+      <Text style={{ fontSize: 15, fontWeight: "700", color: palette.ink }}>{params.name}</Text>
+      <Text style={{ fontSize: 13, color: palette.muted, marginBottom: 18, lineHeight: 19 }}>
         Em {formatMonth(params.month)} ela não acontece: sai do comprometido e do planejamento
         {params.isCard ? " e não entra na fatura" : ""}. A despesa fixa continua cadastrada e volta no mês seguinte.
       </Text>
@@ -38,13 +39,13 @@ export function SkipBillScreen() {
         placeholder="Ex.: Tobias não vai à creche este mês"
         maxLength={200}
       />
-      {error ? <Text style={{ color: Colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
-      <Btn
+      {error ? <Text style={{ color: palette.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
+      <Button
         label={`Pular ${formatMonth(params.month)}`}
         onPress={() =>
           skipBill({ variables: { billId: params.billId, month: params.month, note: note.trim() || null } })
         }
-        loading={loading}
+        isLoading={loading}
       />
     </ScrollView>
   );

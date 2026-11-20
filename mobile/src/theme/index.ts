@@ -7,7 +7,7 @@ import { radius, shadow, hairline } from "./shape";
 import { layout, space } from "./spacing";
 import { font, tabularNums, textVariants } from "./typography";
 
-export { palette, tint } from "./colors";
+export { palette, tint, categoryColor, CATEGORY_COLORS } from "./colors";
 export type { PaletteColor } from "./colors";
 export { radius, shadow, hairline } from "./shape";
 export { layout, space } from "./spacing";

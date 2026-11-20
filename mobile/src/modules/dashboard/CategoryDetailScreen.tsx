@@ -1,8 +1,7 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { Card } from "../../components/ui/Card";
+import { Block } from "../../components/ui/Block";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import type { AppStackParamList } from "../../../App";
 import { ChartColors } from "./charts/chart-tokens";
 import { ChartCard } from "./components/ChartCard";
@@ -21,18 +20,21 @@ import { TrendChart } from "./components/TrendChart";
 import { formatDay } from "./analytics";
 import { useCategoryDetailController } from "./use-category-detail-controller";
 import { percent, signedPercent, useMoney } from "./use-money";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
+import { BackLink } from "../../components/ui/BackLink";
 
 type Props = NativeStackScreenProps<AppStackParamList, "CategoryDetail">;
 
 function Stat({ label, value, note, bad }: { label: string; value: string; note: string; bad?: boolean }) {
   return (
-    <Card padding={22} style={{ flexGrow: 1, flexBasis: 200, gap: 8 }}>
-      <Text style={{ fontSize: 13, fontWeight: "600", color: Colors.textSec }}>{label}</Text>
-      <Text style={{ fontSize: 28, fontWeight: "800", color: Colors.text }}>{value}</Text>
-      <Text style={{ fontSize: 13, fontWeight: bad ? "700" : "400", color: bad ? ChartColors.overText : Colors.textSec }}>
+    <Block padding={22} style={{ flexGrow: 1, flexBasis: 200, gap: 8 }}>
+      <Text style={{ fontSize: 13, fontWeight: "600", color: palette.muted }}>{label}</Text>
+      <Text style={{ fontSize: 28, fontWeight: "800", color: palette.ink }}>{value}</Text>
+      <Text style={{ fontSize: 13, fontWeight: bad ? "700" : "400", color: bad ? ChartColors.overText : palette.muted }}>
         {note}
       </Text>
-    </Card>
+    </Block>
   );
 }
 
@@ -59,14 +61,12 @@ export function CategoryDetailScreen({ navigation, route }: Props) {
     <DashboardPage>
       <PageHeader
         eyebrow={
-          <Pressable accessibilityRole="link" onPress={() => navigation.goBack()} style={{ minHeight: 32, justifyContent: "center" }}>
-            <Text style={{ fontSize: 13, fontWeight: "700", color: ChartColors.seriesText }}>‹ Visão geral</Text>
-          </Pressable>
+          <BackLink label="Visão geral" onPress={() => navigation.goBack()} />
         }
         title={
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{ width: 18, height: 18, borderRadius: 5, backgroundColor: category.color }} />
-            <Text accessibilityRole="header" style={{ fontSize: wide ? 34 : 26, fontWeight: "800", color: Colors.text }}>
+            <Text accessibilityRole="header" style={{ fontSize: wide ? 34 : 26, fontWeight: "800", color: palette.ink }}>
               {category.name}
             </Text>
           </View>

@@ -1,9 +1,10 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import type { MembersSplit as MembersSplitData } from "../analytics";
 import { ChartColors } from "../charts/chart-tokens";
 import type { CategoryInfo } from "../types";
 import { percent, type MoneyFormat } from "../use-money";
-import { Colors } from "../../../theme/tokens";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type MembersSplitProps = {
   split: MembersSplitData;
@@ -38,7 +39,7 @@ function SplitBar({ shares, height }: { shares: number[]; height: number }) {
 export function MembersSplit({ split, categories, format }: MembersSplitProps) {
   if (split.members.length < 2) {
     return (
-      <Text style={{ fontSize: 14, color: Colors.textSec }}>
+      <Text style={{ fontSize: 14, color: palette.muted }}>
         {split.members.length === 1
           ? `Todos os gastos deste intervalo foram lançados por ${split.members[0].name}.`
           : "Nenhum gasto neste intervalo."}
@@ -53,8 +54,8 @@ export function MembersSplit({ split, categories, format }: MembersSplitProps) {
         {split.members.map((m, i) => (
           <View key={m.authorId} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: toneFor(i) }} />
-            <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.text }}>{m.name}</Text>
-            <Text style={{ fontSize: 13, color: Colors.textSec }}>
+            <Text style={{ fontSize: 13, fontWeight: "700", color: palette.ink }}>{m.name}</Text>
+            <Text style={{ fontSize: 13, color: palette.muted }}>
               {format.money(m.total)} · {percent(m.share)}
             </Text>
           </View>
@@ -63,7 +64,7 @@ export function MembersSplit({ split, categories, format }: MembersSplitProps) {
       <View style={{ gap: 12 }}>
         {split.byCategory.map((row) => (
           <View key={row.categoryId} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Text numberOfLines={1} style={{ width: 96, fontSize: 13, fontWeight: "600", color: Colors.text }}>
+            <Text numberOfLines={1} style={{ width: 96, fontSize: 13, fontWeight: "600", color: palette.ink }}>
               {categories.get(row.categoryId)?.name}
             </Text>
             <Text style={{ width: 36, textAlign: "right", fontSize: 12, fontWeight: "700", color: ChartColors.seriesText }}>
@@ -73,7 +74,7 @@ export function MembersSplit({ split, categories, format }: MembersSplitProps) {
           </View>
         ))}
       </View>
-      <Text style={{ fontSize: 12, color: Colors.textSec }}>
+      <Text style={{ fontSize: 12, color: palette.muted }}>
         O número à esquerda é a parte de {split.members[0].name} em cada categoria.
       </Text>
     </View>

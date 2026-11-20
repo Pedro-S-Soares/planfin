@@ -1,6 +1,7 @@
-import { Text, TouchableOpacity } from "react-native";
+import { TouchableOpacity } from "react-native";
 import { CategoryIcon } from "./CategoryIcon";
-import { Colors, Radius } from "../../theme/tokens";
+import { palette, radius } from "../../theme";
+import { Text } from "./Text";
 
 interface IconPickerButtonProps {
   icon: string | null;
@@ -18,10 +19,10 @@ export function IconPickerButton({ icon, name, size = 40, onPress }: IconPickerB
       style={{
         width: size,
         height: size,
-        borderRadius: Radius.sm,
+        borderRadius: radius.control,
         borderWidth: 1.5,
-        borderColor: Colors.border,
-        backgroundColor: Colors.surface,
+        borderColor: palette.rule,
+        backgroundColor: palette.sheet,
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -29,7 +30,7 @@ export function IconPickerButton({ icon, name, size = 40, onPress }: IconPickerB
       {icon ? (
         <CategoryIcon icon={icon} name={name} size={20} />
       ) : (
-        <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.textTer }}>ícone</Text>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>ícone</Text>
       )}
     </TouchableOpacity>
   );

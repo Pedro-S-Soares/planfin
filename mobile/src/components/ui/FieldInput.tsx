@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Text, TextInput, View, TextInputProps } from "react-native";
-import { Colors, Radius, Shadow } from "../../theme/tokens";
+import { StyleSheet, View, type TextInputProps } from "react-native";
+import { palette, radius, space, textVariants } from "../../theme";
+import { AppText } from "./AppText";
+import { TextInput } from "./TextInput";
 
 interface FieldInputProps extends Omit<TextInputProps, "onChange"> {
   label?: string;
@@ -11,62 +13,90 @@ interface FieldInputProps extends Omit<TextInputProps, "onChange"> {
   onChange?: (value: string) => void;
 }
 
-export function FieldInput({ label, error, hint, prefix, value, onChange, ...rest }: FieldInputProps) {
-  const [focused, setFocused] = useState(false);
+/** A text field: sentence-case label, 48 high, rule border that turns accent on focus. */
+export function FieldInput({ label, error, hint, prefix, value, onChange, editable = true, ...rest }: FieldInputProps) {
+  const [isFocused, setIsFocused] = useState(false);
 
   return (
-    <View style={{ marginBottom: 16 }}>
-      {label && (
-        <Text style={{
-          fontSize: 11,
-          fontWeight: "700",
-          color: Colors.textSec,
-          letterSpacing: 0.8,
-          textTransform: "uppercase",
-          marginBottom: 7,
-        }}>
+    <View style={styles.root}>
+      {label ? (
+        <AppText variant="label" tone="muted" style={styles.label}>
           {label}
-        </Text>
-      )}
-      <View style={{ position: "relative", flexDirection: "row", alignItems: "center" }}>
-        {prefix && (
-          <Text style={{
-            position: "absolute",
-            left: 14,
-            fontSize: 16,
-            color: Colors.textSec,
-            fontWeight: "600",
-            zIndex: 1,
-          }}>
+        </AppText>
+      ) : null}
+      <View style={styles.row}>
+        {prefix ? (
+          <AppText variant="baseStrong" tone="muted" style={styles.prefix}>
             {prefix}
-          </Text>
-        )}
+          </AppText>
+        ) : null}
         <TextInput
           value={value ?? ""}
           onChangeText={onChange}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={{
-            flex: 1,
-            height: 52,
-            paddingHorizontal: prefix ? 40 : 16,
-            borderRadius: Radius.md,
-            fontSize: 16,
-            color: Colors.text,
-            backgroundColor: Colors.surface,
-            borderWidth: 1.5,
-            borderColor: error ? Colors.danger : focused ? Colors.primary : Colors.border,
-            ...Shadow.xs,
-          }}
-          placeholderTextColor={Colors.textTer}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          editable={editable}
+          style={[
+            styles.input,
+            prefix ? styles.inputWithPrefix : null,
+            isFocused ? styles.inputFocused : null,
+            error ? styles.inputError : null,
+            editable ? null : styles.inputReadOnly,
+          ]}
           {...rest}
         />
       </View>
-      {(error || hint) && (
-        <Text style={{ marginTop: 5, fontSize: 12, color: error ? Colors.danger : Colors.textTer }}>
+      {error || hint ? (
+        <AppText variant="caption" tone={error ? "danger" : "muted"} style={styles.help}>
           {error || hint}
-        </Text>
-      )}
+        </AppText>
+      ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    marginBottom: space.lg,
+  },
+  label: {
+    marginBottom: space.sm,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  prefix: {
+    position: "absolute",
+    left: 14,
+    zIndex: 1,
+  },
+  input: {
+    ...textVariants.base,
+    flex: 1,
+    height: 48,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.control,
+    backgroundColor: palette.sheet,
+    borderWidth: 1,
+    borderColor: palette.rule,
+    outlineStyle: "solid",
+    outlineWidth: 0,
+  },
+  inputWithPrefix: {
+    paddingLeft: 40,
+  },
+  inputFocused: {
+    borderColor: palette.accent,
+  },
+  inputError: {
+    borderColor: palette.danger,
+  },
+  inputReadOnly: {
+    backgroundColor: palette.paper,
+    color: palette.muted,
+  },
+  help: {
+    marginTop: space.xs,
+  },
+});

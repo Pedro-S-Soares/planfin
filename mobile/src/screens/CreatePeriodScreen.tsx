@@ -1,4 +1,4 @@
-import { View, Text, ScrollView } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -6,15 +6,16 @@ import { useCreatePeriodMutation } from "../graphql/__generated__/hooks";
 import { usePeriod } from "../context/PeriodContext";
 import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { FieldInput } from "../components/ui/FieldInput";
 import { toISODate } from "../lib/date";
 import { displayToAPI, formatCents } from "../lib/currency";
-import { Colors, Radius } from "../theme/tokens";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { TouchableOpacity } from "react-native";
 import type { AppStackParamList } from "../../App";
+import { palette, radius } from "../theme";
+import { Text } from "../components/ui/Text";
 
 const today = new Date();
 const in30Days = new Date(today);
@@ -104,20 +105,20 @@ export function CreatePeriodScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
+    <View style={{ flex: 1, backgroundColor: palette.sheet }}>
       {/* Header */}
       <View style={{
-        backgroundColor: Colors.bg,
+        backgroundColor: palette.paper,
         paddingTop: 62,
         paddingBottom: 22,
         paddingHorizontal: 22,
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
+        borderBottomWidth: 1,
+        borderBottomColor: palette.rule,
       }}>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.text, letterSpacing: -0.5 }}>
+        <Text style={{ fontSize: 26, fontWeight: "800", color: palette.ink, letterSpacing: -0.5 }}>
           Novo planejamento
         </Text>
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4, lineHeight: 20 }}>
+        <Text style={{ fontSize: 13, color: palette.muted, marginTop: 4, lineHeight: 20 }}>
           Defina o período, o limite diário e o orçamento total.
         </Text>
       </View>
@@ -126,12 +127,12 @@ export function CreatePeriodScreen() {
         <TouchableOpacity
           onPress={() => navigation.navigate("MonthPlan")}
           activeOpacity={0.85}
-          style={{ borderWidth: 1.5, borderColor: Colors.primary, borderRadius: Radius.lg, padding: 16, marginBottom: 20 }}
+          style={{ borderWidth: 1.5, borderColor: palette.accent, borderRadius: radius.block, padding: 16, marginBottom: 20 }}
         >
-          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>Planejamento do mês (recomendado)</Text>
-          <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4, lineHeight: 18 }}>
+          <Text style={{ fontSize: 15, fontWeight: "800", color: palette.ink }}>Planejamento do mês (recomendado)</Text>
+          <Text style={{ fontSize: 13, color: palette.muted, marginTop: 4, lineHeight: 18 }}>
             Fecha o mês atual com saldo, salário, fatura e boletos, mostra quanto sobra para variáveis no mês seguinte e
-            aplica a meta diária. ›
+            aplica a meta diária.
           </Text>
         </TouchableOpacity>
         <Controller
@@ -149,7 +150,7 @@ export function CreatePeriodScreen() {
           )}
         />
 
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 7 }}>
           Data de início
         </Text>
         <Controller
@@ -160,7 +161,7 @@ export function CreatePeriodScreen() {
           )}
         />
 
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 7 }}>
           Data de fim
         </Text>
         <Controller
@@ -171,7 +172,7 @@ export function CreatePeriodScreen() {
           )}
         />
 
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 7 }}>
           Limite diário
         </Text>
         <Controller
@@ -182,10 +183,10 @@ export function CreatePeriodScreen() {
           )}
         />
 
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 4 }}>
           Orçamento total
         </Text>
-        <Text style={{ fontSize: 12, color: Colors.textSec, marginBottom: 7 }}>
+        <Text style={{ fontSize: 12, color: palette.muted, marginBottom: 7 }}>
           Mínimo: R$ {minBudget} ({dailyLimit}/dia × {(() => {
             const s = new Date(startDate + "T00:00:00");
             const e = new Date(endDate + "T00:00:00");
@@ -200,22 +201,22 @@ export function CreatePeriodScreen() {
           )}
         />
         {isBelowMin && (
-          <Text style={{ color: Colors.danger, fontSize: 12, marginBottom: 12, marginTop: -8 }}>
+          <Text style={{ color: palette.danger, fontSize: 12, marginBottom: 12, marginTop: -8 }}>
             O orçamento total deve ser ao menos R$ {minBudget}
           </Text>
         )}
 
         {errors.root && (
-          <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+          <Text style={{ color: palette.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
             {errors.root.message}
           </Text>
         )}
 
-        <Btn
+        <Button
           label="Começar planejamento"
           onPress={handleSubmit(onSubmit)}
-          loading={loading}
-          disabled={isBelowMin}
+          isLoading={loading}
+          isDisabled={isBelowMin}
         />
       </ScrollView>
     </View>

@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { isIconName } from "./icons/curated-icons";
-import { categoryColor } from "../../theme/tokens";
+import { categoryColor } from "../../theme";
 
 interface CategoryIconProps {
   icon?: string | null;

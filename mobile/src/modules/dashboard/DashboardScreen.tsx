@@ -1,8 +1,7 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import type { AppStackParamList } from "../../../App";
 import { ChartColors } from "./charts/chart-tokens";
 import { CalendarHeatmap } from "./components/CalendarHeatmap";
@@ -27,6 +26,8 @@ import { RangeSelector } from "./components/RangeSelector";
 import { WeekdayChart } from "./components/WeekdayChart";
 import { RANGE_OPTIONS, useDashboardController } from "./use-dashboard-controller";
 import { useMoney } from "./use-money";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
@@ -50,7 +51,7 @@ export function DashboardScreen() {
     <DashboardPage>
       <PageHeader
         eyebrow={
-          <Text style={{ fontSize: 13, fontWeight: "700", letterSpacing: 0.8, color: ChartColors.seriesText, textTransform: "uppercase" }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: ChartColors.seriesText }}>
             {view.windowLabel}
           </Text>
         }
@@ -81,12 +82,12 @@ export function DashboardScreen() {
                 <View style={{ gap: 12 }}>
                   <CumulativeChart pace={pace} width={width} format={format} />
                   <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 8 }}>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.text }}>Gasto por dia</Text>
+                    <Text style={{ fontSize: 14, fontWeight: "700", color: palette.ink }}>Gasto por dia</Text>
                     <Legend
                       items={[
                         { label: "Dentro do limite", color: ChartColors.under },
                         { label: "Acima do limite diário", color: ChartColors.over },
-                        { label: `Limite ${format.money(pace.dailyLimit)}/dia`, color: Colors.text, shape: "dashed" },
+                        { label: `Limite ${format.money(pace.dailyLimit)}/dia`, color: palette.ink, shape: "dashed" },
                       ]}
                     />
                   </View>

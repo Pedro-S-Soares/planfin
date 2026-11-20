@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { ScrollView } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { CurrencyInput } from "../../components/CurrencyInput";
-import { Btn } from "../../components/ui/Btn";
+import { Button } from "../../components/ui/Button";
 import { useCurrency } from "../../context/CurrencyContext";
 import { useSetAccountBalanceMutation } from "../../graphql/__generated__/hooks";
 import { displayToAPI, formatCents } from "../../lib/currency";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { FormLabel } from "./components/FormLabel";
 import { ToggleRow } from "./components/ToggleRow";
 import { formatMoney, signedApiAmount, toNumber } from "./format";
 import type { AppStackParamList } from "../../../App";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
 
 export function AdjustBalanceScreen() {
   usePageTitle("Planfin - Ajustar saldo");
@@ -41,16 +42,16 @@ export function AdjustBalanceScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.surface }} contentContainerStyle={{ padding: 18 }}>
-      <Text style={{ fontSize: 14, color: Colors.textSec, lineHeight: 20, marginBottom: 18 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.sheet }} contentContainerStyle={{ padding: 18 }}>
+      <Text style={{ fontSize: 14, color: palette.muted, lineHeight: 20, marginBottom: 18 }}>
         Abra o app do banco e informe o saldo de agora. O app passa a contar a partir dele, sem mexer no histórico.
         Saldo calculado hoje: {formatMoney(current, currency.symbol)}.
       </Text>
       <FormLabel>Saldo no banco agora</FormLabel>
       <CurrencyInput value={value} onChange={setValue} autoFocus />
       <ToggleRow title="Saldo negativo" description="Ative se a conta está no cheque especial" value={isNegative} onChange={setIsNegative} />
-      {error ? <Text style={{ color: Colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
-      <Btn label="Salvar saldo" onPress={handleSave} loading={loading} />
+      {error ? <Text style={{ color: palette.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
+      <Button label="Salvar saldo" onPress={handleSave} isLoading={loading} />
     </ScrollView>
   );
 }

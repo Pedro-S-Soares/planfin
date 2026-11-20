@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { FlatList, Modal, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, Modal, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { CURATED_ICONS, isIconName } from "./icons/curated-icons";
-import { Colors, Radius, Shadow } from "../../theme/tokens";
 import type { IconName } from "./icons/curated-icons";
+import { palette, radius } from "../../theme";
+import { Text } from "./Text";
+import { TextInput } from "./TextInput";
 
 const SEARCH_LIMIT = 120;
 const ALL_ICON_NAMES: readonly IconName[] = Object.keys(MaterialCommunityIcons.glyphMap).filter(isIconName);
@@ -39,35 +41,34 @@ export function IconPicker({ visible, value, onSelect, onClose }: IconPickerProp
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={{
         flex: 1,
-        backgroundColor: "rgba(0,0,0,0.4)",
+        backgroundColor: palette.backdrop,
         alignItems: "center",
         justifyContent: "center",
         padding: 24,
       }}>
         <View style={{
-          backgroundColor: Colors.surface,
-          borderRadius: Radius.lg,
+          backgroundColor: palette.sheet,
+          borderRadius: radius.block,
           padding: 20,
           width: "100%",
           maxWidth: 420,
           maxHeight: "80%",
           gap: 12,
-          ...Shadow.md,
         }}>
-          <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.text }}>Escolher ícone</Text>
+          <Text style={{ fontSize: 17, fontWeight: "800", color: palette.ink }}>Escolher ícone</Text>
           <TextInput
             style={{
               height: 40,
               borderWidth: 1.5,
-              borderColor: Colors.border,
-              borderRadius: Radius.sm,
+              borderColor: palette.rule,
+              borderRadius: radius.control,
               paddingHorizontal: 12,
               fontSize: 14,
-              color: Colors.text,
-              backgroundColor: Colors.surface,
+              color: palette.ink,
+              backgroundColor: palette.sheet,
             }}
             placeholder="Buscar ícone (em inglês)..."
-            placeholderTextColor={Colors.textTer}
+            placeholderTextColor={palette.muted}
             value={query}
             onChangeText={setQuery}
             autoCapitalize="none"
@@ -82,7 +83,7 @@ export function IconPicker({ visible, value, onSelect, onClose }: IconPickerProp
             contentContainerStyle={{ gap: 8 }}
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
-              <Text style={{ fontSize: 13, color: Colors.textSec, textAlign: "center", paddingVertical: 16 }}>
+              <Text style={{ fontSize: 13, color: palette.muted, textAlign: "center", paddingVertical: 16 }}>
                 Nenhum ícone encontrado
               </Text>
             }
@@ -96,10 +97,10 @@ export function IconPicker({ visible, value, onSelect, onClose }: IconPickerProp
                     flex: 1,
                     aspectRatio: 1,
                     maxWidth: 52,
-                    borderRadius: Radius.sm,
+                    borderRadius: radius.control,
                     borderWidth: 1.5,
-                    borderColor: isSelected ? Colors.primary : Colors.border,
-                    backgroundColor: isSelected ? Colors.primaryLight : Colors.surface,
+                    borderColor: isSelected ? palette.accent : palette.rule,
+                    backgroundColor: isSelected ? palette.accentSoft : palette.sheet,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
@@ -107,7 +108,7 @@ export function IconPicker({ visible, value, onSelect, onClose }: IconPickerProp
                   <MaterialCommunityIcons
                     name={item}
                     size={22}
-                    color={isSelected ? Colors.primaryText : Colors.textSec}
+                    color={isSelected ? palette.accent : palette.muted}
                   />
                 </TouchableOpacity>
               );
@@ -119,28 +120,27 @@ export function IconPicker({ visible, value, onSelect, onClose }: IconPickerProp
               style={{
                 flex: 1,
                 height: 44,
-                borderRadius: Radius.sm,
+                borderRadius: radius.control,
                 borderWidth: 1.5,
-                borderColor: Colors.border,
+                borderColor: palette.rule,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.textSec }}>Sem ícone</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: palette.muted }}>Sem ícone</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleClose}
               style={{
                 flex: 1,
                 height: 44,
-                borderRadius: Radius.sm,
-                backgroundColor: Colors.primary,
+                borderRadius: radius.control,
+                backgroundColor: palette.accent,
                 alignItems: "center",
                 justifyContent: "center",
-                ...Shadow.sm,
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Fechar</Text>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: palette.onAccent }}>Fechar</Text>
             </TouchableOpacity>
           </View>
         </View>

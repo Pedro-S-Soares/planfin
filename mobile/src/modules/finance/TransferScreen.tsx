@@ -1,20 +1,21 @@
 import { useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { ScrollView } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { CurrencyInput } from "../../components/CurrencyInput";
 import { DatePickerField } from "../../components/DatePickerField";
-import { Btn } from "../../components/ui/Btn";
+import { Button } from "../../components/ui/Button";
 import { FieldInput } from "../../components/ui/FieldInput";
 import { useCreateTransferMutation } from "../../graphql/__generated__/hooks";
 import { displayToAPI, formatCents, parseCents } from "../../lib/currency";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { AccountPicker } from "./components/AccountPicker";
 import { FormLabel } from "./components/FormLabel";
 import { toNumber } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
 
 const MONEY_KINDS = ["checking", "allowance", "reserve"] as const;
 
@@ -56,7 +57,7 @@ export function TransferScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.surface }} contentContainerStyle={{ padding: 18, paddingBottom: 32 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.sheet }} contentContainerStyle={{ padding: 18, paddingBottom: 32 }}>
       <FormLabel>Valor</FormLabel>
       <CurrencyInput value={amount} onChange={setAmount} autoFocus />
       <AccountPicker label="De" accounts={accounts} value={from} onChange={setFromId} kinds={[...MONEY_KINDS]} />
@@ -64,8 +65,8 @@ export function TransferScreen() {
       <FormLabel>Data</FormLabel>
       <DatePickerField value={date} onChange={setDate} />
       <FieldInput label="Nota (opcional)" value={note} onChange={setNote} placeholder="Ex: guardar na reserva" />
-      {error ? <Text style={{ color: Colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
-      <Btn label="Transferir" onPress={handleSave} loading={loading} />
+      {error ? <Text style={{ color: palette.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
+      <Button label="Transferir" onPress={handleSave} isLoading={loading} />
     </ScrollView>
   );
 }

@@ -1,5 +1,4 @@
-import { palette, tint } from "../../theme";
-import { categoryColor } from "../../theme/tokens";
+import { categoryColor, palette, tint } from "../../theme";
 import { subcategoryLabel } from "../../lib/category-label";
 import { useCurrency } from "../../context/CurrencyContext";
 import { formatMoney, toNumber } from "../../lib/money";

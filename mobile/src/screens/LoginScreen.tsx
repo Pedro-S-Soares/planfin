@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
+import { View, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -6,10 +6,12 @@ import * as yup from "yup";
 import { useLoginMutation } from "../graphql/__generated__/hooks";
 import { useAuth } from "../context/AuthContext";
 import { Logo } from "../components/ui/Logo";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { FieldInput } from "../components/ui/FieldInput";
-import { Colors } from "../theme/tokens";
 import type { AuthStackParamList } from "../../App";
+import { palette } from "../theme";
+import { Text } from "../components/ui/Text";
+import { TextInput } from "../components/ui/TextInput";
 
 const schema = yup.object({
   email: yup.string().email("Email inválido").required("Email é obrigatório"),
@@ -40,28 +42,28 @@ export function LoginScreen({ navigation }: Props) {
   const onSubmit = (values: FormValues) => login({ variables: values });
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
+    <View style={{ flex: 1, backgroundColor: palette.sheet }}>
       {/* Header */}
       <View style={{
-        backgroundColor: Colors.bg,
+        backgroundColor: palette.paper,
         paddingTop: 72,
         paddingBottom: 32,
         alignItems: "center",
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
+        borderBottomWidth: 1,
+        borderBottomColor: palette.rule,
       }}>
         <Logo size={60} />
-        <Text style={{ marginTop: 14, fontSize: 27, fontWeight: "800", color: Colors.text, letterSpacing: -0.6 }}>
+        <Text style={{ marginTop: 14, fontSize: 27, fontWeight: "800", color: palette.ink, letterSpacing: -0.6 }}>
           Planfin
         </Text>
-        <Text style={{ marginTop: 4, fontSize: 13, color: Colors.textSec }}>
+        <Text style={{ marginTop: 4, fontSize: 13, color: palette.muted }}>
           Controle financeiro em grupo
         </Text>
       </View>
 
       {/* Form */}
       <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 28 }}>
-        <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.text, letterSpacing: -0.4, marginBottom: 20 }}>
+        <Text style={{ fontSize: 22, fontWeight: "800", color: palette.ink, letterSpacing: -0.4, marginBottom: 20 }}>
           Entrar na conta
         </Text>
 
@@ -101,23 +103,23 @@ export function LoginScreen({ navigation }: Props) {
         />
 
         {errors.root && (
-          <Text style={{ color: Colors.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
+          <Text style={{ color: palette.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
             {errors.root.message}
           </Text>
         )}
 
         <View style={{ marginBottom: 12 }}>
-          <Btn label="Entrar" onPress={handleSubmit(onSubmit)} loading={loading} />
+          <Button label="Entrar" onPress={handleSubmit(onSubmit)} isLoading={loading} />
         </View>
 
         <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
-          <Text style={{ color: Colors.primary, textAlign: "center", fontSize: 14, fontWeight: "500", paddingVertical: 8 }}>
+          <Text style={{ color: palette.accent, textAlign: "center", fontSize: 14, fontWeight: "500", paddingVertical: 8 }}>
             Esqueci minha senha
           </Text>
         </TouchableOpacity>
 
-        <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: Colors.border, alignItems: "center" }}>
-          <Text style={{ color: Colors.textSec, fontSize: 13 }}>Acesso somente por convite.</Text>
+        <View style={{ marginTop: 24, paddingTop: 20, borderTopWidth: 1, borderTopColor: palette.rule, alignItems: "center" }}>
+          <Text style={{ color: palette.muted, fontSize: 13 }}>Acesso somente por convite.</Text>
         </View>
       </ScrollView>
     </View>

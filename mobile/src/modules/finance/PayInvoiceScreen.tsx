@@ -1,19 +1,20 @@
 import { useState } from "react";
-import { ScrollView, Text } from "react-native";
+import { ScrollView } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { CurrencyInput } from "../../components/CurrencyInput";
 import { DatePickerField } from "../../components/DatePickerField";
-import { Btn } from "../../components/ui/Btn";
+import { Button } from "../../components/ui/Button";
 import { usePayInvoiceMutation } from "../../graphql/__generated__/hooks";
 import { displayToAPI, formatCents, parseCents } from "../../lib/currency";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { AccountPicker } from "./components/AccountPicker";
 import { FormLabel } from "./components/FormLabel";
 import { formatMonth, toNumber } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
 
 export function PayInvoiceScreen() {
   usePageTitle("Planfin - Pagar fatura");
@@ -41,15 +42,15 @@ export function PayInvoiceScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.surface }} contentContainerStyle={{ padding: 18 }}>
-      <Text style={{ fontSize: 14, color: Colors.textSec, marginBottom: 16 }}>Fatura de {formatMonth(params.month)}</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.sheet }} contentContainerStyle={{ padding: 18 }}>
+      <Text style={{ fontSize: 14, color: palette.muted, marginBottom: 16 }}>Fatura de {formatMonth(params.month)}</Text>
       <FormLabel>Valor pago</FormLabel>
       <CurrencyInput value={amount} onChange={setAmount} autoFocus />
       <AccountPicker label="Pago com" accounts={accounts} value={from} onChange={setFrom} kinds={["checking", "allowance", "reserve"]} />
       <FormLabel>Data do pagamento</FormLabel>
       <DatePickerField value={date} onChange={setDate} />
-      {error ? <Text style={{ color: Colors.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
-      <Btn label="Registrar pagamento" onPress={handlePay} loading={loading} />
+      {error ? <Text style={{ color: palette.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
+      <Button label="Registrar pagamento" onPress={handlePay} isLoading={loading} />
     </ScrollView>
   );
 }

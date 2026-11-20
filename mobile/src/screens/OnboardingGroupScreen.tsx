@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
+import { View, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
 import { confirm } from "../lib/alert";
-import { LinearGradient } from "expo-linear-gradient";
 import { useGroup } from "../context/GroupContext";
 import { useAuth } from "../context/AuthContext";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { FieldInput } from "../components/ui/FieldInput";
-import { Colors, Radius, Shadow } from "../theme/tokens";
+import { palette, radius } from "../theme";
+import { Text } from "../components/ui/Text";
+import { Icon } from "../components/ui/Icon";
+import { BackLink } from "../components/ui/BackLink";
+import { TextInput } from "../components/ui/TextInput";
 
 type Mode = "menu" | "create" | "join";
 
@@ -56,39 +59,23 @@ export function OnboardingGroupScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
+    <View style={{ flex: 1, backgroundColor: palette.sheet }}>
       {/* Header */}
       <View style={{
-        backgroundColor: Colors.bg,
+        backgroundColor: palette.paper,
         paddingTop: 72,
         paddingBottom: 28,
         alignItems: "center",
-        borderBottomLeftRadius: 28,
-        borderBottomRightRadius: 28,
+        borderBottomWidth: 1,
+        borderBottomColor: palette.rule,
       }}>
-        <LinearGradient
-          colors={[Colors.gradStart, Colors.gradEnd]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: 22,
-            alignItems: "center",
-            justifyContent: "center",
-            shadowColor: Colors.fabShadow,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 1,
-            shadowRadius: 20,
-            elevation: 8,
-          }}
-        >
-          <Text style={{ fontSize: 32 }}>👥</Text>
-        </LinearGradient>
-        <Text style={{ marginTop: 14, fontSize: 22, fontWeight: "800", color: Colors.text, letterSpacing: -0.4 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: palette.accent, alignItems: "center", justifyContent: "center" }}>
+          <Icon name="account-group-outline" size={36} tone="onAccent" />
+        </View>
+        <Text style={{ marginTop: 14, fontSize: 22, fontWeight: "800", color: palette.ink, letterSpacing: -0.4 }}>
           Bem-vindo ao Planfin
         </Text>
-        <Text style={{ marginTop: 5, fontSize: 13, color: Colors.textSec, textAlign: "center", paddingHorizontal: 32, lineHeight: 20 }}>
+        <Text style={{ marginTop: 5, fontSize: 13, color: palette.muted, textAlign: "center", paddingHorizontal: 32, lineHeight: 20 }}>
           Crie um grupo ou entre em um existente para começar.
         </Text>
       </View>
@@ -96,24 +83,18 @@ export function OnboardingGroupScreen() {
       <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 24 }}>
         {mode === "menu" && (
           <>
-            <Btn label="Criar novo grupo" onPress={() => { setError(null); setMode("create"); }} size="lg" />
+            <Button label="Criar novo grupo" onPress={() => { setError(null); setMode("create"); }} />
             <View style={{ height: 10 }} />
-            <Btn label="Entrar com código" variant="secondary" size="lg" onPress={() => { setError(null); setMode("join"); }} />
+            <Button label="Entrar com código" variant="secondary" onPress={() => { setError(null); setMode("join"); }} />
             <TouchableOpacity onPress={handleSignOut} style={{ marginTop: 28, alignItems: "center" }}>
-              <Text style={{ color: Colors.textSec, fontSize: 13 }}>Sair da conta</Text>
+              <Text style={{ color: palette.muted, fontSize: 13 }}>Sair da conta</Text>
             </TouchableOpacity>
           </>
         )}
 
         {mode === "create" && (
           <>
-            <TouchableOpacity
-              onPress={() => setMode("menu")}
-              style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 16 }}
-            >
-              <Text style={{ color: Colors.primary, fontSize: 18 }}>‹</Text>
-              <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "600" }}>Voltar</Text>
-            </TouchableOpacity>
+            <BackLink onPress={() => setMode("menu")} />
             <FieldInput
               label="Nome do grupo"
               placeholder="Ex.: Casa, Família, República"
@@ -121,21 +102,15 @@ export function OnboardingGroupScreen() {
               onChange={setGroupName}
               autoFocus
             />
-            {error && <Text style={{ color: Colors.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
-            <Btn label="Criar grupo" onPress={handleCreate} loading={busy} />
+            {error && <Text style={{ color: palette.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
+            <Button label="Criar grupo" onPress={handleCreate} isLoading={busy} />
           </>
         )}
 
         {mode === "join" && (
           <>
-            <TouchableOpacity
-              onPress={() => setMode("menu")}
-              style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 16 }}
-            >
-              <Text style={{ color: Colors.primary, fontSize: 18 }}>‹</Text>
-              <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "600" }}>Voltar</Text>
-            </TouchableOpacity>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 7 }}>
+            <BackLink onPress={() => setMode("menu")} />
+            <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 7 }}>
               Código de convite
             </Text>
             <TextInput
@@ -152,17 +127,17 @@ export function OnboardingGroupScreen() {
                 letterSpacing: 6,
                 fontSize: 22,
                 fontWeight: "800",
-                color: Colors.text,
+                color: palette.ink,
                 borderWidth: 1.5,
-                borderColor: Colors.border,
-                borderRadius: Radius.md,
-                backgroundColor: Colors.surface,
+                borderColor: palette.rule,
+                borderRadius: radius.control,
+                backgroundColor: palette.sheet,
                 marginBottom: 16,
               }}
-              placeholderTextColor={Colors.textTer}
+              placeholderTextColor={palette.muted}
             />
-            {error && <Text style={{ color: Colors.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
-            <Btn label="Entrar no grupo" onPress={handleJoin} loading={busy} />
+            {error && <Text style={{ color: palette.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
+            <Button label="Entrar no grupo" onPress={handleJoin} isLoading={busy} />
           </>
         )}
       </ScrollView>

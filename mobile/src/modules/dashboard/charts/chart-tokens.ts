@@ -1,19 +1,19 @@
-import { Colors } from "../../../theme/tokens";
+import { palette } from "../../../theme";
 
 /** Chart-only roles layered on the app tokens. Text always uses text tokens, never series colours. */
 export const ChartColors = {
   grid: "#ECEBF4",
   track: "#F3F2F9",
-  axisText: Colors.textSec,
+  axisText: palette.muted,
   reference: "#8A88A6",
-  referenceLight: Colors.textTer,
-  series: Colors.primary,
-  seriesText: Colors.primaryText,
+  referenceLight: palette.muted,
+  series: palette.accent,
+  seriesText: palette.accent,
   under: "#9C93F0",
   over: "#D0301F",
   overText: "#B42318",
-  hover: Colors.primaryLight,
-  tooltipBg: Colors.text,
+  hover: palette.accentSoft,
+  tooltipBg: palette.ink,
   tooltipMuted: "#C9C7E0",
   tooltipBad: "#FF9B8F",
   tooltipGood: "#7FE0B5",

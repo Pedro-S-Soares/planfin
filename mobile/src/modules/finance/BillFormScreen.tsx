@@ -1,10 +1,10 @@
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { Controller, useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import type * as yup from "yup";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { CurrencyInput } from "../../components/CurrencyInput";
-import { Btn } from "../../components/ui/Btn";
+import { Button } from "../../components/ui/Button";
 import { Chip } from "../../components/ui/Chip";
 import { FieldInput } from "../../components/ui/FieldInput";
 import {
@@ -17,13 +17,15 @@ import {
 import { confirm } from "../../lib/alert";
 import { displayToAPI, formatCents } from "../../lib/currency";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { categoryColor, Colors } from "../../theme/tokens";
 import { billFormSchema } from "./bill-form-schema";
 import { AccountPicker } from "./components/AccountPicker";
 import { FormLabel } from "./components/FormLabel";
 import { addMonths, formatMonth, formatShortDate, invoiceDueDate, invoiceMonthFor, monthOf, toNumber } from "./format";
 import { defaultSpendingAccountId, useFinancialAccounts, type FinancialAccount } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
+import { categoryColor, palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
+import { MonthStepper } from "../../components/ui/MonthStepper";
 
 type BillFormValues = yup.InferType<typeof billFormSchema>;
 
@@ -137,7 +139,7 @@ export function BillFormScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.surface }} contentContainerStyle={{ padding: 18, paddingBottom: 32 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.sheet }} contentContainerStyle={{ padding: 18, paddingBottom: 32 }}>
       <Controller
         control={control}
         name="direction"
@@ -158,10 +160,8 @@ export function BillFormScreen() {
               <Chip label="Só um mês" selected={!!value} onPress={() => onChange(value || monthOf(new Date()))} />
             </View>
             {value ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }}>
-                <Text onPress={() => onChange(addMonths(value, -1))} style={{ fontSize: 22, color: Colors.primary }}>‹</Text>
-                <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.primaryText }}>{formatMonth(value)}</Text>
-                <Text onPress={() => onChange(addMonths(value, 1))} style={{ fontSize: 22, color: Colors.primary }}>›</Text>
+              <View style={{ marginTop: 10 }}>
+                <MonthStepper label={formatMonth(value)} onPrevious={() => onChange(addMonths(value, -1))} onNext={() => onChange(addMonths(value, 1))} />
               </View>
             ) : null}
           </View>
@@ -178,7 +178,7 @@ export function BillFormScreen() {
                 <Chip label="Cota de gasto" selected={value === "quota"} onPress={() => onChange("quota")} />
               </View>
               {value === "quota" ? (
-                <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 8, lineHeight: 17 }}>
+                <Text style={{ fontSize: 12, color: palette.muted, marginTop: 8, lineHeight: 17 }}>
                   Um valor reservado no mês e gasto aos poucos, como R$ 350 de unhas. Os gastos da subcategoria escolhida
                   abaixo vão abatendo a cota e não mexem no limite diário. Nada é lançado sozinho.
                 </Text>
@@ -199,12 +199,10 @@ export function BillFormScreen() {
               </View>
               {value ? (
                 <>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 10 }}>
-                    <Text onPress={() => onChange(addMonths(value, -1))} style={{ fontSize: 22, color: Colors.primary }}>‹</Text>
-                    <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.primaryText }}>{formatMonth(value)}</Text>
-                    <Text onPress={() => onChange(addMonths(value, 1))} style={{ fontSize: 22, color: Colors.primary }}>›</Text>
+                  <View style={{ marginTop: 10 }}>
+                    <MonthStepper label={formatMonth(value)} onPrevious={() => onChange(addMonths(value, -1))} onNext={() => onChange(addMonths(value, 1))} />
                   </View>
-                  <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 6, lineHeight: 17 }}>
+                  <Text style={{ fontSize: 12, color: palette.muted, marginTop: 6, lineHeight: 17 }}>
                     {lastOccurrenceText(value, Number(watch("dueDay")) || 1, accounts.find((a) => a.id === accountId), isIncome, isQuota)}
                   </Text>
                 </>
@@ -248,7 +246,7 @@ export function BillFormScreen() {
         />
       )}
       {onceMonth && !isQuota ? (
-        <Text style={{ fontSize: 12, color: Colors.primaryText, marginTop: -8, marginBottom: 16, lineHeight: 17 }}>
+        <Text style={{ fontSize: 12, color: palette.accent, marginTop: -8, marginBottom: 16, lineHeight: 17 }}>
           {oneOffLandingText(onceMonth, Number(watch("dueDay")) || 1, accounts.find((a) => a.id === accountId), isIncome)}
         </Text>
       ) : null}
@@ -266,7 +264,7 @@ export function BillFormScreen() {
         )}
       />
       {isIncome || isQuota ? null : (
-        <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: -8, marginBottom: 16 }}>
+        <Text style={{ fontSize: 12, color: palette.muted, marginTop: -8, marginBottom: 16 }}>
           Na conta: boleto ou Pix, sai do saldo. No cartão: entra na fatura.
         </Text>
       )}
@@ -309,13 +307,13 @@ export function BillFormScreen() {
         />
       ) : null}
 
-      {errors.root ? <Text style={{ color: Colors.danger, textAlign: "center", marginBottom: 12 }}>{errors.root.message}</Text> : null}
-      <Btn label={editing ? "Salvar" : "Adicionar"} onPress={handleSubmit(onSubmit)} loading={creating || updating} />
+      {errors.root ? <Text style={{ color: palette.danger, textAlign: "center", marginBottom: 12 }}>{errors.root.message}</Text> : null}
+      <Button label={editing ? "Salvar" : "Adicionar"} onPress={handleSubmit(onSubmit)} isLoading={creating || updating} />
       {editing?.id ? (
         <View style={{ marginTop: 10 }}>
-          <Btn
+          <Button
             label="Excluir"
-            variant="danger"
+            variant="destructive"
             size="sm"
             onPress={() => {
               const id = editing.id ?? "";

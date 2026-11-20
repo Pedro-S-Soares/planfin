@@ -1,8 +1,9 @@
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import type { CategoryTotal } from "../analytics";
 import { ChartColors } from "../charts/chart-tokens";
 import { percent, signedPercent, type MoneyFormat } from "../use-money";
-import { Colors, Radius } from "../../../theme/tokens";
+import { palette, radius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type CategoryRankingProps = {
   categories: CategoryTotal[];
@@ -29,14 +30,14 @@ export function CategoryRanking({ categories, format, compared, onSelect }: Cate
               paddingVertical: 10,
               paddingHorizontal: 12,
               marginHorizontal: -12,
-              borderRadius: Radius.md,
+              borderRadius: radius.control,
               backgroundColor: pressed ? ChartColors.track : "transparent",
             })}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: c.color }} />
-              <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: Colors.text }}>{c.name}</Text>
-              <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.text }}>{format.money(c.total)}</Text>
+              <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: palette.ink }}>{c.name}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "800", color: palette.ink }}>{format.money(c.total)}</Text>
             </View>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <View style={{ flex: 1, height: 10, borderRadius: 5, backgroundColor: ChartColors.track, overflow: "hidden" }}>
@@ -50,7 +51,7 @@ export function CategoryRanking({ categories, format, compared, onSelect }: Cate
                   }}
                 />
               </View>
-              <Text style={{ width: 36, textAlign: "right", fontSize: 12, fontWeight: "600", color: Colors.textSec }}>
+              <Text style={{ width: 36, textAlign: "right", fontSize: 12, fontWeight: "600", color: palette.muted }}>
                 {percent(c.share)}
               </Text>
               {compared ? (
@@ -60,7 +61,7 @@ export function CategoryRanking({ categories, format, compared, onSelect }: Cate
                   textAlign: "right",
                   fontSize: 12,
                   fontWeight: "700",
-                  color: c.delta !== null && c.delta > 0.05 ? ChartColors.overText : Colors.textSec,
+                  color: c.delta !== null && c.delta > 0.05 ? ChartColors.overText : palette.muted,
                 }}
               >
                 {c.delta === null ? "novo" : signedPercent(c.delta)}

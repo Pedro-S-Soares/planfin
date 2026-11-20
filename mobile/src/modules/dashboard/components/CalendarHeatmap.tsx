@@ -1,9 +1,10 @@
 import { useRef } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { formatDay, monthLabel, type CalendarYear } from "../analytics";
 import { ChartColors } from "../charts/chart-tokens";
 import { percent, type MoneyFormat } from "../use-money";
-import { Colors } from "../../../theme/tokens";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type CalendarHeatmapProps = { calendar: CalendarYear; dailyLimit: number; width: number; format: MoneyFormat };
 
@@ -57,14 +58,14 @@ export function CalendarHeatmap({ calendar, dailyLimit, width, format }: Calenda
           <View style={{ flexDirection: "row" }}>
             <View style={{ width: LABEL_COL, paddingTop: 20, gap: GAP }}>
               {["", "seg", "", "qua", "", "sex", ""].map((d, i) => (
-                <Text key={i} style={{ height: cell, fontSize: 10, lineHeight: cell, color: Colors.textSec }}>
+                <Text key={i} style={{ height: cell, fontSize: 12, lineHeight: cell, color: palette.muted }}>
                   {d}
                 </Text>
               ))}
             </View>
             <View style={{ paddingTop: 20 }}>
               {monthMarks.map((m) => (
-                <Text key={`${m.left}-${m.label}`} style={{ position: "absolute", top: 0, left: m.left, fontSize: 11, color: Colors.textSec }}>
+                <Text key={`${m.left}-${m.label}`} style={{ position: "absolute", top: 0, left: m.left, fontSize: 12, color: palette.muted }}>
                   {m.label}
                 </Text>
               ))}
@@ -93,7 +94,7 @@ export function CalendarHeatmap({ calendar, dailyLimit, width, format }: Calenda
           {legend.map((label, i) => (
             <View key={label} style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: ChartColors.ramp[i] }} />
-              <Text style={{ fontSize: 11, color: Colors.textSec }}>{label}</Text>
+              <Text style={{ fontSize: 12, color: palette.muted }}>{label}</Text>
             </View>
           ))}
         </View>
@@ -107,13 +108,13 @@ export function CalendarHeatmap({ calendar, dailyLimit, width, format }: Calenda
           gap: 20,
           paddingLeft: side ? 32 : 0,
           borderLeftWidth: side ? 1 : 0,
-          borderLeftColor: Colors.border,
+          borderLeftColor: palette.rule,
         }}
       >
         {stats.map((s) => (
           <View key={s.label} style={{ minWidth: 140 }}>
-            <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.text }}>{s.value}</Text>
-            <Text style={{ fontSize: 13, color: Colors.textSec }}>{s.label}</Text>
+            <Text style={{ fontSize: 26, fontWeight: "800", color: palette.ink }}>{s.value}</Text>
+            <Text style={{ fontSize: 13, color: palette.muted }}>{s.label}</Text>
           </View>
         ))}
       </View>

@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { diffDays, addDays, formatDay } from "../analytics";
 import { AxisTextStyle, ChartColors } from "../charts/chart-tokens";
 import type { DateWindow, Fact } from "../types";
 import type { MoneyFormat } from "../use-money";
-import { Colors, Radius } from "../../../theme/tokens";
+import { palette, radius as themeRadius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type ExpenseStripProps = {
   facts: Fact[];
@@ -70,11 +71,11 @@ export function ExpenseStrip({ facts, window, today, color, width, format }: Exp
             r={radius(f.amount)}
             fill={color}
             fillOpacity={0.85}
-            stroke={Colors.surface}
+            stroke={palette.sheet}
             strokeWidth={2}
           />
         ))}
-        <Circle cx={x(selected.date)} cy={cy(selected)} r={radius(selected.amount) + 3} fill="none" stroke={Colors.text} strokeWidth={2} />
+        <Circle cx={x(selected.date)} cy={cy(selected)} r={radius(selected.amount) + 3} fill="none" stroke={palette.ink} strokeWidth={2} />
       </Svg>
 
       {visible.map((f) => {
@@ -94,8 +95,8 @@ export function ExpenseStrip({ facts, window, today, color, width, format }: Exp
         const t = totals.get(name);
         return (
           <View key={name} style={{ position: "absolute", left: 0, width: left - 12, top: i * LANE_H + LANE_H / 2 - 17 }}>
-            <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "700", color: Colors.text }}>{name}</Text>
-            <Text numberOfLines={1} style={{ fontSize: 11, color: Colors.textSec }}>
+            <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "700", color: palette.ink }}>{name}</Text>
+            <Text numberOfLines={1} style={{ fontSize: 12, color: palette.muted }}>
               {format.money(t?.total ?? 0)} · {t?.count ?? 0} lanç.
             </Text>
           </View>
@@ -113,7 +114,7 @@ export function ExpenseStrip({ facts, window, today, color, width, format }: Exp
           position: floating ? "absolute" : "relative",
           width: floating ? TOOLTIP_W : "100%",
           padding: 10,
-          borderRadius: Radius.sm,
+          borderRadius: themeRadius.control,
           backgroundColor: ChartColors.tooltipBg,
           top: floating ? Math.max(0, Math.min(cy(selected) - 34, height - 100)) : height,
           left: !floating ? 0 : Math.max(
@@ -125,7 +126,7 @@ export function ExpenseStrip({ facts, window, today, color, width, format }: Exp
         }}
       >
         <Text style={{ fontSize: 12, color: ChartColors.tooltipMuted }}>{formatDay(selected.date, true)}</Text>
-        <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.surface }}>{format.money(selected.amount)}</Text>
+        <Text style={{ fontSize: 18, fontWeight: "800", color: palette.sheet }}>{format.money(selected.amount)}</Text>
         <Text style={{ fontSize: 12, color: ChartColors.tooltipMuted }}>
           {selected.subcategoryName} · {selected.authorName}
         </Text>

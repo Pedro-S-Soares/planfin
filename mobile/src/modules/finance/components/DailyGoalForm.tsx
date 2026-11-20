@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { Btn } from "../../../components/ui/Btn";
+import { Button } from "../../../components/ui/Button";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { usePeriod } from "../../../context/PeriodContext";
 import { useApplyDailyGoalMutation } from "../../../graphql/__generated__/hooks";
 import { confirm } from "../../../lib/alert";
 import { displayToAPI, formatCents, parseCents } from "../../../lib/currency";
-import { Colors, Radius } from "../../../theme/tokens";
 import { formatMoney, formatShortDate } from "../format";
 import { FormLabel } from "./FormLabel";
+import { palette, radius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type DailyGoalFormProps = {
   /** Money for variable spending over the goal's days. */
@@ -69,28 +70,28 @@ export function DailyGoalForm({ available, days, startDate, endDate, today }: Da
     <View style={{ marginTop: 12 }}>
       <FormLabel>Meta diária</FormLabel>
       <CurrencyInput value={goalValue} onChange={setGoal} />
-      <View style={{ backgroundColor: Colors.bg, borderRadius: Radius.md, padding: 12, marginBottom: 12, gap: 4 }}>
-        <Text style={{ fontSize: 13, color: Colors.textSec }}>
+      <View style={{ backgroundColor: palette.paper, borderRadius: radius.control, padding: 12, marginBottom: 12, gap: 4 }}>
+        <Text style={{ fontSize: 13, color: palette.muted }}>
           {money(goalCents / 100)} × {days} {days === 1 ? "dia" : "dias"} ({formatShortDate(startDate)} a {formatShortDate(endDate)}) = {money(expectedSpending)}
         </Text>
-        <Text style={{ fontSize: 14, fontWeight: "800", color: leftover >= 0 ? Colors.successText : Colors.danger }}>
+        <Text style={{ fontSize: 14, fontWeight: "800", color: leftover >= 0 ? palette.income : palette.danger }}>
           {leftover >= 0
             ? `Sobra prevista: ${money(leftover)} (${money(leftover / 2)} de mesada para cada)`
             : `Passa ${money(-leftover)} do que dá para gastar`}
         </Text>
         {currentGoal !== null ? (
-          <Text style={{ fontSize: 12, color: Colors.textTer }}>Limite em uso hoje: {money(currentGoal)}/dia</Text>
+          <Text style={{ fontSize: 12, color: palette.muted }}>Limite em uso hoje: {money(currentGoal)}/dia</Text>
         ) : null}
       </View>
-      <Btn
+      <Button
         label={
           isScheduled
             ? `Agendar ${money(goalCents / 100)}/dia a partir de ${formatShortDate(startDate)}`
             : `Usar ${money(goalCents / 100)}/dia até ${formatShortDate(endDate)}`
         }
         onPress={handleApply}
-        loading={loading}
-        disabled={goalCents <= 0}
+        isLoading={loading}
+        isDisabled={goalCents <= 0}
       />
     </View>
   );

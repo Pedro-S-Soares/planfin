@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { Animated, Platform, Pressable, Text, View } from "react-native";
+import { Animated, Platform, Pressable, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { subscribeToasts, type ToastMessage } from "../../lib/toast";
-import { Colors, Radius, Shadow } from "../../theme/tokens";
+import { palette, radius } from "../../theme";
+import { Text } from "./Text";
+import { Icon } from "./Icon";
 
 const DURATION_MS = { success: 2800, error: 5500 } as const;
 const MAX_VISIBLE = 3;
@@ -26,15 +28,14 @@ function ToastItem({ message, onDismiss }: { message: ToastMessage; onDismiss: (
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
-          backgroundColor: isError ? Colors.danger : Colors.successText,
-          borderRadius: Radius.md,
+          backgroundColor: isError ? palette.danger : palette.income,
+          borderRadius: radius.control,
           paddingHorizontal: 14,
           paddingVertical: 12,
-          ...Shadow.md,
         }}
       >
-        <Text style={{ fontSize: 16, color: "#fff" }}>{isError ? "⚠" : "✓"}</Text>
-        <Text style={{ flex: 1, color: "#fff", fontSize: 14, fontWeight: "600", lineHeight: 19 }}>{message.text}</Text>
+        <Icon name={isError ? "alert-circle-outline" : "check-circle-outline"} size={20} tone="onAccent" />
+        <Text style={{ flex: 1, color: palette.onAccent, fontSize: 14, fontWeight: "600", lineHeight: 19 }}>{message.text}</Text>
       </Pressable>
     </Animated.View>
   );

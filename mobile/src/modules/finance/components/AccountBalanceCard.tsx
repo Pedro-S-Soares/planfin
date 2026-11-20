@@ -1,10 +1,13 @@
-import { Text, TouchableOpacity, View } from "react-native";
-import { Card } from "../../../components/ui/Card";
+import { TouchableOpacity, View } from "react-native";
+import { Block } from "../../../components/ui/Block";
 import { useCurrency } from "../../../context/CurrencyContext";
-import { Colors, Radius } from "../../../theme/tokens";
 import { parseISODate } from "../../../lib/date";
 import { ACCOUNT_KIND_ICON, ACCOUNT_KIND_LABEL, formatMoney, formatShortDate, toNumber } from "../format";
 import type { FinancialAccount } from "../use-financial-accounts";
+import { palette, radius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
+import { Icon } from "../../../components/ui/Icon";
+import { IconTile } from "../../../components/ui/IconTile";
 
 type AccountBalanceCardProps = {
   account: FinancialAccount;
@@ -29,25 +32,27 @@ export function AccountBalanceCard({ account, onPress, onAdjust }: AccountBalanc
   const creditHint = benefitHint(account, balance, currency.symbol);
 
   return (
-    <Card padding={16} style={{ marginBottom: 12 }}>
+    <Block padding={16} style={{ marginBottom: 12 }}>
       <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Text style={{ fontSize: 22 }}>{ACCOUNT_KIND_ICON[account.kind]}</Text>
+          <IconTile background={palette.accentSoft}>
+          <Icon name={ACCOUNT_KIND_ICON[account.kind]} size={18} tone="accent" />
+        </IconTile>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>{account.name}</Text>
-            <Text style={{ fontSize: 12, color: Colors.textSec }}>
+            <Text style={{ fontSize: 15, fontWeight: "700", color: palette.ink }}>{account.name}</Text>
+            <Text style={{ fontSize: 12, color: palette.muted }}>
               {ACCOUNT_KIND_LABEL[account.kind]}
               {account.isPrimary ? " · Principal" : ""}
               {ownerName ? ` · ${ownerName}` : ""}
             </Text>
           </View>
-          <Text style={{ fontSize: 16, color: Colors.textTer }}>›</Text>
+          <Icon name="chevron-right" />
         </View>
         <Text
           style={{
             fontSize: 26,
             fontWeight: "800",
-            color: balance < 0 ? Colors.danger : Colors.text,
+            color: balance < 0 ? palette.danger : palette.ink,
             marginTop: 12,
             letterSpacing: -0.5,
           }}
@@ -55,19 +60,19 @@ export function AccountBalanceCard({ account, onPress, onAdjust }: AccountBalanc
           {formatMoney(balance, currency.symbol)}
         </Text>
       </TouchableOpacity>
-      {creditHint ? <Text style={{ fontSize: 12, color: Colors.successText, marginTop: 2 }}>{creditHint}</Text> : null}
+      {creditHint ? <Text style={{ fontSize: 12, color: palette.income, marginTop: 2 }}>{creditHint}</Text> : null}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-        <Text style={{ fontSize: 12, color: Colors.textTer }}>
+        <Text style={{ fontSize: 12, color: palette.muted }}>
           Conferido com o banco em {formatShortDate(account.balanceDate)}
         </Text>
         <TouchableOpacity
           onPress={onAdjust}
           activeOpacity={0.8}
-          style={{ backgroundColor: Colors.bg, borderRadius: Radius.full, paddingHorizontal: 12, paddingVertical: 6 }}
+          style={{ backgroundColor: palette.paper, borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 6 }}
         >
-          <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primaryText }}>Ajustar saldo</Text>
+          <Text style={{ fontSize: 12, fontWeight: "700", color: palette.accent }}>Ajustar saldo</Text>
         </TouchableOpacity>
       </View>
-    </Card>
+    </Block>
   );
 }

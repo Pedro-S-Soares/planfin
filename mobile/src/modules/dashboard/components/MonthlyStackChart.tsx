@@ -1,11 +1,12 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import type { MonthStack } from "../analytics";
 import { AxisTextStyle, ChartColors } from "../charts/chart-tokens";
 import { barPath, hLines, niceTicks, rectPath } from "../charts/scale";
 import type { CategoryInfo } from "../types";
 import type { MoneyFormat } from "../use-money";
-import { Colors } from "../../../theme/tokens";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type MonthlyStackChartProps = {
   months: MonthStack[];
@@ -68,7 +69,7 @@ export function MonthlyStackChart({ months, categoryIds, categories, width, form
           {m.total > 0 ? (
             <Text
               numberOfLines={1}
-              style={{ position: "absolute", left: -8, right: -8, top: y(m.total) - 20, textAlign: "center", fontSize: slot >= 84 ? 12 : 10, fontWeight: "800", color: Colors.text }}
+              style={{ position: "absolute", left: -8, right: -8, top: y(m.total) - 20, textAlign: "center", fontSize: slot >= 84 ? 12 : 10, fontWeight: "800", color: palette.ink }}
             >
               {slot >= 84
                 ? format.money(m.total)
@@ -76,7 +77,7 @@ export function MonthlyStackChart({ months, categoryIds, categories, width, form
             </Text>
           ) : null}
           <Text
-            style={{ position: "absolute", left: 0, right: 0, bottom: 4, textAlign: "center", fontSize: 12, fontWeight: "600", color: Colors.textSec }}
+            style={{ position: "absolute", left: 0, right: 0, bottom: 4, textAlign: "center", fontSize: 12, fontWeight: "600", color: palette.muted }}
           >
             {m.label}
             {m.partial ? "*" : ""}

@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { Btn } from "../../../components/ui/Btn";
-import { Card } from "../../../components/ui/Card";
+import { Button } from "../../../components/ui/Button";
+import { Block } from "../../../components/ui/Block";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { useSetInvoiceGoalMutation } from "../../../graphql/__generated__/hooks";
 import { displayToAPI, formatCents, parseCents } from "../../../lib/currency";
-import { Colors, Radius } from "../../../theme/tokens";
 import { formatMoney, formatMonth, toNumber } from "../format";
+import { palette, radius } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type HistoryInvoice = { month: string; total: number; status: string };
 
@@ -38,10 +39,10 @@ export function InvoiceHistory({ cardId, goal, invoices }: InvoiceHistoryProps) 
   const delta = last && previous && previous.total > 0 ? (last.total - previous.total) / previous.total : null;
 
   return (
-    <Card padding={16} style={{ marginBottom: 12 }}>
-      <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>EVOLUÇÃO DA FATURA</Text>
+    <Block padding={16} style={{ marginBottom: 12 }}>
+      <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>Evolução da fatura</Text>
       {last ? (
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4 }}>
+        <Text style={{ fontSize: 13, color: palette.muted, marginTop: 4 }}>
           Última fechada: {formatMoney(last.total, currency.symbol)}
           {delta !== null ? ` · ${delta <= 0 ? "▼" : "▲"} ${Math.abs(Math.round(delta * 100))}% vs ${formatMonth(previous?.month)}` : ""}
         </Text>
@@ -57,7 +58,7 @@ export function InvoiceHistory({ cardId, goal, invoices }: InvoiceHistoryProps) 
               bottom: (goalValue / max) * CHART_HEIGHT,
               borderTopWidth: 1.5,
               borderStyle: "dashed",
-              borderColor: Colors.success,
+              borderColor: palette.income,
             }}
           />
         ) : null}
@@ -69,11 +70,11 @@ export function InvoiceHistory({ cardId, goal, invoices }: InvoiceHistoryProps) 
                 style={{
                   width: "100%",
                   height: Math.max(2, (i.total / max) * CHART_HEIGHT),
-                  borderTopLeftRadius: Radius.xs,
-                  borderTopRightRadius: Radius.xs,
-                  backgroundColor: i.status === "open" ? Colors.primaryLight : overGoal ? Colors.danger : Colors.primary,
+                  borderTopLeftRadius: radius.control,
+                  borderTopRightRadius: radius.control,
+                  backgroundColor: i.status === "open" ? palette.accentSoft : overGoal ? palette.danger : palette.accent,
                   borderWidth: i.status === "open" ? 1.5 : 0,
-                  borderColor: Colors.primary,
+                  borderColor: palette.accent,
                   borderStyle: "dashed",
                 }}
               />
@@ -83,7 +84,7 @@ export function InvoiceHistory({ cardId, goal, invoices }: InvoiceHistoryProps) 
       </View>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
         {invoices.map((i) => (
-          <Text key={i.month} style={{ flex: 1, textAlign: "center", fontSize: 10, color: Colors.textSec }}>
+          <Text key={i.month} style={{ flex: 1, textAlign: "center", fontSize: 12, color: palette.muted }}>
             {formatMonth(i.month).slice(0, 3)}
           </Text>
         ))}
@@ -94,10 +95,10 @@ export function InvoiceHistory({ cardId, goal, invoices }: InvoiceHistoryProps) 
           <CurrencyInput value={goalDraft} onChange={setGoalDraft} autoFocus />
           <View style={{ flexDirection: "row", gap: 8 }}>
             <View style={{ flex: 1 }}>
-              <Btn
+              <Button
                 label="Salvar meta"
                 size="sm"
-                loading={loading}
+                isLoading={loading}
                 onPress={() =>
                   setInvoiceGoal({ variables: { id: cardId, invoiceGoal: parseCents(goalDraft) > 0 ? displayToAPI(goalDraft) : null } })
                 }
@@ -105,20 +106,20 @@ export function InvoiceHistory({ cardId, goal, invoices }: InvoiceHistoryProps) 
             </View>
             {goalValue !== null ? (
               <View style={{ flex: 1 }}>
-                <Btn label="Remover" size="sm" variant="ghost" onPress={() => setInvoiceGoal({ variables: { id: cardId, invoiceGoal: null } })} />
+                <Button label="Remover" size="sm" variant="secondary" onPress={() => setInvoiceGoal({ variables: { id: cardId, invoiceGoal: null } })} />
               </View>
             ) : null}
           </View>
         </View>
       ) : (
         <TouchableOpacity onPress={() => setEditingGoal(true)} activeOpacity={0.7} style={{ marginTop: 12 }}>
-          <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: palette.accent }}>
             {goalValue !== null
               ? `Meta: fatura até ${formatMoney(goalValue, currency.symbol)} · alterar`
               : "Definir meta para reduzir a fatura"}
           </Text>
         </TouchableOpacity>
       )}
-    </Card>
+    </Block>
   );
 }

@@ -1,9 +1,10 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import type { SubcategoryComparison } from "../analytics";
 import { ChartColors } from "../charts/chart-tokens";
 import { signedPercent, type MoneyFormat } from "../use-money";
-import { Colors } from "../../../theme/tokens";
 import { Legend } from "./ChartCard";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type SubcategoryCompareProps = { rows: SubcategoryComparison[]; color: string; format: MoneyFormat };
 
@@ -16,7 +17,7 @@ export function SubcategoryCompare({ rows, color, format }: SubcategoryComparePr
       <Legend
         items={[
           { label: "Este intervalo", color },
-          ...(hasPrevious ? [{ label: "Intervalo anterior (traço)", color: Colors.text, shape: "line" as const }] : []),
+          ...(hasPrevious ? [{ label: "Intervalo anterior (traço)", color: palette.ink, shape: "line" as const }] : []),
         ]}
       />
       {rows.map((r) => {
@@ -24,8 +25,8 @@ export function SubcategoryCompare({ rows, color, format }: SubcategoryComparePr
         return (
           <View key={r.name} style={{ gap: 8 }} accessibilityLabel={`${r.name}: ${format.money(r.current)}`}>
             <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-              <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: Colors.text }}>{r.name}</Text>
-              <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.text }}>{format.money(r.current)}</Text>
+              <Text style={{ flex: 1, fontSize: 14, fontWeight: "700", color: palette.ink }}>{r.name}</Text>
+              <Text style={{ fontSize: 14, fontWeight: "800", color: palette.ink }}>{format.money(r.current)}</Text>
               {hasPrevious ? (
                 <Text
                   style={{
@@ -33,7 +34,7 @@ export function SubcategoryCompare({ rows, color, format }: SubcategoryComparePr
                     textAlign: "right",
                     fontSize: 12,
                     fontWeight: "700",
-                    color: delta !== null && delta > 0.1 ? ChartColors.overText : Colors.textSec,
+                    color: delta !== null && delta > 0.1 ? ChartColors.overText : palette.muted,
                   }}
                 >
                   {delta === null ? "novo" : signedPercent(delta)}
@@ -58,7 +59,7 @@ export function SubcategoryCompare({ rows, color, format }: SubcategoryComparePr
                     width: 2,
                     height: 20,
                     left: `${(r.previous / max) * 100}%`,
-                    backgroundColor: Colors.text,
+                    backgroundColor: palette.ink,
                   }}
                 />
               ) : null}

@@ -1,7 +1,8 @@
 import { ReactNode, useState } from "react";
-import { LayoutChangeEvent, Text, View, ViewStyle } from "react-native";
-import { Card } from "../../../components/ui/Card";
-import { Colors } from "../../../theme/tokens";
+import { LayoutChangeEvent, View, ViewStyle } from "react-native";
+import { Block } from "../../../components/ui/Block";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type ChartCardProps = {
   title: string;
@@ -18,18 +19,18 @@ export function ChartCard({ title, subtitle, aside, style, children }: ChartCard
   const onLayout = (e: LayoutChangeEvent) => setWidth(Math.floor(e.nativeEvent.layout.width));
 
   return (
-    <Card padding={24} style={{ gap: 16, ...style }}>
+    <Block padding={24} style={{ gap: 16, ...style }}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 12 }}>
         <View style={{ flexShrink: 1, gap: 4 }}>
-          <Text accessibilityRole="header" style={{ fontSize: 17, fontWeight: "800", color: Colors.text }}>
+          <Text accessibilityRole="header" style={{ fontSize: 17, fontWeight: "800", color: palette.ink }}>
             {title}
           </Text>
-          {subtitle ? <Text style={{ fontSize: 13, color: Colors.textSec }}>{subtitle}</Text> : null}
+          {subtitle ? <Text style={{ fontSize: 13, color: palette.muted }}>{subtitle}</Text> : null}
         </View>
         {aside ? <View style={{ flexShrink: 1, maxWidth: "100%" }}>{aside}</View> : null}
       </View>
       <View onLayout={onLayout}>{width > 0 ? children(width) : <View style={{ height: 120 }} />}</View>
-    </Card>
+    </Block>
   );
 }
 
@@ -53,7 +54,7 @@ export function Legend({ items }: { items: LegendItem[] }) {
           ) : (
             <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: item.color }} />
           )}
-          <Text style={{ fontSize: 12, color: Colors.textSec }}>{item.label}</Text>
+          <Text style={{ fontSize: 12, color: palette.muted }}>{item.label}</Text>
         </View>
       ))}
     </View>

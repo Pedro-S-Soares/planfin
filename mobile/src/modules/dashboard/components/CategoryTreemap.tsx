@@ -1,9 +1,10 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
 import type { CategoryTotal } from "../analytics";
 import { tint } from "../palette";
 import { inset, squarify } from "../treemap";
 import { percent, type MoneyFormat } from "../use-money";
-import { Colors } from "../../../theme/tokens";
+import { palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 type CategoryTreemapProps = { categories: CategoryTotal[]; width: number; height: number; format: MoneyFormat };
 
@@ -42,9 +43,9 @@ export function CategoryTreemap({ categories, width, height, format }: CategoryT
                   overflow: "hidden",
                 }}
               >
-                <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "800", color: Colors.text }}>
+                <Text numberOfLines={1} style={{ fontSize: 12, fontWeight: "800", color: palette.ink }}>
                   {b.item.name}
-                  <Text style={{ fontWeight: "400", color: Colors.textSec }}> {percent(b.item.share)}</Text>
+                  <Text style={{ fontWeight: "400", color: palette.muted }}> {percent(b.item.share)}</Text>
                 </Text>
               </View>
             ) : null}
@@ -69,7 +70,7 @@ export function CategoryTreemap({ categories, width, height, format }: CategoryT
                 >
                   {showLabel ? (
                     <>
-                      <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "700", color: Colors.text }}>
+                      <Text numberOfLines={1} style={{ fontSize: 13, fontWeight: "700", color: palette.ink }}>
                         {t.item.name}
                       </Text>
                       <Text numberOfLines={1} style={{ fontSize: 12, color: "#3A3857" }}>

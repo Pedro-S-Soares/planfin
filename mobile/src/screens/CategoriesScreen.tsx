@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Modal, Platform } from "react-native";
+import { View, FlatList, TouchableOpacity, ActivityIndicator, Modal, Platform } from "react-native";
 import {
   useCategoriesQuery,
   useCreateCategoryMutation,
@@ -10,13 +10,19 @@ import {
   CategoriesDocument,
   CategoriesQuery,
 } from "../graphql/__generated__/hooks";
-import { Card } from "../components/ui/Card";
+import { Block } from "../components/ui/Block";
 import { CategoryIcon } from "../components/ui/CategoryIcon";
 import { IconPicker } from "../components/ui/IconPicker";
 import { IconPickerButton } from "../components/ui/IconPickerButton";
 import { InlineError } from "../components/ui/InlineError";
-import { Colors, Radius, Shadow, categoryColor } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { categoryColor, palette, radius } from "../theme";
+import { Text } from "../components/ui/Text";
+import { TextInput } from "../components/ui/TextInput";
+import { Icon } from "../components/ui/Icon";
+import { AppText } from "../components/ui/AppText";
+import { ChipGroup } from "../components/ui/Chip";
+import { ScreenHeader } from "../components/ui/ScreenHeader";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -27,72 +33,14 @@ const TYPE_LABELS: Record<CategoryType, string> = {
   income: "Receita",
 };
 
-const TYPE_COLORS: Record<CategoryType, { bg: string; text: string }> = {
-  expense: { bg: "#FEF0EE", text: "#E5392B" },
-  income: { bg: "#E8FBF2", text: "#0A7A50" },
-};
+const TYPE_OPTIONS = (["expense", "income"] as CategoryType[]).map((value) => ({ value, label: TYPE_LABELS[value] }));
 
-function TypeToggle({
-  value,
-  onChange,
-}: {
-  value: CategoryType;
-  onChange: (v: CategoryType) => void;
-}) {
-  return (
-    <View style={{ flexDirection: "row", gap: 6 }}>
-      {(["expense", "income"] as CategoryType[]).map((t) => {
-        const active = value === t;
-        return (
-          <TouchableOpacity
-            key={t}
-            onPress={() => onChange(t)}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: Radius.full,
-              backgroundColor: active ? (t === "expense" ? Colors.dangerLight : Colors.successLight) : Colors.border,
-              borderWidth: 1.5,
-              borderColor: active ? (t === "expense" ? Colors.danger : Colors.success) : "transparent",
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 12,
-                fontWeight: "700",
-                color: active
-                  ? t === "expense"
-                    ? Colors.danger
-                    : Colors.success
-                  : Colors.textSec,
-              }}
-            >
-              {TYPE_LABELS[t]}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
+function TypeToggle({ value, onChange }: { value: CategoryType; onChange: (v: CategoryType) => void }) {
+  return <ChipGroup options={TYPE_OPTIONS} value={value} onChange={onChange} />;
 }
 
-function TypeBadge({ type }: { type: string | null | undefined }) {
-  const t = (type ?? "expense") as CategoryType;
-  const colors = TYPE_COLORS[t] ?? TYPE_COLORS.expense;
-  return (
-    <View
-      style={{
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: Radius.full,
-        backgroundColor: colors.bg,
-      }}
-    >
-      <Text style={{ fontSize: 10, fontWeight: "700", color: colors.text }}>
-        {TYPE_LABELS[t] ?? type}
-      </Text>
-    </View>
-  );
+function typeLabel(type: string | null | undefined): string {
+  return type === "income" ? TYPE_LABELS.income : TYPE_LABELS.expense;
 }
 
 const refetchCategories = [{ query: CategoriesDocument }];
@@ -161,30 +109,14 @@ export function CategoriesScreen() {
 
   const categories = (data?.categories ?? []).filter(Boolean) as NonNullable<Category>[];
 
-  const header = (
-    <View style={{
-      backgroundColor: Colors.surface,
-      paddingTop: Platform.OS === "ios" ? 58 : 24,
-      paddingBottom: 14,
-      paddingHorizontal: 18,
-      borderBottomWidth: 1,
-      borderBottomColor: Colors.border,
-    }}>
-      <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.text, letterSpacing: -0.4 }}>
-        Categorias
-      </Text>
-      <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
-        Organize seus gastos
-      </Text>
-    </View>
-  );
+  const header = <ScreenHeader title="Categorias" subtitle="Organize seus gastos" />;
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <View style={{ flex: 1, backgroundColor: palette.paper }}>
         {header}
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={palette.accent} />
         </View>
       </View>
     );
@@ -192,7 +124,7 @@ export function CategoriesScreen() {
 
   if (error) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <View style={{ flex: 1, backgroundColor: palette.paper }}>
         {header}
         <View style={{ padding: 16 }}>
           <InlineError onRetry={refetch} />
@@ -202,14 +134,14 @@ export function CategoriesScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: palette.paper }}>
       {header}
       <FlatList
         data={categories}
         keyExtractor={(item) => item?.id ?? ""}
         contentContainerStyle={{ padding: 16, gap: 10 }}
         ListHeaderComponent={
-          <Card padding={12} style={{ marginBottom: 4, gap: 10 }}>
+          <Block padding={12} style={{ marginBottom: 4, gap: 10 }}>
             <View style={{ flexDirection: "row", gap: 8 }}>
               <IconPickerButton
                 icon={newCategoryIcon}
@@ -221,42 +153,43 @@ export function CategoriesScreen() {
                   flex: 1,
                   height: 40,
                   borderWidth: 1.5,
-                  borderColor: Colors.border,
-                  borderRadius: Radius.sm,
+                  borderColor: palette.rule,
+                  borderRadius: radius.control,
                   paddingHorizontal: 12,
                   fontSize: 14,
-                  color: Colors.text,
-                  backgroundColor: Colors.surface,
+                  color: palette.ink,
+                  backgroundColor: palette.sheet,
                 }}
                 placeholder="Nova categoria..."
-                placeholderTextColor={Colors.textTer}
+                placeholderTextColor={palette.muted}
                 value={newCategoryName}
                 onChangeText={setNewCategoryName}
               />
               <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Adicionar categoria"
                 onPress={handleAddCategory}
                 style={{
                   width: 40,
                   height: 40,
-                  borderRadius: Radius.sm,
-                  backgroundColor: Colors.primary,
+                  borderRadius: radius.control,
+                  backgroundColor: palette.accent,
                   alignItems: "center",
                   justifyContent: "center",
-                  ...Shadow.sm,
                 }}
               >
-                <Text style={{ color: "#fff", fontSize: 22, lineHeight: 28, fontWeight: "300" }}>+</Text>
+                <Icon name="plus" size={22} tone="onAccent" />
               </TouchableOpacity>
             </View>
             <TypeToggle value={newCategoryType} onChange={setNewCategoryType} />
-          </Card>
+          </Block>
         }
         renderItem={({ item: cat }) => {
           const cc = categoryColor(cat.name ?? "");
           const isOpen = expandedId === cat.id;
 
           return (
-            <Card padding={0} style={{ overflow: "hidden" }}>
+            <Block padding={0} style={{ overflow: "hidden" }}>
               <TouchableOpacity
                 style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14 }}
                 onPress={() => setExpandedId(isOpen ? null : cat.id ?? null)}
@@ -265,7 +198,7 @@ export function CategoriesScreen() {
                 <View style={{
                   width: 36,
                   height: 36,
-                  borderRadius: Radius.sm,
+                  borderRadius: radius.control,
                   backgroundColor: cc.bg,
                   alignItems: "center",
                   justifyContent: "center",
@@ -273,53 +206,51 @@ export function CategoriesScreen() {
                 }}>
                   <CategoryIcon icon={cat.icon} name={cat.name ?? ""} size={20} />
                 </View>
-                <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>
-                    {cat.name}
-                  </Text>
-                  <TypeBadge type={cat.type} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <AppText variant="label" numberOfLines={1}>{cat.name}</AppText>
+                  <AppText variant="caption" numberOfLines={1}>
+                    {typeLabel(cat.type)} · {cat.subcategories?.length ?? 0}{" "}
+                    {(cat.subcategories?.length ?? 0) === 1 ? "subcategoria" : "subcategorias"}
+                  </AppText>
                 </View>
-                <Text style={{ fontSize: 12, color: Colors.textSec, marginRight: 4 }}>
-                  {cat.subcategories?.length ?? 0} subcats
-                </Text>
                 <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                   <TouchableOpacity onPress={() => openEditModal(cat)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Text style={{ color: Colors.primary, fontSize: 14 }}>✎</Text>
+                    <Icon name="pencil-outline" size={18} tone="accent" />
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={() => handleDeleteCategory(cat.id ?? "")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Text style={{ color: Colors.danger, fontSize: 13, fontWeight: "700" }}>✕</Text>
+                  <TouchableOpacity accessibilityLabel={`Excluir ${cat.name}`} onPress={() => handleDeleteCategory(cat.id ?? "")} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                    <Icon name="trash-can-outline" size={18} tone="danger" />
                   </TouchableOpacity>
                 </View>
-                <Text style={{ color: Colors.textTer, fontSize: 11, marginLeft: 4 }}>{isOpen ? "▲" : "▼"}</Text>
+                <Icon name={isOpen ? "chevron-up" : "chevron-down"} />
               </TouchableOpacity>
 
               {isOpen && (
-                <View style={{ paddingHorizontal: 14, paddingBottom: 14, borderTopWidth: 1, borderTopColor: Colors.border }}>
+                <View style={{ paddingHorizontal: 14, paddingBottom: 14, borderTopWidth: 1, borderTopColor: palette.rule }}>
                   {(cat.subcategories ?? []).filter(Boolean).map((sub: Subcategory) => (
-                    <View key={sub?.id ?? ""} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: Colors.border }}>
-                      <Text style={{ fontSize: 13.5, color: Colors.text }}>{sub?.name}</Text>
+                    <View key={sub?.id ?? ""} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: palette.rule }}>
+                      <Text style={{ fontSize: 13.5, color: palette.ink }}>{sub?.name}</Text>
                       <TouchableOpacity
                         onPress={() => handleDeleteSubcategory(sub?.id ?? "")}
                         hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                       >
-                        <Text style={{ color: Colors.danger, fontSize: 13, fontWeight: "700" }}>✕</Text>
+                        <Icon name="trash-can-outline" size={18} tone="danger" />
                       </TouchableOpacity>
                     </View>
                   ))}
                   <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
                     <TextInput
                       placeholder="Nova subcategoria..."
-                      placeholderTextColor={Colors.textTer}
+                      placeholderTextColor={palette.muted}
                       style={{
                         flex: 1,
                         height: 38,
                         borderWidth: 1.5,
-                        borderColor: Colors.border,
-                        borderRadius: Radius.sm,
+                        borderColor: palette.rule,
+                        borderRadius: radius.control,
                         paddingHorizontal: 10,
                         fontSize: 13,
-                        color: Colors.text,
-                        backgroundColor: Colors.surface,
+                        color: palette.ink,
+                        backgroundColor: palette.sheet,
                       }}
                       value={newSubName[cat.id ?? ""] ?? ""}
                       onChangeText={(t) => setNewSubName((prev) => ({ ...prev, [cat.id ?? ""]: t }))}
@@ -329,18 +260,18 @@ export function CategoriesScreen() {
                       style={{
                         width: 38,
                         height: 38,
-                        borderRadius: Radius.sm,
-                        backgroundColor: Colors.primaryLight,
+                        borderRadius: radius.control,
+                        backgroundColor: palette.accentSoft,
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
-                      <Text style={{ color: Colors.primaryText, fontSize: 20, fontWeight: "700", lineHeight: 26 }}>+</Text>
+                      <Text style={{ color: palette.accent, fontSize: 20, fontWeight: "700", lineHeight: 26 }}>+</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               )}
-            </Card>
+            </Block>
           );
         }}
       />
@@ -354,20 +285,19 @@ export function CategoriesScreen() {
       >
         <View style={{
           flex: 1,
-          backgroundColor: "rgba(0,0,0,0.4)",
+          backgroundColor: palette.backdrop,
           alignItems: "center",
           justifyContent: "center",
           padding: 24,
         }}>
           <View style={{
-            backgroundColor: Colors.surface,
-            borderRadius: Radius.lg,
+            backgroundColor: palette.sheet,
+            borderRadius: radius.block,
             padding: 24,
             width: "100%",
             gap: 16,
-            ...Shadow.md,
           }}>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: Colors.text }}>
+            <Text style={{ fontSize: 17, fontWeight: "800", color: palette.ink }}>
               Editar categoria
             </Text>
             <View style={{ flexDirection: "row", gap: 10 }}>
@@ -382,15 +312,15 @@ export function CategoriesScreen() {
                   flex: 1,
                   height: 44,
                   borderWidth: 1.5,
-                  borderColor: Colors.border,
-                  borderRadius: Radius.sm,
+                  borderColor: palette.rule,
+                  borderRadius: radius.control,
                   paddingHorizontal: 12,
                   fontSize: 15,
-                  color: Colors.text,
-                  backgroundColor: Colors.surface,
+                  color: palette.ink,
+                  backgroundColor: palette.sheet,
                 }}
                 placeholder="Nome da categoria"
-                placeholderTextColor={Colors.textTer}
+                placeholderTextColor={palette.muted}
                 value={editName}
                 onChangeText={setEditName}
                 autoFocus
@@ -403,28 +333,27 @@ export function CategoriesScreen() {
                 style={{
                   flex: 1,
                   height: 44,
-                  borderRadius: Radius.sm,
+                  borderRadius: radius.control,
                   borderWidth: 1.5,
-                  borderColor: Colors.border,
+                  borderColor: palette.rule,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.textSec }}>Cancelar</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: palette.muted }}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleSaveEdit}
                 style={{
                   flex: 1,
                   height: 44,
-                  borderRadius: Radius.sm,
-                  backgroundColor: Colors.primary,
+                  borderRadius: radius.control,
+                  backgroundColor: palette.accent,
                   alignItems: "center",
                   justifyContent: "center",
-                  ...Shadow.sm,
                 }}
               >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>Salvar</Text>
+                <Text style={{ fontSize: 14, fontWeight: "700", color: palette.onAccent }}>Salvar</Text>
               </TouchableOpacity>
             </View>
           </View>

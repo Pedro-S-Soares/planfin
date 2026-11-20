@@ -1,14 +1,16 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, TouchableOpacity } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { useForgotPasswordMutation } from "../graphql/__generated__/hooks";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { FieldInput } from "../components/ui/FieldInput";
-import { Colors, Radius } from "../theme/tokens";
 import type { AuthStackParamList } from "../../App";
+import { palette, radius } from "../theme";
+import { Text } from "../components/ui/Text";
+import { BackLink } from "../components/ui/BackLink";
 
 const schema = yup.object({
   email: yup.string().email("Email inválido").required("Email é obrigatório"),
@@ -32,27 +34,21 @@ export function ForgotPasswordScreen({ navigation }: Props) {
   const onSubmit = (values: FormValues) => forgotPassword({ variables: values });
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.surface }}>
+    <View style={{ flex: 1, backgroundColor: palette.sheet }}>
       {/* Header */}
       <View style={{
-        backgroundColor: Colors.bg,
+        backgroundColor: palette.paper,
         paddingTop: 62,
         paddingBottom: 22,
         paddingHorizontal: 22,
-        borderBottomLeftRadius: 24,
-        borderBottomRightRadius: 24,
+        borderBottomWidth: 1,
+        borderBottomColor: palette.rule,
       }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{ flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 16 }}
-        >
-          <Text style={{ color: Colors.primary, fontSize: 18 }}>‹</Text>
-          <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "600" }}>Voltar</Text>
-        </TouchableOpacity>
-        <Text style={{ fontSize: 26, fontWeight: "800", color: Colors.text, letterSpacing: -0.5 }}>
+        <BackLink onPress={() => navigation.goBack()} />
+        <Text style={{ fontSize: 26, fontWeight: "800", color: palette.ink, letterSpacing: -0.5 }}>
           Recuperar senha
         </Text>
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 3 }}>
+        <Text style={{ fontSize: 13, color: palette.muted, marginTop: 3 }}>
           Enviaremos um link para o seu e-mail
         </Text>
       </View>
@@ -60,16 +56,16 @@ export function ForgotPasswordScreen({ navigation }: Props) {
       <View style={{ padding: 22, paddingTop: 22 }}>
         {sent ? (
           <View style={{
-            backgroundColor: Colors.successLight,
-            borderRadius: Radius.lg,
+            backgroundColor: palette.incomeSoft,
+            borderRadius: radius.block,
             padding: 18,
             borderWidth: 1,
-            borderColor: "rgba(14,173,112,0.3)",
+            borderColor: palette.income,
           }}>
-            <Text style={{ fontSize: 15, color: Colors.successText, fontWeight: "700" }}>
-              ✓ Link enviado!
+            <Text style={{ fontSize: 15, color: palette.income, fontWeight: "700" }}>
+              Link enviado!
             </Text>
-            <Text style={{ fontSize: 13, color: Colors.successText, marginTop: 5, lineHeight: 20 }}>
+            <Text style={{ fontSize: 13, color: palette.income, marginTop: 5, lineHeight: 20 }}>
               Verifique seu e-mail e siga as instruções para redefinir sua senha.
             </Text>
           </View>
@@ -93,7 +89,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
                 />
               )}
             />
-            <Btn label="Enviar link de recuperação" onPress={handleSubmit(onSubmit)} loading={loading} />
+            <Button label="Enviar link de recuperação" onPress={handleSubmit(onSubmit)} isLoading={loading} />
           </>
         )}
       </View>

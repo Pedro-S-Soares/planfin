@@ -1,13 +1,15 @@
 import { ReactNode } from "react";
-import { ActivityIndicator, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { ActivityIndicator, ScrollView, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { InlineError } from "../../../components/ui/InlineError";
-import { Colors } from "../../../theme/tokens";
+import { layout, palette } from "../../../theme";
+import { Text } from "../../../components/ui/Text";
 
 export const WIDE_BREAKPOINT = 1100;
 
+/** Wide layout only when the app column itself is wide (it is capped at 560px on desktop). */
 export function useIsWide(): boolean {
-  return useWindowDimensions().width >= WIDE_BREAKPOINT;
+  return Math.min(useWindowDimensions().width, layout.maxContentWidth) >= WIDE_BREAKPOINT;
 }
 
 /** Scrollable page with a centred, max-width column. */
@@ -15,7 +17,7 @@ export function DashboardPage({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
   const wide = useIsWide();
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }}>
       <View
         style={{
           width: "100%",
@@ -63,13 +65,13 @@ export function PageHeader({ eyebrow, title, subtitle, aside }: {
       <View style={{ gap: 6, flexShrink: 1 }}>
         {eyebrow}
         {typeof title === "string" ? (
-          <Text accessibilityRole="header" style={{ fontSize: wide ? 34 : 26, fontWeight: "800", color: Colors.text }}>
+          <Text accessibilityRole="header" style={{ fontSize: wide ? 34 : 26, fontWeight: "800", color: palette.ink }}>
             {title}
           </Text>
         ) : (
           title
         )}
-        {subtitle ? <Text style={{ fontSize: 14, color: Colors.textSec }}>{subtitle}</Text> : null}
+        {subtitle ? <Text style={{ fontSize: 14, color: palette.muted }}>{subtitle}</Text> : null}
       </View>
       {aside}
     </View>
@@ -78,8 +80,8 @@ export function PageHeader({ eyebrow, title, subtitle, aside }: {
 
 export function DashboardLoading() {
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: Colors.bg }}>
-      <ActivityIndicator color={Colors.primary} size="large" />
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: palette.paper }}>
+      <ActivityIndicator color={palette.accent} size="large" />
     </View>
   );
 }
@@ -93,5 +95,5 @@ export function DashboardError({ onRetry }: { onRetry: () => void }) {
 }
 
 export function EmptyNote({ children }: { children: string }) {
-  return <Text style={{ fontSize: 14, color: Colors.textSec, paddingVertical: 24 }}>{children}</Text>;
+  return <Text style={{ fontSize: 14, color: palette.muted, paddingVertical: 24 }}>{children}</Text>;
 }

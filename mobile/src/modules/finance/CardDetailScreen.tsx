@@ -1,21 +1,22 @@
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { DatePickerField } from "../../components/DatePickerField";
-import { Btn } from "../../components/ui/Btn";
-import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Block } from "../../components/ui/Block";
 import { InlineError } from "../../components/ui/InlineError";
 import { usePeriod } from "../../context/PeriodContext";
 import { useAssignEntriesToAccountMutation, useInvoicesQuery } from "../../graphql/__generated__/hooks";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
-import { Colors } from "../../theme/tokens";
 import { InvoiceHistory } from "./components/InvoiceHistory";
 import { InvoiceRow } from "./components/InvoiceRow";
 import { toNumber } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
+import { palette } from "../../theme";
+import { Text } from "../../components/ui/Text";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
@@ -48,19 +49,19 @@ export function CardDetailScreen() {
     .map((i) => ({ month: i.month ?? "", total: toNumber(i.total), status: i.status ?? "" }));
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
       {card ? (
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginBottom: 10 }}>
+        <Text style={{ fontSize: 13, color: palette.muted, marginBottom: 10 }}>
           {card.name} · fecha dia {card.closingDay} · vence dia {card.dueDay}
         </Text>
       ) : null}
 
       {history.length > 0 ? <InvoiceHistory cardId={params.cardId} goal={card?.invoiceGoal} invoices={history} /> : null}
 
-      <Card padding={16} style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>FATURAS</Text>
+      <Block padding={16} style={{ marginBottom: 12 }}>
+        <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>Faturas</Text>
         {loading && !data ? (
-          <ActivityIndicator color={Colors.primary} style={{ marginVertical: 16 }} />
+          <ActivityIndicator color={palette.accent} style={{ marginVertical: 16 }} />
         ) : error ? (
           <InlineError onRetry={() => refetch()} />
         ) : (
@@ -75,32 +76,32 @@ export function CardDetailScreen() {
             />
           ))
         )}
-      </Card>
+      </Block>
 
-      <Btn
+      <Button
         label="Lançar compra antiga ou ajuste na fatura"
-        variant="ghost"
+        variant="secondary"
         onPress={() => navigation.navigate("AddExpense", { accountId: params.cardId, outsideBudget: true })}
       />
 
-      <Card padding={16} style={{ marginTop: 12 }}>
-        <Text style={{ fontSize: 15, fontWeight: "700", color: Colors.text }}>Trazer gastos já lançados</Text>
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4, marginBottom: 12, lineHeight: 18 }}>
+      <Block padding={16} style={{ marginTop: 12 }}>
+        <Text style={{ fontSize: 15, fontWeight: "700", color: palette.ink }}>Trazer gastos já lançados</Text>
+        <Text style={{ fontSize: 13, color: palette.muted, marginTop: 4, marginBottom: 12, lineHeight: 18 }}>
           Os gastos registrados antes de você cadastrar o cartão estão sem conta. Escolha a partir de quando eles foram
           no cartão e o app coloca todos na fatura certa.
         </Text>
         <DatePickerField value={fromDate} onChange={setFromDate} />
-        <Btn
+        <Button
           label="Mover para este cartão"
           size="sm"
           variant="secondary"
-          loading={assigning}
+          isLoading={assigning}
           onPress={() => assignEntries({ variables: { accountId: params.cardId, fromDate } })}
         />
-      </Card>
+      </Block>
 
       <View style={{ marginTop: 12 }}>
-        <Btn label="Editar cartão" size="sm" variant="ghost" onPress={() => navigation.navigate("AccountForm", { accountId: params.cardId })} />
+        <Button label="Editar cartão" size="sm" variant="secondary" onPress={() => navigation.navigate("AccountForm", { accountId: params.cardId })} />
       </View>
     </ScrollView>
   );
