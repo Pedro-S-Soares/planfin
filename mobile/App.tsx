@@ -66,7 +66,8 @@ export type AuthStackParamList = {
 /** Optional presets when opening the new expense/income form. */
 export type EntryFormParams =
   | {
-      accountId?: string;
+      /** null = no account (the history filtered by "Sem conta"). */
+      accountId?: string | null;
       /** Start with "counts in budget" off (old purchases, salary, bills). */
       outsideBudget?: boolean;
       date?: string;

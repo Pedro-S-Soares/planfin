@@ -34,7 +34,8 @@ export function CurrencyInput({ value, onChange, error, autoFocus }: CurrencyInp
       }}>
         <Text style={{ fontSize: 16, color: Colors.textSec, fontWeight: "600", marginRight: 4 }}>R$</Text>
         <TextInput
-          style={{ flex: 1, fontSize: 16, color: Colors.text }}
+          // The wrapper border already shows focus; drop the browser outline drawn inside it.
+          style={{ flex: 1, fontSize: 16, color: Colors.text, outlineStyle: "solid", outlineWidth: 0 }}
           value={value}
           onChangeText={handleChangeText}
           onFocus={() => setFocused(true)}

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, Switch, ScrollView } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -23,6 +24,7 @@ import { confirm } from "../lib/alert";
 import { AccountPicker } from "../modules/finance/components/AccountPicker";
 import { InstallmentsSection } from "../modules/finance/components/InstallmentsSection";
 import { useFinancialAccounts } from "../modules/finance/use-financial-accounts";
+import { toast } from "../lib/toast";
 import type { AppStackParamList } from "../../App";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
@@ -50,6 +52,17 @@ export function EditExpenseScreen() {
   usePageTitle("Planfin - Editar gasto");
   const navigation = useNavigation();
   const route = useRoute<NativeStackScreenProps<AppStackParamList, "EditExpense">["route"]>();
+  return <EditExpenseForm entry={route.params} onDone={() => navigation.goBack()} />;
+}
+
+interface EditExpenseFormProps {
+  entry: AppStackParamList["EditExpense"];
+  /** Called once the entry is saved or deleted. */
+  onDone: () => void;
+}
+
+/** The edit-expense form: its own screen, and the sheet opened over the history. */
+export function EditExpenseForm({ entry, onDone }: EditExpenseFormProps) {
   const {
     id,
     amount,
@@ -61,7 +74,7 @@ export function EditExpenseScreen() {
     accountId: initialAccountId,
     countsInBudget,
     installmentCount,
-  } = route.params;
+  } = entry;
   const { accounts } = useFinancialAccounts();
   const isBudgetEntry = countsInBudget !== false;
 
@@ -69,7 +82,7 @@ export function EditExpenseScreen() {
   const { data: catData } = useCategoriesQuery({ variables: { type: "expense" } });
   const categories = catData?.categories ?? [];
 
-  const { control, handleSubmit, watch, setError, formState: { errors } } = useForm({
+  const { control, handleSubmit, watch, setValue, getValues, setError, formState: { errors } } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
       amount: apiToDisplay(amount),
@@ -82,12 +95,19 @@ export function EditExpenseScreen() {
     },
   });
 
+  // Callers like the history only know the subcategory: select its category once categories load,
+  // so the subcategory chips show up already marked.
+  const subcategoryCategoryId = categories.find((c) => c?.subcategories?.some((s) => s?.id === subcategoryId))?.id;
+  useEffect(() => {
+    if (subcategoryCategoryId && !getValues("categoryId")) setValue("categoryId", subcategoryCategoryId);
+  }, [subcategoryCategoryId, getValues, setValue]);
+
   const selectedCategoryId = watch("categoryId");
   const subcategories: NonNullable<Subcategory>[] =
     categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
 
   const [updateExpense, { loading: updating }] = useUpdateExpenseMutation({
-    onCompleted: () => { refetch(); navigation.goBack(); },
+    onCompleted: () => { refetch(); toast.success("Alteração salva"); onDone(); },
     onError: (error) => setError("root", { message: error.message }),
     refetchQueries: [
       { query: ActivePeriodDocument },
@@ -102,7 +122,7 @@ export function EditExpenseScreen() {
   });
 
   const [deleteExpense, { loading: deleting }] = useDeleteExpenseMutation({
-    onCompleted: () => { refetch(); navigation.goBack(); },
+    onCompleted: () => { refetch(); toast.success("Gasto excluído"); onDone(); },
     onError: (error) => setError("root", { message: error.message }),
     refetchQueries: [
       { query: ActivePeriodDocument },
@@ -166,7 +186,7 @@ export function EditExpenseScreen() {
         )}
       />
 
-      {installmentCount ? <InstallmentsSection expenseId={id} onAnticipated={() => navigation.goBack()} /> : null}
+      {installmentCount ? <InstallmentsSection expenseId={id} onAnticipated={onDone} /> : null}
 
       <Controller
         control={control}

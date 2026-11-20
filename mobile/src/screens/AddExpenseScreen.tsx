@@ -25,7 +25,8 @@ import { invoiceMonthFor } from "../modules/finance/format";
 import { ToggleRow } from "../modules/finance/components/ToggleRow";
 import { defaultSpendingAccountId, useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import { parseCents } from "../lib/currency";
-import type { AppStackParamList } from "../../App";
+import { toast } from "../lib/toast";
+import type { AppStackParamList, EntryFormParams } from "../../App";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -53,6 +54,17 @@ export function AddExpenseScreen() {
   usePageTitle("Planfin - Novo gasto");
   const navigation = useNavigation();
   const { params } = useRoute<RouteProp<AppStackParamList, "AddExpense">>();
+  return <AddExpenseForm params={params} onDone={() => navigation.goBack()} />;
+}
+
+interface AddExpenseFormProps {
+  params?: EntryFormParams;
+  /** Called once the entry is saved. */
+  onDone: () => void;
+}
+
+/** The new-expense form: its own screen, and the sheet opened over the history. */
+export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
   const { period, refetch } = usePeriod();
   const { accounts } = useFinancialAccounts();
 
@@ -100,7 +112,7 @@ export function AddExpenseScreen() {
     categories.find((c) => c?.id === selectedCategoryId)?.subcategories?.filter(Boolean) as NonNullable<Subcategory>[] ?? [];
 
   const [createExpense, { loading }] = useCreateExpenseMutation({
-    onCompleted: () => { refetch(); navigation.goBack(); },
+    onCompleted: () => { refetch(); toast.success("Gasto registrado"); onDone(); },
     onError: (error) => setError("root", { message: error.message }),
     refetchQueries: [
       { query: ActivePeriodDocument },
