@@ -1,4 +1,3 @@
-import { Text, ScrollView } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -11,17 +10,16 @@ import {
 import { usePeriod } from "../context/PeriodContext";
 import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { toISODate } from "../lib/date";
 import { displayToAPI } from "../lib/currency";
-import { Ledger } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { AccountPicker } from "../modules/finance/components/AccountPicker";
 import { ToggleRow } from "../modules/finance/components/ToggleRow";
 import { defaultSpendingAccountId, useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import { parseCents } from "../lib/currency";
 import { toast } from "../lib/toast";
-import { CategoryField, ExtraToggle, FieldLabel, MoreOptions, NoteField } from "../modules/history/components/entry-form-parts";
+import { CategoryField, ExtraToggle, FieldLabel, MoreOptions, NoteField, EntryFormLayout } from "../modules/history/components/entry-form-parts";
 import type { AppStackParamList, EntryFormParams } from "../../App";
 
 const schema = yup.object({
@@ -116,11 +114,9 @@ export function AddIncomeForm({ params, onDone }: AddIncomeFormProps) {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: Ledger.sheet }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
+    <EntryFormLayout
+      error={errors.root?.message}
+      submit={<Button label="Registrar receita" onPress={handleSubmit(onSubmit)} isLoading={loading} />}
     >
       <FieldLabel>Valor</FieldLabel>
       <Controller
@@ -200,13 +196,6 @@ export function AddIncomeForm({ params, onDone }: AddIncomeFormProps) {
         />
       </MoreOptions>
 
-      {errors.root && (
-        <Text style={{ color: Ledger.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
-          {errors.root.message}
-        </Text>
-      )}
-
-      <Btn label="Registrar receita" onPress={handleSubmit(onSubmit)} loading={loading} />
-    </ScrollView>
+    </EntryFormLayout>
   );
 }

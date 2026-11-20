@@ -1,5 +1,6 @@
-import { Switch, Text, TouchableOpacity, View } from "react-native";
-import { Colors, Radius } from "../../../theme/tokens";
+import { Pressable, StyleSheet, Switch, View } from "react-native";
+import { AppText } from "../../../components/ui/AppText";
+import { palette, radius, space } from "../../../theme";
 
 type ToggleRowProps = {
   title: string;
@@ -8,34 +9,47 @@ type ToggleRowProps = {
   onChange: (value: boolean) => void;
 };
 
+/** An on/off option with one line explaining it; the switch alone shows the state. */
 export function ToggleRow({ title, description, value, onChange }: ToggleRowProps) {
   return (
-    <TouchableOpacity
+    <Pressable
+      accessibilityRole="switch"
+      aria-checked={value}
       onPress={() => onChange(!value)}
-      activeOpacity={0.8}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: value ? Colors.primaryLight : Colors.bg,
-        borderRadius: Radius.md,
-        borderWidth: 1.5,
-        borderColor: value ? Colors.primary : Colors.border,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        marginBottom: 16,
-      }}
+      style={({ pressed }) => [styles.row, pressed ? styles.pressed : null]}
     >
-      <View style={{ flex: 1, marginRight: 12 }}>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: value ? Colors.primaryText : Colors.text }}>{title}</Text>
-        <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>{description}</Text>
+      <View style={styles.texts}>
+        <AppText variant="label">{title}</AppText>
+        <AppText variant="caption">{description}</AppText>
       </View>
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: Colors.border, true: Colors.primary }}
-        thumbColor="#fff"
+        trackColor={{ false: palette.rule, true: palette.accent }}
+        thumbColor={palette.sheet}
       />
-    </TouchableOpacity>
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.md,
+    borderRadius: radius.control,
+    borderWidth: 1,
+    borderColor: palette.rule,
+    backgroundColor: palette.sheet,
+    paddingHorizontal: space.md + 2,
+    paddingVertical: space.md,
+    marginBottom: space.lg,
+  },
+  pressed: {
+    backgroundColor: palette.paper,
+  },
+  texts: {
+    flex: 1,
+  },
+});

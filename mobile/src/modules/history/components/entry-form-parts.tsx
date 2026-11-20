@@ -1,9 +1,15 @@
 import { useState, type ReactNode } from "react";
-import { Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { AppText } from "../../../components/ui/AppText";
+import { Button } from "../../../components/ui/Button";
 import { Chip } from "../../../components/ui/Chip";
+import { SheetFooter } from "../../../components/ui/Sheet";
 import { confirm } from "../../../lib/alert";
-import { categoryColor, Ledger } from "../../../theme/tokens";
+import { layout, palette, radius, space, textVariants } from "../../../theme";
+import { categoryColor } from "../../../theme/tokens";
 import { FormLabel as FieldLabel } from "../../finance/components/FormLabel";
+import { ToggleRow } from "../../finance/components/ToggleRow";
 import type { CategoriesQuery } from "../../../graphql/__generated__/graphql";
 
 type Category = NonNullable<NonNullable<CategoriesQuery["categories"]>[number]>;
@@ -34,7 +40,7 @@ export function CategoryField({
   return (
     <>
       <FieldLabel>Categoria</FieldLabel>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 16 }}>
+      <View style={styles.chips}>
         {list.map((cat) => (
           <Chip
             key={cat.id}
@@ -50,7 +56,7 @@ export function CategoryField({
       {subcategories.length > 0 ? (
         <>
           <FieldLabel>{`Subcategoria de ${selected?.name ?? "categoria"}`}</FieldLabel>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 16 }}>
+          <View style={styles.chips}>
             {subcategories.map((sub) => (
               <Chip
                 key={sub.id}
@@ -74,35 +80,12 @@ interface ExtraToggleProps {
 
 export function ExtraToggle({ title, value, onChange }: ExtraToggleProps) {
   return (
-    <TouchableOpacity
-      onPress={() => onChange(!value)}
-      activeOpacity={0.8}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: value ? Ledger.accentSoft : Ledger.paper,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: value ? Ledger.accent : Ledger.rule,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        marginBottom: 16,
-      }}
-    >
-      <View style={{ flex: 1, marginRight: 12 }}>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: value ? Ledger.accent : Ledger.ink }}>{title}</Text>
-        <Text style={{ fontSize: 12, color: Ledger.muted, marginTop: 2 }}>
-          Não conta no limite diário, só no orçamento total
-        </Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onChange}
-        trackColor={{ false: Ledger.rule, true: Ledger.accent }}
-        thumbColor="#fff"
-      />
-    </TouchableOpacity>
+    <ToggleRow
+      title={title}
+      description="Não conta no limite diário, só no orçamento total"
+      value={value}
+      onChange={onChange}
+    />
   );
 }
 
@@ -115,24 +98,15 @@ interface NoteFieldProps {
 
 export function NoteField({ value, onChange, onBlur, placeholder }: NoteFieldProps) {
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={styles.noteField}>
       <FieldLabel>Nota</FieldLabel>
       <TextInput
-        style={{
-          height: 48,
-          borderWidth: 1,
-          borderColor: Ledger.rule,
-          borderRadius: 8,
-          paddingHorizontal: 14,
-          fontSize: 16,
-          color: Ledger.ink,
-          backgroundColor: Ledger.sheet,
-        }}
+        style={styles.noteInput}
         value={value}
         onChangeText={onChange}
         onBlur={onBlur}
         placeholder={placeholder}
-        placeholderTextColor={Ledger.muted}
+        placeholderTextColor={palette.muted}
       />
     </View>
   );
@@ -151,27 +125,19 @@ export function MoreOptions({ summary, isInitiallyOpen = false, children }: More
   const [isOpen, setIsOpen] = useState(isInitiallyOpen);
 
   return (
-    <View style={{ marginBottom: 8 }}>
-      <TouchableOpacity
+    <View style={styles.moreOptions}>
+      <Pressable
         accessibilityRole="button"
-        accessibilityState={{ expanded: isOpen }}
+        aria-expanded={isOpen}
         onPress={() => setIsOpen((open) => !open)}
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          minHeight: 48,
-          borderTopWidth: 1,
-          borderTopColor: Ledger.rule,
-          marginBottom: isOpen ? 12 : 0,
-        }}
+        style={[styles.moreOptionsToggle, isOpen ? styles.moreOptionsToggleOpen : null]}
       >
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 15, fontWeight: "600", color: Ledger.accent }}>Mais opções</Text>
-          {isOpen ? null : <Text style={{ fontSize: 12, color: Ledger.muted, marginTop: 1 }}>{summary}</Text>}
+        <View style={styles.moreOptionsTexts}>
+          <AppText variant="baseStrong" tone="accent">Mais opções</AppText>
+          {isOpen ? null : <AppText variant="caption">{summary}</AppText>}
         </View>
-        <Text style={{ fontSize: 14, color: Ledger.accent }}>{isOpen ? "▴" : "▾"}</Text>
-      </TouchableOpacity>
+        <MaterialCommunityIcons name={isOpen ? "chevron-up" : "chevron-down"} size={20} color={palette.accent} />
+      </Pressable>
       {isOpen ? children : null}
     </View>
   );
@@ -189,15 +155,104 @@ interface DeleteEntryButtonProps {
 /** Destructive action of the edit sheet: danger text with no fill, always behind a confirmation. */
 export function DeleteEntryButton({ label, confirmTitle, confirmMessage, isDisabled, onConfirm }: DeleteEntryButtonProps) {
   return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      disabled={isDisabled}
+    <Button
+      label={label}
+      variant="destructive"
+      isDisabled={isDisabled}
+      style={styles.deleteButton}
       onPress={() =>
         confirm({ title: confirmTitle, message: confirmMessage, confirmLabel: "Excluir", destructive: true }, onConfirm)
       }
-      style={{ height: 48, alignItems: "center", justifyContent: "center", marginTop: 8, opacity: isDisabled ? 0.5 : 1 }}
-    >
-      <Text style={{ fontSize: 16, fontWeight: "600", color: Ledger.danger }}>{label}</Text>
-    </TouchableOpacity>
+    />
   );
 }
+
+interface EntryFormLayoutProps {
+  /** The fields, in a scrolling column. */
+  children: ReactNode;
+  /** Form error to show right above the save button. */
+  error?: string;
+  /** The save button, pinned at the bottom of the sheet. */
+  submit: ReactNode;
+}
+
+/** Fields scroll; the save button stays pinned at the bottom, always in reach. */
+export function EntryFormLayout({ children, error, submit }: EntryFormLayoutProps) {
+  return (
+    <View style={styles.formRoot}>
+      <ScrollView
+        style={styles.formScroll}
+        contentContainerStyle={styles.formContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {children}
+      </ScrollView>
+      <SheetFooter>
+        {error ? (
+          <AppText variant="body" tone="danger" style={styles.formError}>
+            {error}
+          </AppText>
+        ) : null}
+        {submit}
+      </SheetFooter>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  chips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: space.sm,
+    marginBottom: space.lg,
+  },
+  noteField: {
+    marginBottom: space.lg,
+  },
+  noteInput: {
+    ...textVariants.base,
+    height: 48,
+    borderWidth: 1,
+    borderColor: palette.rule,
+    borderRadius: radius.control,
+    paddingHorizontal: 14,
+    backgroundColor: palette.sheet,
+  },
+  moreOptions: {
+    marginBottom: space.sm,
+  },
+  moreOptionsToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 48,
+    borderTopWidth: 1,
+    borderTopColor: palette.rule,
+    paddingTop: space.sm,
+  },
+  moreOptionsToggleOpen: {
+    marginBottom: space.md,
+  },
+  moreOptionsTexts: {
+    flex: 1,
+  },
+  deleteButton: {
+    marginTop: space.lg,
+  },
+  formRoot: {
+    flex: 1,
+    backgroundColor: palette.sheet,
+  },
+  formScroll: {
+    flex: 1,
+  },
+  formContent: {
+    padding: layout.gutter,
+    paddingBottom: space.xl,
+  },
+  formError: {
+    textAlign: "center",
+    marginBottom: space.xs,
+  },
+});

@@ -1,4 +1,4 @@
-import { Text, ScrollView } from "react-native";
+import { StyleSheet } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -12,10 +12,10 @@ import {
 import { usePeriod } from "../context/PeriodContext";
 import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { toISODate } from "../lib/date";
 import { displayToAPI } from "../lib/currency";
-import { Ledger } from "../theme/tokens";
+import { AppText } from "../components/ui/AppText";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { AccountPicker } from "../modules/finance/components/AccountPicker";
 import { InstallmentPlan } from "../modules/finance/components/InstallmentPlan";
@@ -24,7 +24,7 @@ import { ToggleRow } from "../modules/finance/components/ToggleRow";
 import { defaultSpendingAccountId, useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import { parseCents } from "../lib/currency";
 import { toast } from "../lib/toast";
-import { CategoryField, ExtraToggle, FieldLabel, MoreOptions, NoteField } from "../modules/history/components/entry-form-parts";
+import { CategoryField, ExtraToggle, FieldLabel, MoreOptions, NoteField, EntryFormLayout } from "../modules/history/components/entry-form-parts";
 import type { AppStackParamList, EntryFormParams } from "../../App";
 
 const schema = yup.object({
@@ -139,11 +139,9 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: Ledger.sheet }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
+    <EntryFormLayout
+      error={errors.root?.message}
+      submit={<Button label="Registrar gasto" onPress={handleSubmit(onSubmit)} isLoading={loading} />}
     >
       <FieldLabel>Valor</FieldLabel>
       <Controller
@@ -165,9 +163,9 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
         onSubcategoryChange={(id) => setValue("subcategoryId", id)}
       />
       {quota ? (
-        <Text style={{ fontSize: 12, color: Ledger.muted, marginTop: -8, marginBottom: 16, lineHeight: 17 }}>
+        <AppText variant="caption" style={styles.quotaNote}>
           Entra na cota "{quota.name}": abate do valor reservado no mês e não mexe no limite diário.
-        </Text>
+        </AppText>
       ) : null}
 
       <Controller
@@ -243,13 +241,13 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
         />
       </MoreOptions>
 
-      {errors.root && (
-        <Text style={{ color: Ledger.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
-          {errors.root.message}
-        </Text>
-      )}
-
-      <Btn label="Registrar gasto" onPress={handleSubmit(onSubmit)} loading={loading} />
-    </ScrollView>
+    </EntryFormLayout>
   );
 }
+
+const styles = StyleSheet.create({
+  quotaNote: {
+    marginTop: -8,
+    marginBottom: 16,
+  },
+});

@@ -1,3 +1,7 @@
+/**
+ * Legacy tokens of the pre-redesign look (gradients, purple shadows). Screens not yet
+ * migrated to the "extrato da casa" theme (src/theme/index.ts) still use them.
+ */
 export const Colors = {
   primary: "#6255EA",
   primaryDark: "#4A3FBB",
@@ -77,20 +81,7 @@ export function categoryColor(name: string) {
 }
 
 /**
- * "Extrato da casa" palette (docs/ux-audit): the app as a well-printed bank statement.
- * New and reworked components use these; the rest migrates in the redesign.
+ * Legacy aliases of the theme (src/theme/index.ts), kept while the remaining screens
+ * migrate in the next redesign phases. New code imports from "theme" directly.
  */
-export const Ledger = {
-  ink: "#1C1A2E",
-  paper: "#F6F5FA",
-  sheet: "#FFFFFF",
-  rule: "#E4E1EE",
-  muted: "#6A6785",
-  accent: "#4B3FD1",
-  accentSoft: "#ECEAFC",
-  income: "#0E7F57",
-  danger: "#C2372C",
-};
-
-/** Digits of equal width, so amounts line up in a column like on a statement. */
-export const TABULAR_NUMS = { fontVariant: ["tabular-nums" as const] };
+export { palette as Ledger, tabularNums as TABULAR_NUMS } from "./index";

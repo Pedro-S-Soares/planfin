@@ -1,11 +1,13 @@
-import { Text, TouchableOpacity, View } from "react-native";
-import { Colors, Radius } from "../../theme/tokens";
+import { palette, tint } from "../../theme";
 import { categoryColor } from "../../theme/tokens";
-import { CategoryIcon } from "./CategoryIcon";
-import { useCurrency } from "../../context/CurrencyContext";
 import { subcategoryLabel } from "../../lib/category-label";
-import { isRecurringEntry } from "../../modules/history/history-filters";
+import { useCurrency } from "../../context/CurrencyContext";
 import { formatMoney, toNumber } from "../../lib/money";
+import { isRecurringEntry } from "../../modules/history/history-filters";
+import { CategoryIcon } from "./CategoryIcon";
+import { IconTile } from "./IconTile";
+import { ListRow } from "./ListRow";
+import { MoneyText } from "./MoneyText";
 
 interface ExpenseItem {
   id: string;
@@ -30,95 +32,41 @@ interface ExpenseRowProps {
   authorLabel?: string | null;
 }
 
+/** One entry of a statement list: category icon, title, "Receita · Banco Azul · 2/10 · Feira", amount. */
 export function ExpenseRow({ item, onPress, authorLabel }: ExpenseRowProps) {
   const { currency } = useCurrency();
   const colorKey = item.subcategory?.category?.name ?? item.subcategory?.name ?? "";
-  const cc = categoryColor(colorKey);
+  const iconColor = item.type === "income" ? palette.income : categoryColor(colorKey).dot;
   const isIncome = item.type === "income";
   // A paid planned item (fixed or one-off) shows its name (the bill's name is stored as the note).
   const isBillEntry = (item.source === "bill" || item.source === "one_off_bill") && Boolean(item.note);
   const title = item.source === "invoice_adjustment"
     ? "Ajuste da fatura"
-    : isBillEntry ? item.note : subcategoryLabel(item.subcategory);
-  const details = [
-    authorLabel,
+    : isBillEntry ? item.note ?? "" : subcategoryLabel(item.subcategory, isIncome ? "Receita" : "Sem categoria");
+  // Former pills (Receita, Recorrente) are plain words of the detail line, like on a bank statement.
+  const detail = [
+    isIncome && title !== "Receita" ? "Receita" : null,
+    isRecurringEntry({ source: item.source ?? null }) ? "Recorrente" : null,
+    item.account?.name,
     item.installmentCount ? `${item.installmentNumber}/${item.installmentCount}` : null,
-    item.account?.name ? `${item.account.kind === "credit_card" ? "💳" : "🏦"} ${item.account.name}` : null,
     isBillEntry ? subcategoryLabel(item.subcategory, "") : item.note,
-  ].filter(Boolean);
-  const isOutsideBudget = item.countsInBudget === false;
-  const isRecurring = isRecurringEntry({ source: item.source ?? null });
+    authorLabel,
+  ].filter(Boolean).join(" · ");
+  const signedAmount = isIncome ? toNumber(item.amount) : -toNumber(item.amount);
 
   return (
-    <TouchableOpacity
+    <ListRow
       onPress={onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-        paddingVertical: 11,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.border,
-      }}
-    >
-      <View style={{
-        width: 36,
-        height: 36,
-        borderRadius: Radius.sm,
-        backgroundColor: isIncome ? Colors.successLight : cc.bg,
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}>
-        <CategoryIcon
-          icon={item.subcategory?.category?.icon}
-          name={colorKey}
-          size={18}
-          color={isIncome ? Colors.success : cc.dot}
-        />
-      </View>
-
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Text style={{ flexShrink: 1, fontSize: 14, fontWeight: "600", color: Colors.text }} numberOfLines={1}>
-            {title}
-          </Text>
-          {isIncome && (
-            <View style={{
-              backgroundColor: Colors.successLight,
-              borderRadius: 4,
-              paddingHorizontal: 5,
-              paddingVertical: 1,
-            }}>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.successText }}>Receita</Text>
-            </View>
-          )}
-          {isRecurring ? (
-            <View style={{
-              backgroundColor: Colors.primaryLight,
-              borderRadius: 4,
-              paddingHorizontal: 5,
-              paddingVertical: 1,
-            }}>
-              <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.primaryText }}>↻ Recorrente</Text>
-            </View>
-          ) : null}
-        </View>
-        {details.length > 0 ? (
-          <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 1 }} numberOfLines={1}>
-            {details.join(" · ")}
-          </Text>
-        ) : null}
-        {isOutsideBudget ? (
-          <Text style={{ fontSize: 11, color: Colors.textTer, marginTop: 1 }}>Fora do orçamento do dia</Text>
-        ) : null}
-      </View>
-
-      <Text style={{ fontSize: 15, fontWeight: "700", color: isIncome ? Colors.success : Colors.text, flexShrink: 0, fontVariant: ["tabular-nums"] }}>
-        {formatMoney(isIncome ? item.amount : -toNumber(item.amount), currency.symbol, { sign: "flow" })}
-      </Text>
-
-    </TouchableOpacity>
+      accessibilityLabel={[title, detail, formatMoney(signedAmount, currency.symbol, { sign: "flow" })].filter(Boolean).join(", ")}
+      leading={
+        <IconTile background={tint(iconColor)}>
+          <CategoryIcon icon={item.subcategory?.category?.icon} name={colorKey} size={18} color={iconColor} />
+        </IconTile>
+      }
+      title={title}
+      detail={detail}
+      footnote={item.countsInBudget === false ? "Fora do orçamento do dia" : null}
+      trailing={<MoneyText amount={signedAmount} sign="flow" variant="value" isColoredBySign />}
+    />
   );
 }

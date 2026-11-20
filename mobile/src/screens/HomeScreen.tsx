@@ -1,17 +1,6 @@
 import { useCallback, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-  ActionSheetIOS,
-  Modal,
-  Platform,
-  StyleSheet,
-  Pressable,
-} from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { ActionSheetIOS, ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@apollo/client/react";
@@ -25,19 +14,25 @@ import {
   type ExpenseDayWithAuthors,
   type ExpenseWithAuthor,
 } from "../graphql/expenses";
-import { BalanceViewToggle, type BalanceView } from "../components/ui/BalanceViewToggle";
+import { AppText } from "../components/ui/AppText";
+import { Block, ListBlock } from "../components/ui/Block";
+import { Button } from "../components/ui/Button";
+import { ChipGroup } from "../components/ui/Chip";
 import { DailyBalanceCard } from "../components/ui/DailyBalanceCard";
-import { TotalBalanceCard } from "../components/ui/TotalBalanceCard";
-import { Card } from "../components/ui/Card";
+import { SectionHeader } from "../components/ui/DayHeader";
+import { EmptyState } from "../components/ui/EmptyState";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { InlineError } from "../components/ui/InlineError";
-import { Colors, Ledger, Radius } from "../theme/tokens";
+import { PlusIcon } from "../components/ui/PlusIcon";
+import { TotalBalanceCard } from "../components/ui/TotalBalanceCard";
+import { layout, palette, radius, shadow, space } from "../theme";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { FinancePanel } from "../modules/finance/components/FinancePanel";
 import { MonthPlanCard } from "../modules/finance/components/MonthPlanCard";
 import { AllowanceCard } from "../modules/finance/components/AllowanceCard";
 import { SpendableLine } from "../modules/finance/components/SpendableLine";
 import { EntrySheet } from "../modules/history/components/EntrySheet";
+import { OptionSheet, type SheetSection } from "../modules/history/components/OptionSheet";
 import {
   CLOSED_SHEET,
   createEntryState,
@@ -50,6 +45,12 @@ import type { GroupPeriod } from "../context/PeriodContext";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 type ExpenseHistoryData = { expenseHistory: ExpenseDayWithAuthors[] };
+type BalanceView = "daily" | "total";
+
+const BALANCE_VIEWS: { value: BalanceView; label: string }[] = [
+  { value: "daily", label: "Diário" },
+  { value: "total", label: "Total" },
+];
 
 function authorLabel(author: ExpenseWithAuthor["createdBy"], currentUserId?: string) {
   if (!author) return null;
@@ -65,74 +66,6 @@ function formatPeriodLabel(p: GroupPeriod): string {
   return `${start} – ${end}`;
 }
 
-// ─── Period Selector (Android fallback modal) ─────────────────────────────────
-
-type PeriodPickerModalProps = {
-  visible: boolean;
-  periods: GroupPeriod[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-  onClose: () => void;
-  onCreateNew: () => void;
-};
-
-function PeriodPickerModal({
-  visible,
-  periods,
-  selectedId,
-  onSelect,
-  onClose,
-  onCreateNew,
-}: PeriodPickerModalProps) {
-  return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.modalSheet} onPress={() => {}}>
-          <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Selecionar período</Text>
-          {periods.map((p) => {
-            const isSelected = p.id === selectedId;
-            return (
-              <TouchableOpacity
-                key={p.id}
-                onPress={() => {
-                  onSelect(p.id);
-                  onClose();
-                }}
-                style={[styles.modalItem, isSelected && styles.modalItemSelected]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.modalItemText, isSelected && styles.modalItemTextSelected]}>
-                  {formatPeriodLabel(p)}
-                </Text>
-                {p.status === "active" && (
-                  <View style={styles.activeBadge}>
-                    <Text style={styles.activeBadgeText}>Ativo</Text>
-                  </View>
-                )}
-                {isSelected && (
-                  <Text style={styles.checkmark}>✓</Text>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-          <TouchableOpacity onPress={onCreateNew} style={styles.modalCreateNew} activeOpacity={0.7}>
-            <Text style={styles.modalCreateNewText}>+ Novo planejamento</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onClose} style={styles.modalCancel} activeOpacity={0.7}>
-            <Text style={styles.modalCancelText}>Cancelar</Text>
-          </TouchableOpacity>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
 // ─── Period Selector Strip ────────────────────────────────────────────────────
 
 type PeriodSelectorProps = {
@@ -142,7 +75,7 @@ type PeriodSelectorProps = {
 };
 
 function PeriodSelector({ periods, selectedId, onSetSelected }: PeriodSelectorProps) {
-  const [androidModalVisible, setAndroidModalVisible] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const navigation = useNavigation<Navigation>();
 
   const selectedPeriod = periods.find((p) => p.id === selectedId) ?? periods[0] ?? null;
@@ -168,36 +101,40 @@ function PeriodSelector({ periods, selectedId, onSetSelected }: PeriodSelectorPr
         },
       );
     } else {
-      setAndroidModalVisible(true);
+      setIsPickerOpen(true);
     }
   }, [periods, onSetSelected, navigation]);
 
+  const sections: SheetSection[] = [
+    {
+      options: periods.map((p) => ({
+        key: p.id,
+        label: p.status === "active" ? `${formatPeriodLabel(p)} · ativo` : formatPeriodLabel(p),
+        isSelected: p.id === selectedPeriod?.id,
+        onSelect: () => {
+          onSetSelected(p.id);
+        },
+      })),
+    },
+    {
+      options: [
+        { key: "new", label: "Novo planejamento", isSelected: false, onSelect: () => navigation.navigate("CreatePeriod") },
+      ],
+    },
+  ];
+
   return (
     <>
-      <TouchableOpacity
-        onPress={openPicker}
-        activeOpacity={0.7}
-        style={styles.periodSelector}
-      >
-        <Text style={styles.periodSelectorText} numberOfLines={1}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Período: ${label}`} onPress={openPicker} style={styles.periodSelector}>
+        <AppText variant="label" tone="accent" style={styles.periodSelectorText} numberOfLines={1}>
           {label}
-        </Text>
-        <Text style={styles.periodSelectorChevron}>▾</Text>
-      </TouchableOpacity>
+        </AppText>
+        <MaterialCommunityIcons name="chevron-down" size={18} color={palette.accent} />
+      </Pressable>
 
-      {Platform.OS !== "ios" && (
-        <PeriodPickerModal
-          visible={androidModalVisible}
-          periods={periods}
-          selectedId={selectedId}
-          onSelect={onSetSelected}
-          onClose={() => setAndroidModalVisible(false)}
-          onCreateNew={() => {
-            setAndroidModalVisible(false);
-            navigation.navigate("CreatePeriod");
-          }}
-        />
-      )}
+      {Platform.OS !== "ios" ? (
+        <OptionSheet title="Selecionar período" sections={sections} isOpen={isPickerOpen} onClose={() => setIsPickerOpen(false)} />
+      ) : null}
     </>
   );
 }
@@ -243,6 +180,8 @@ export function HomeScreen() {
 
   const todayStr = toISODate(new Date());
   const todayExpenses = data?.expenseHistory?.find((d) => d.date === todayStr)?.expenses ?? [];
+  const openCreate = () =>
+    setSheet(createEntryState(defaultEntryDate(period?.startDate, period?.endDate), { kind: "all" }));
 
   const [logout] = useLogoutMutation({
     onCompleted: () => signOut(),
@@ -253,44 +192,38 @@ export function HomeScreen() {
     <View style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.navigate("Groups")} style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Planfin</Text>
-          {activeGroup && (
-            <Text style={styles.headerGroupName}>📍 {activeGroup.name} ▾</Text>
-          )}
-        </TouchableOpacity>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => navigation.navigate("Profile")} activeOpacity={0.8}>
-            <LinearGradient
-              colors={[Colors.gradStart, Colors.gradEnd]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.avatarGradient}
-            >
-              <Text style={styles.avatarText}>
-                {(user?.name ?? user?.email ?? "U")[0].toUpperCase()}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Trocar de grupo"
+          onPress={() => navigation.navigate("Groups")}
+          style={styles.headerLeft}
+        >
+          <AppText variant="title">Planfin</AppText>
+          {activeGroup ? (
+            <View style={styles.groupRow}>
+              <AppText variant="label" tone="accent" numberOfLines={1}>
+                {activeGroup.name}
+              </AppText>
+              <MaterialCommunityIcons name="chevron-down" size={16} color={palette.accent} />
+            </View>
+          ) : null}
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Perfil" onPress={() => navigation.navigate("Profile")} style={styles.avatar}>
+          <AppText variant="label" tone="accent">
+            {(user?.name ?? user?.email ?? "U")[0].toUpperCase()}
+          </AppText>
+        </Pressable>
       </View>
 
-      {/* Period selector strip */}
-      {periods.length > 0 && (
-        <PeriodSelector
-          periods={periods}
-          selectedId={selectedPeriodId}
-          onSetSelected={setSelectedPeriod}
-        />
-      )}
+      {periods.length > 0 ? (
+        <PeriodSelector periods={periods} selectedId={selectedPeriodId} onSetSelected={setSelectedPeriod} />
+      ) : null}
 
-      {/* Content */}
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* The one hero number: what can be spent today (or in the period, on "Total") */}
-        <BalanceViewToggle value={balanceView} onChange={setBalanceView} />
+        <View style={styles.viewToggle}>
+          <ChipGroup options={BALANCE_VIEWS} value={balanceView} onChange={setBalanceView} />
+        </View>
         {balanceView === "daily" ? (
           <DailyBalanceCard
             available={balance}
@@ -308,68 +241,70 @@ export function HomeScreen() {
           />
         )}
 
-        {/* Period info strip */}
-        {period && (
-          <TouchableOpacity
-            onPress={() => navigation.navigate("EditPeriod")}
-            activeOpacity={0.8}
-            style={styles.periodInfoRow}
+        {/* Period: dates and days left in one line, tap to edit */}
+        {period ? (
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel="Editar período"
+            onPress={() => navigation.navigate("EditPeriod")}
           >
-            {[
-              {
-                label: "Período · editar",
-                val: `${period.startDate?.slice(8, 10)}/${period.startDate?.slice(5, 7)} – ${period.endDate?.slice(8, 10)}/${period.endDate?.slice(5, 7)}`,
-              },
-              { label: "Dias restantes", val: daysLeft !== null ? `${daysLeft} dias` : "—" },
-            ].map(({ label, val }) => (
-              <Card key={label} padding={12} style={styles.periodInfoCard}>
-                <Text style={styles.periodInfoLabel}>{label}</Text>
-                <Text style={styles.periodInfoValue}>{val}</Text>
-              </Card>
-            ))}
-          </TouchableOpacity>
-        )}
+            <Block style={styles.periodBlock}>
+              <View style={styles.periodRow}>
+                <View>
+                  <AppText variant="caption">Período</AppText>
+                  <AppText variant="label" isTabular>
+                    {`${period.startDate?.slice(8, 10)}/${period.startDate?.slice(5, 7)} – ${period.endDate?.slice(8, 10)}/${period.endDate?.slice(5, 7)}`}
+                  </AppText>
+                </View>
+                <View style={styles.periodRight}>
+                  <AppText variant="caption">Faltam</AppText>
+                  <AppText variant="label" isTabular>
+                    {daysLeft !== null ? `${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}` : "—"}
+                  </AppText>
+                </View>
+                <AppText variant="label" tone="accent">Editar</AppText>
+              </View>
+            </Block>
+          </Pressable>
+        ) : null}
 
         <FinancePanel />
         <MonthPlanCard />
         <AllowanceCard />
 
-        {/* Today's expenses */}
-        <Card padding={16}>
-          <View style={styles.expenseHeader}>
-            <Text style={styles.expenseHeaderLabel}>Gastos de hoje</Text>
-          </View>
-
-          {loading ? (
-            <ActivityIndicator color={Colors.primary} style={styles.activityIndicator} />
-          ) : error ? (
-            <InlineError onRetry={refetchHistory} />
-          ) : todayExpenses.length === 0 ? (
-            <Text style={styles.emptyText}>Nenhum gasto hoje.</Text>
-          ) : (
-            todayExpenses.map((item) => (
+        {/* Today's entries */}
+        <SectionHeader title="Gastos de hoje" />
+        {loading ? (
+          <ActivityIndicator color={palette.accent} style={styles.activityIndicator} />
+        ) : error ? (
+          <InlineError onRetry={refetchHistory} />
+        ) : todayExpenses.length === 0 ? (
+          <Block padding={0}>
+            <EmptyState message="Nenhum gasto hoje." />
+          </Block>
+        ) : (
+          <ListBlock>
+            {todayExpenses.map((item) => (
               <ExpenseRow
                 key={item.id}
                 item={item}
                 onPress={() => setSheet(editEntryState(item, todayStr))}
                 authorLabel={authorLabel(item.createdBy, user?.id)}
               />
-            ))
-          )}
-        </Card>
+            ))}
+          </ListBlock>
+        )}
       </ScrollView>
 
       {/* One floating action: the same entry sheet as the history (Gasto/Receita inside) */}
-      <TouchableOpacity
-        accessibilityRole="button"
+      <Button
+        label="Lançar"
+        isFullWidth={false}
+        leading={<PlusIcon />}
         accessibilityLabel="Lançar gasto ou receita"
-        onPress={() => setSheet(createEntryState(defaultEntryDate(period?.startDate, period?.endDate), { kind: "all" }))}
-        activeOpacity={0.85}
+        onPress={openCreate}
         style={styles.fab}
-      >
-        <Text style={styles.fabLabel}>+ Lançar</Text>
-      </TouchableOpacity>
+      />
 
       <EntrySheet
         state={sheet}
@@ -385,236 +320,77 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.bg,
+    backgroundColor: palette.paper,
   },
-  // Header
   header: {
-    backgroundColor: Colors.surface,
+    backgroundColor: palette.sheet,
     paddingTop: 56,
-    paddingBottom: 14,
-    paddingHorizontal: 18,
+    paddingBottom: space.md,
+    paddingHorizontal: layout.gutter,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: palette.rule,
   },
   headerLeft: {
-    flex: 1,
+    flexShrink: 1,
   },
-  headerTitle: {
-    fontSize: 19,
-    fontWeight: "800",
-    color: Colors.text,
-    letterSpacing: -0.3,
-  },
-  headerGroupName: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontWeight: "600",
-    marginTop: 1,
-  },
-  headerRight: {
+  groupRow: {
     flexDirection: "row",
-    gap: 10,
     alignItems: "center",
+    gap: 2,
   },
-  avatarGradient: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: palette.accentSoft,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: {
-    fontSize: 14,
-    color: "#fff",
-    fontWeight: "700",
-  },
-  // Period selector strip
   periodSelector: {
-    backgroundColor: Colors.surface,
+    backgroundColor: palette.sheet,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    paddingHorizontal: 18,
-    paddingVertical: 8,
+    borderBottomColor: palette.rule,
+    paddingHorizontal: layout.gutter,
+    minHeight: 40,
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: space.xs,
   },
   periodSelectorText: {
-    fontSize: 13,
-    color: Colors.primaryText,
-    fontWeight: "600",
     flex: 1,
   },
-  periodSelectorChevron: {
-    fontSize: 12,
-    color: Colors.primaryText,
-    fontWeight: "600",
-  },
-  // Scroll content
   scrollContent: {
-    padding: 16,
-    // Room for the floating "+ Lançar" (52 + 24 from the bottom) so it never covers the last card.
-    paddingBottom: 100,
+    padding: layout.gutter,
+    // Room for the floating "Lançar" (48 + 24 from the bottom) so it never covers the last block.
+    paddingBottom: 96,
   },
-  // Period info
-  periodInfoRow: {
+  viewToggle: {
+    marginBottom: space.md,
+  },
+  periodBlock: {
+    marginTop: space.lg,
+    marginBottom: space.lg,
+    paddingVertical: space.md,
+  },
+  periodRow: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  periodInfoCard: {
-    flex: 1,
-  },
-  periodInfoLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Colors.textSec,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  periodInfoValue: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  // Expense section
-  expenseHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 11,
+    gap: space.xl,
   },
-  expenseHeaderLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.textSec,
-    letterSpacing: 0.7,
-    textTransform: "uppercase",
+  periodRight: {
+    flex: 1,
   },
   activityIndicator: {
-    marginVertical: 20,
+    marginVertical: space.xl,
   },
-  emptyText: {
-    textAlign: "center",
-    color: Colors.textTer,
-    fontSize: 14,
-    paddingVertical: 16,
-  },
-  // Floating "+ Lançar"
   fab: {
     position: "absolute",
-    bottom: 24,
-    right: 16,
-    height: 52,
-    paddingHorizontal: 22,
-    borderRadius: Radius.full,
-    backgroundColor: Ledger.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: Ledger.accent,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  fabLabel: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  // Android period picker modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-end",
-  },
-  modalSheet: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: Radius.xl,
-    borderTopRightRadius: Radius.xl,
-    paddingTop: 12,
-    paddingBottom: 32,
-    paddingHorizontal: 16,
-  },
-  modalHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.border,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: Colors.textSec,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: Radius.md,
-    marginBottom: 4,
-  },
-  modalItemSelected: {
-    backgroundColor: Colors.primaryLight,
-  },
-  modalItemText: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.text,
-    fontWeight: "500",
-  },
-  modalItemTextSelected: {
-    color: Colors.primary,
-    fontWeight: "700",
-  },
-  activeBadge: {
-    backgroundColor: Colors.successLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: Radius.full,
-    marginRight: 8,
-  },
-  activeBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.successText,
-  },
-  checkmark: {
-    fontSize: 16,
-    color: Colors.primary,
-    fontWeight: "700",
-  },
-  modalCreateNew: {
-    marginTop: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  modalCreateNewText: {
-    fontSize: 15,
-    color: Colors.primary,
-    fontWeight: "700",
-  },
-  modalCancel: {
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    fontSize: 15,
-    color: Colors.danger,
-    fontWeight: "600",
+    bottom: space.xl,
+    right: layout.gutter,
+    paddingHorizontal: space.xl,
+    ...shadow.floating,
   },
 });

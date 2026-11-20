@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { CurrencyInput } from "../../../components/CurrencyInput";
-import { Btn } from "../../../components/ui/Btn";
+import { AppText } from "../../../components/ui/AppText";
+import { Button } from "../../../components/ui/Button";
 import { useSetInvoiceTotalMutation } from "../../../graphql/__generated__/hooks";
 import { displayToAPI, formatCents } from "../../../lib/currency";
 import { toISODate } from "../../../lib/date";
-import { Colors } from "../../../theme/tokens";
+import { space } from "../../../theme";
 import { toNumber } from "../format";
 
 type AdjustInvoiceTotalProps = {
@@ -26,39 +27,57 @@ export function AdjustInvoiceTotal({ cardId, month, currentTotal }: AdjustInvoic
 
   if (!editing) {
     return (
-      <TouchableOpacity
+      <Pressable
+        accessibilityRole="button"
         onPress={() => {
           setValue(formatCents(Math.round(toNumber(currentTotal) * 100)));
           setEditing(true);
         }}
-        activeOpacity={0.7}
-        style={{ marginTop: 12 }}
+        hitSlop={8}
+        style={styles.link}
       >
-        <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>Ajustar valor da fatura ›</Text>
-      </TouchableOpacity>
+        <AppText variant="label" tone="accent">Ajustar valor da fatura</AppText>
+      </Pressable>
     );
   }
 
   return (
-    <View style={{ marginTop: 12 }}>
-      <Text style={{ fontSize: 13, color: Colors.textSec, marginBottom: 8, lineHeight: 18 }}>
+    <View style={styles.editor}>
+      <AppText variant="caption" style={styles.help}>
         Informe o total que o banco mostra para esta fatura. A diferença para o que está no app vira um lançamento de
         ajuste, sem precisar registrar gasto por gasto. Ajustar de novo substitui o ajuste anterior.
-      </Text>
+      </AppText>
       <CurrencyInput value={value} onChange={setValue} autoFocus />
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <View style={{ flex: 1 }}>
-          <Btn
-            label="Salvar valor"
-            size="sm"
-            loading={loading}
-            onPress={() => setTotal({ variables: { cardId, month, total: displayToAPI(value), today: toISODate(new Date()) } })}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Btn label="Cancelar" size="sm" variant="ghost" onPress={() => setEditing(false)} />
-        </View>
+      <View style={styles.actions}>
+        <Button
+          label="Salvar valor"
+          size="sm"
+          isLoading={loading}
+          style={styles.action}
+          onPress={() => setTotal({ variables: { cardId, month, total: displayToAPI(value), today: toISODate(new Date()) } })}
+        />
+        <Button label="Cancelar" size="sm" variant="secondary" style={styles.action} onPress={() => setEditing(false)} />
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  link: {
+    alignSelf: "flex-start",
+    marginTop: space.md,
+  },
+  editor: {
+    marginTop: space.md,
+  },
+  help: {
+    marginBottom: space.sm,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: space.sm,
+  },
+  action: {
+    flex: 1,
+  },
+});

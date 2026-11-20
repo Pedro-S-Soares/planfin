@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useCurrency } from "../../context/CurrencyContext";
 import { formatMoney, toNumber } from "../../lib/money";
-import { Ledger, TABULAR_NUMS } from "../../theme/tokens";
+import { palette, space } from "../../theme";
+import { AppText } from "./AppText";
 import { BalanceCard, BalanceStat, BalanceStatDivider, BalanceStatRow } from "./BalanceCard";
 
 interface DailyBalanceCardProps {
@@ -43,10 +44,10 @@ export function DailyBalanceCard({
       {hasExtra ? (
         <View style={styles.extraBlock}>
           <View style={styles.extraHeader}>
-            <Text style={styles.extraLabel}>Extra do período</Text>
-            <Text style={styles.extraValue} numberOfLines={1}>
+            <AppText variant="body" tone="muted">Extra do período</AppText>
+            <AppText variant="label" isTabular style={styles.extraValue} numberOfLines={1}>
               {formatMoney(extraSpentNum, currency.symbol)} de {formatMoney(extraBudgetNum, currency.symbol)}
-            </Text>
+            </AppText>
           </View>
           <View style={styles.extraTrack}>
             <View
@@ -65,38 +66,30 @@ export function DailyBalanceCard({
 
 const styles = StyleSheet.create({
   extraBlock: {
-    marginTop: 12,
+    marginTop: space.md,
   },
   extraHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "baseline",
-    gap: 8,
+    gap: space.sm,
     marginBottom: 6,
-  },
-  extraLabel: {
-    fontSize: 14,
-    color: Ledger.muted,
   },
   extraValue: {
     flexShrink: 1,
-    fontSize: 14,
-    fontWeight: "700",
-    color: Ledger.ink,
-    ...TABULAR_NUMS,
   },
   extraTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: Ledger.accentSoft,
+    backgroundColor: palette.accentSoft,
     overflow: "hidden",
   },
   extraFill: {
     height: "100%",
     borderRadius: 3,
-    backgroundColor: Ledger.accent,
+    backgroundColor: palette.accent,
   },
   extraFillOver: {
-    backgroundColor: Ledger.danger,
+    backgroundColor: palette.danger,
   },
 });

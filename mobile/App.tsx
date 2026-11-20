@@ -53,6 +53,7 @@ import { SkipBillScreen } from "./src/modules/finance/SkipBillScreen";
 import { SalarySettingsScreen } from "./src/modules/finance/SalarySettingsScreen";
 import { MonthPlanScreen } from "./src/modules/finance/MonthPlanScreen";
 import type { AccountKind } from "./src/modules/finance/format";
+import { palette, useThemeFonts } from "./src/theme";
 
 enableScreens();
 
@@ -432,10 +433,15 @@ function Navigation() {
 // instead of stretching lists to the full window.
 const frameStyles = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#E9E7F2" },
-  frame: { flex: 1, width: "100%", maxWidth: 560, alignSelf: "center", backgroundColor: "#F6F5FA", overflow: "hidden" },
+  frame: { flex: 1, width: "100%", maxWidth: 560, alignSelf: "center", backgroundColor: palette.paper, overflow: "hidden" },
 });
 
 export default function App() {
+  // Native waits for Manrope (a missing font family errors there); the web draws with the
+  // system font until the Google Fonts stylesheet arrives.
+  const isFontReady = useThemeFonts();
+  if (!isFontReady) return null;
+
   return (
     <SafeAreaProvider>
       <ApolloProvider client={apolloClient}>

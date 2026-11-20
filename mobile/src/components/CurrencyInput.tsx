@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { TextInput, Text, View } from "react-native";
+import { StyleSheet, TextInput, View } from "react-native";
 import { formatCents } from "../lib/currency";
-import { Colors, Radius, Shadow } from "../theme/tokens";
+import { palette, radius, space, tabularNums, textVariants } from "../theme";
+import { AppText } from "./ui/AppText";
 
 interface CurrencyInputProps {
   value: string;
@@ -10,8 +11,9 @@ interface CurrencyInputProps {
   autoFocus?: boolean;
 }
 
+/** Amount field: typed digits fill from the cents up ("1" → "0,01"), in tabular digits. */
 export function CurrencyInput({ value, onChange, error, autoFocus }: CurrencyInputProps) {
-  const [focused, setFocused] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const handleChangeText = (raw: string) => {
     const digits = raw.replace(/\D/g, "");
@@ -20,33 +22,64 @@ export function CurrencyInput({ value, onChange, error, autoFocus }: CurrencyInp
   };
 
   return (
-    <View style={{ marginBottom: 16 }}>
-      <View style={{
-        flexDirection: "row",
-        alignItems: "center",
-        height: 52,
-        borderRadius: Radius.md,
-        borderWidth: 1.5,
-        borderColor: error ? Colors.danger : focused ? Colors.primary : Colors.border,
-        backgroundColor: Colors.surface,
-        paddingHorizontal: 16,
-        ...Shadow.xs,
-      }}>
-        <Text style={{ fontSize: 16, color: Colors.textSec, fontWeight: "600", marginRight: 4 }}>R$</Text>
+    <View style={styles.root}>
+      <View style={[styles.field, isFocused ? styles.fieldFocused : null, error ? styles.fieldError : null]}>
+        <AppText variant="baseStrong" tone="muted" style={styles.prefix}>
+          R$
+        </AppText>
         <TextInput
           // The wrapper border already shows focus; drop the browser outline drawn inside it.
-          style={{ flex: 1, fontSize: 16, color: Colors.text, outlineStyle: "solid", outlineWidth: 0 }}
+          style={styles.input}
           value={value}
           onChangeText={handleChangeText}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
           keyboardType="number-pad"
           autoFocus={autoFocus}
           selection={{ start: value.length, end: value.length }}
-          placeholderTextColor={Colors.textTer}
+          placeholderTextColor={palette.muted}
         />
       </View>
-      {error && <Text style={{ marginTop: 5, fontSize: 12, color: Colors.danger }}>{error}</Text>}
+      {error ? (
+        <AppText variant="caption" tone="danger" style={styles.error}>
+          {error}
+        </AppText>
+      ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    marginBottom: space.lg,
+  },
+  field: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 52,
+    borderRadius: radius.control,
+    borderWidth: 1,
+    borderColor: palette.rule,
+    backgroundColor: palette.sheet,
+    paddingHorizontal: space.lg,
+  },
+  fieldFocused: {
+    borderColor: palette.accent,
+  },
+  fieldError: {
+    borderColor: palette.danger,
+  },
+  prefix: {
+    marginRight: space.xs,
+  },
+  input: {
+    ...textVariants.title,
+    ...tabularNums,
+    flex: 1,
+    outlineStyle: "solid",
+    outlineWidth: 0,
+  },
+  error: {
+    marginTop: space.xs,
+  },
+});

@@ -1,8 +1,10 @@
-import { Text, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { AppText } from "../../../components/ui/AppText";
 import { Chip } from "../../../components/ui/Chip";
+import { IconButton } from "../../../components/ui/IconButton";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { toISODate } from "../../../lib/date";
-import { Colors, Radius } from "../../../theme/tokens";
+import { space } from "../../../theme";
 import { addMonths, formatMoney, formatMonth, invoiceDueDate } from "../format";
 import { FormLabel } from "./FormLabel";
 
@@ -51,9 +53,9 @@ export function InstallmentPlan({
   const isRetroactive = firstInvoice !== defaultInvoice;
 
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={styles.root}>
       <FormLabel>Parcelas</FormLabel>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
+      <View style={styles.chips}>
         {COUNTS.map((n) => (
           <Chip key={n} label={n === 1 ? "À vista" : `${n}x`} selected={count === n} onPress={() => onCountChange(n)} />
         ))}
@@ -61,46 +63,76 @@ export function InstallmentPlan({
 
       {count > 1 ? (
         <>
-          <View style={{ flexDirection: "row", gap: 7, marginTop: 12 }}>
+          <View style={[styles.chips, styles.section]}>
             <Chip label="Valor total" selected={!perInstallment} onPress={() => onPerInstallmentChange(false)} />
             <Chip label="Valor da parcela" selected={perInstallment} onPress={() => onPerInstallmentChange(true)} />
           </View>
 
-          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.8, marginTop: 14, marginBottom: 6 }}>
-            FATURA DA 1ª PARCELA
-          </Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <TouchableOpacity onPress={() => onFirstInvoiceChange(addMonths(firstInvoice, -1))} hitSlop={10}>
-              <Text style={{ fontSize: 22, color: Colors.primary }}>‹</Text>
-            </TouchableOpacity>
-            <View style={{ backgroundColor: Colors.primaryLight, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 6 }}>
-              <Text style={{ fontSize: 14, fontWeight: "700", color: Colors.primaryText }}>{formatMonth(firstInvoice)}</Text>
-            </View>
-            <TouchableOpacity onPress={() => onFirstInvoiceChange(addMonths(firstInvoice, 1))} hitSlop={10}>
-              <Text style={{ fontSize: 22, color: Colors.primary }}>›</Text>
-            </TouchableOpacity>
+          <View style={styles.section}>
+            <FormLabel>Fatura da 1ª parcela</FormLabel>
+          </View>
+          <View style={styles.monthRow}>
+            <IconButton
+              icon="chevron-left"
+              accessibilityLabel="Fatura anterior"
+              onPress={() => onFirstInvoiceChange(addMonths(firstInvoice, -1))}
+            />
+            <AppText variant="label" tone="accent" style={styles.month}>
+              {formatMonth(firstInvoice)}
+            </AppText>
+            <IconButton
+              icon="chevron-right"
+              accessibilityLabel="Próxima fatura"
+              onPress={() => onFirstInvoiceChange(addMonths(firstInvoice, 1))}
+            />
             {isRetroactive ? (
-              <TouchableOpacity onPress={() => onFirstInvoiceChange(defaultInvoice)}>
-                <Text style={{ fontSize: 12, color: Colors.textSec, textDecorationLine: "underline" }}>usar a atual</Text>
-              </TouchableOpacity>
+              <Pressable accessibilityRole="button" onPress={() => onFirstInvoiceChange(defaultInvoice)} hitSlop={8}>
+                <AppText variant="caption" tone="accent">Usar a atual</AppText>
+              </Pressable>
             ) : null}
           </View>
 
-          <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 10, lineHeight: 17 }}>
+          <AppText variant="caption" style={styles.section}>
             {count}x de {money(parcel)} · total {money(total)}.{" "}
             {firstCreated === undefined
               ? "Todas as parcelas já venceram; não há nada para lançar."
               : firstCreated === 1
                 ? `Parcelas nas faturas de ${formatMonth(firstInvoice)} a ${formatMonth(addMonths(firstInvoice, count - 1))}.`
                 : `Serão lançadas as parcelas ${firstCreated} a ${count} (${formatMonth(addMonths(firstInvoice, firstCreated - 1))} a ${formatMonth(addMonths(firstInvoice, count - 1))}). As parcelas 1 a ${firstCreated - 1} já venceram e ficam de fora.`}
-          </Text>
-          <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 4 }}>
+          </AppText>
+          <AppText variant="caption" style={styles.note}>
             {isRetroactive
               ? "Compra de outra fatura: nenhuma parcela entra no limite de hoje."
               : "Só a 1ª parcela entra no limite de hoje; as outras são descontadas dos próximos ciclos."}
-          </Text>
+          </AppText>
         </>
       ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    marginBottom: space.lg,
+  },
+  chips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: space.sm,
+  },
+  section: {
+    marginTop: space.md,
+  },
+  monthRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+  },
+  month: {
+    minWidth: 72,
+    textAlign: "center",
+  },
+  note: {
+    marginTop: space.xs,
+  },
+});

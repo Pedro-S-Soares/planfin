@@ -1,6 +1,6 @@
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Chip } from "../../../components/ui/Chip";
-import { Colors } from "../../../theme/tokens";
+import { palette, space } from "../../../theme";
 import { ACCOUNT_KIND_ICON, type AccountKind } from "../format";
 import type { FinancialAccount } from "../use-financial-accounts";
 import { FormLabel } from "./FormLabel";
@@ -21,9 +21,9 @@ export function AccountPicker({ label = "Pago com", accounts, value, onChange, k
   if (options.length === 0) return null;
 
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={styles.root}>
       <FormLabel>{label}</FormLabel>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
+      <View style={styles.chips}>
         {options.map((account) => (
           <Chip
             key={account.id}
@@ -33,9 +33,20 @@ export function AccountPicker({ label = "Pago com", accounts, value, onChange, k
           />
         ))}
         {allowNone ? (
-          <Chip label="Sem conta" selected={value === null} dot={Colors.textTer} onPress={() => onChange(null)} />
+          <Chip label="Sem conta" selected={value === null} dot={palette.muted} onPress={() => onChange(null)} />
         ) : null}
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    marginBottom: space.lg,
+  },
+  chips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: space.sm,
+  },
+});
