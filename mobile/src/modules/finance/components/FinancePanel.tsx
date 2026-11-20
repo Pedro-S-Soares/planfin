@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { useNavigation, type CompositeNavigationProp } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Card } from "../../../components/ui/Card";
+import { AppText } from "../../../components/ui/AppText";
+import { Block } from "../../../components/ui/Block";
+import { MoneyText } from "../../../components/ui/MoneyText";
 import { InlineError } from "../../../components/ui/InlineError";
-import { useCurrency } from "../../../context/CurrencyContext";
-import { Colors, Ledger, TABULAR_NUMS } from "../../../theme/tokens";
-import { formatMoney, formatShortDate } from "../format";
+import { palette, space } from "../../../theme";
+import { formatShortDate } from "../format";
 import { useFinancePanel } from "../use-finance-panel";
 import { CommitmentList } from "./CommitmentList";
 import { SalaryBanner } from "./SalaryBanner";
@@ -18,27 +19,24 @@ type Navigation = CompositeNavigationProp<
   NativeStackNavigationProp<AppStackParamList>
 >;
 
-function Figure({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Figure({ label, value, tone }: { label: string; value: string | null | undefined; tone?: "muted" }) {
   return (
-    <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 12, color: Ledger.muted }}>{label}</Text>
-      <Text style={{ fontSize: 16, fontWeight: "700", color: tone ?? Ledger.ink, marginTop: 2, ...TABULAR_NUMS }} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
+    <View style={styles.figure}>
+      <AppText variant="caption">{label}</AppText>
+      <MoneyText amount={value} variant="value" tone={tone} adjustsFontSizeToFit />
     </View>
   );
 }
 
 export function FinancePanel() {
   const navigation = useNavigation<Navigation>();
-  const { currency } = useCurrency();
   const { panel, loading, error, refetch } = useFinancePanel();
   const [expanded, setExpanded] = useState(false);
 
-  if (loading) return <ActivityIndicator color={Colors.primary} style={{ marginBottom: 12 }} />;
+  if (loading) return <ActivityIndicator color={palette.accent} style={styles.loading} />;
   if (error) {
     return (
-      <View style={{ marginBottom: 12 }}>
+      <View style={styles.spaced}>
         <InlineError message="Erro ao carregar o painel." onRetry={() => refetch()} />
       </View>
     );
@@ -47,14 +45,14 @@ export function FinancePanel() {
 
   if (!panel.hasAccounts || panel.available === null || panel.available === undefined) {
     return (
-      <TouchableOpacity onPress={() => navigation.navigate("Accounts")} activeOpacity={0.85}>
-        <Card padding={16} style={{ marginBottom: 12 }}>
-          <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>Quanto você pode gastar de verdade?</Text>
-          <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4 }}>
-            Cadastre sua conta principal e o cartão para ver o dinheiro livre depois da fatura e dos boletos. ›
-          </Text>
-        </Card>
-      </TouchableOpacity>
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate("Accounts")}>
+        <Block style={styles.spaced}>
+          <AppText variant="baseStrong">Quanto você pode gastar de verdade?</AppText>
+          <AppText variant="body" tone="muted" style={styles.gapTop}>
+            Cadastre sua conta principal e o cartão para ver o dinheiro livre depois da fatura e dos boletos.
+          </AppText>
+        </Block>
+      </Pressable>
     );
   }
 
@@ -65,22 +63,22 @@ export function FinancePanel() {
     : `até ${formatShortDate(panel.horizonDate)}`;
 
   return (
-    <Card padding={16} style={{ marginBottom: 12 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <Text style={{ fontSize: 14, fontWeight: "600", color: Ledger.ink }}>Dinheiro na conta</Text>
-        <Text style={{ fontSize: 12, color: Ledger.muted }}>{horizonLabel}</Text>
+    <Block style={styles.spaced}>
+      <View style={styles.header}>
+        <AppText variant="label">Dinheiro na conta</AppText>
+        <AppText variant="caption">{horizonLabel}</AppText>
       </View>
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        <Figure label="Tenho" value={formatMoney(panel.available, currency.symbol)} />
-        <Figure label="Comprometido" value={formatMoney(panel.committed, currency.symbol)} tone={Ledger.muted} />
+      <View style={styles.figures}>
+        <Figure label="Tenho" value={panel.available} />
+        <Figure label="Comprometido" value={panel.committed} tone="muted" />
       </View>
-      <TouchableOpacity onPress={() => setExpanded((v) => !v)} activeOpacity={0.7} style={{ paddingTop: 10 }}>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText }}>
+      <Pressable accessibilityRole="button" onPress={() => setExpanded((v) => !v)} hitSlop={8} style={styles.toggle}>
+        <AppText variant="label" tone="accent">
           {expanded ? "Esconder compromissos" : `Ver compromissos (${commitments.length})`}
-        </Text>
-      </TouchableOpacity>
+        </AppText>
+      </Pressable>
       {expanded ? (
-        <View style={{ marginTop: 8 }}>
+        <View style={styles.gapTop}>
           <CommitmentList
             items={commitments}
             onOpenInvoice={(cardId, month) => navigation.navigate("Invoice", { cardId, month })}
@@ -91,12 +89,44 @@ export function FinancePanel() {
 
       {salary?.pending && salary.cycleStartDate ? <SalaryBanner amount={salary.amount} date={salary.cycleStartDate} /> : null}
       {salary && !salary.configured ? (
-        <TouchableOpacity onPress={() => navigation.navigate("SalarySettings")} activeOpacity={0.7} style={{ marginTop: 10 }}>
-          <Text style={{ fontSize: 12, color: Colors.textSec }}>
-            Cadastre seu salário para o app contar até o próximo pagamento e montar o ciclo sozinho. ›
-          </Text>
-        </TouchableOpacity>
+        <Pressable accessibilityRole="button" onPress={() => navigation.navigate("SalarySettings")} style={styles.gapTop}>
+          <AppText variant="caption">
+            Cadastre seu salário para o app contar até o próximo pagamento e montar o ciclo sozinho.{" "}
+            <AppText variant="caption" tone="accent">Cadastrar</AppText>
+          </AppText>
+        </Pressable>
       ) : null}
-    </Card>
+    </Block>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    marginBottom: space.lg,
+  },
+  spaced: {
+    marginBottom: space.lg,
+  },
+  gapTop: {
+    marginTop: space.sm,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: space.sm,
+    marginBottom: space.sm,
+  },
+  figures: {
+    flexDirection: "row",
+    gap: space.md,
+  },
+  figure: {
+    flex: 1,
+    minWidth: 0,
+  },
+  toggle: {
+    alignSelf: "flex-start",
+    paddingTop: space.md,
+  },
+});

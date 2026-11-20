@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { Text, ScrollView } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
@@ -14,9 +13,8 @@ import {
 import { usePeriod } from "../context/PeriodContext";
 import { DatePickerField } from "../components/DatePickerField";
 import { CurrencyInput } from "../components/CurrencyInput";
-import { Btn } from "../components/ui/Btn";
+import { Button } from "../components/ui/Button";
 import { displayToAPI, formatCents } from "../lib/currency";
-import { Ledger } from "../theme/tokens";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { AccountPicker } from "../modules/finance/components/AccountPicker";
 import { useFinancialAccounts } from "../modules/finance/use-financial-accounts";
@@ -28,6 +26,7 @@ import {
   FieldLabel,
   MoreOptions,
   NoteField,
+  EntryFormLayout,
 } from "../modules/history/components/entry-form-parts";
 import type { AppStackParamList } from "../../App";
 
@@ -140,11 +139,9 @@ export function EditIncomeForm({ entry, onDone }: EditIncomeFormProps) {
   const isLoading = updating || deleting;
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: Ledger.sheet }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
+    <EntryFormLayout
+      error={errors.root?.message}
+      submit={<Button label="Salvar alterações" onPress={handleSubmit(onSubmit)} isLoading={isLoading} />}
     >
       <FieldLabel>Valor</FieldLabel>
       <Controller
@@ -207,19 +204,12 @@ export function EditIncomeForm({ entry, onDone }: EditIncomeFormProps) {
         />
       </MoreOptions>
 
-      {errors.root && (
-        <Text style={{ color: Ledger.danger, fontSize: 13, textAlign: "center", marginBottom: 12 }}>
-          {errors.root.message}
-        </Text>
-      )}
-
-      <Btn label="Salvar alterações" onPress={handleSubmit(onSubmit)} loading={isLoading} />
       <DeleteEntryButton
         label="Excluir receita"
         confirmTitle="Excluir esta receita?"
         isDisabled={isLoading}
         onConfirm={() => deleteExpense({ variables: { id } })}
       />
-    </ScrollView>
+    </EntryFormLayout>
   );
 }

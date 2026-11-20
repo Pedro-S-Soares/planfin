@@ -1,7 +1,9 @@
-import { Text, View } from "react-native";
-import { Card } from "../../../components/ui/Card";
-import { Colors, Ledger, TABULAR_NUMS } from "../../../theme/tokens";
-import { formatMoney } from "../../finance/format";
+import type { ReactNode } from "react";
+import { StyleSheet, View } from "react-native";
+import { AppText } from "../../../components/ui/AppText";
+import { Block } from "../../../components/ui/Block";
+import { MoneyText } from "../../../components/ui/MoneyText";
+import { palette, space } from "../../../theme";
 import type { FinancialAccount } from "../../finance/use-financial-accounts";
 import type { HistorySummary } from "../history-filters";
 
@@ -9,43 +11,81 @@ interface HistorySummaryCardProps {
   summary: HistorySummary;
   /** The account being filtered, to compare its balance in the app with the bank. */
   account: FinancialAccount | null;
-  currencySymbol: string;
 }
 
-function SummaryValue({ label, value, color }: { label: string; value: string; color: string }) {
+/** One line of the summary, like a statement's totals: label at the left, amount at the right. */
+function SummaryLine({ label, isTotal = false, children }: { label: string; isTotal?: boolean; children: ReactNode }) {
   return (
-    <View style={{ flex: 1 }}>
-      <Text style={{ fontSize: 12, color: Ledger.muted }}>{label}</Text>
-      <Text style={{ fontSize: 15, fontWeight: "700", color, ...TABULAR_NUMS }} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
+    <View style={[styles.line, isTotal ? styles.totalLine : null]}>
+      <AppText variant={isTotal ? "label" : "body"} tone={isTotal ? "ink" : "muted"}>
+        {label}
+      </AppText>
+      {children}
     </View>
   );
 }
 
-export function HistorySummaryCard({ summary, account, currencySymbol }: HistorySummaryCardProps) {
+/** Totals of what the filters leave visible: in, out, result. */
+export function HistorySummaryCard({ summary, account }: HistorySummaryCardProps) {
   const hasBalance = account !== null && account.kind !== "credit_card" && account.balance != null;
 
   return (
-    <Card padding={14} style={{ marginBottom: 14 }}>
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        <SummaryValue label="Entradas" value={formatMoney(summary.incoming, currencySymbol)} color={Colors.success} />
-        <SummaryValue label="Saídas" value={formatMoney(summary.outgoing, currencySymbol)} color={Colors.text} />
-        <SummaryValue
-          label="Resultado"
-          value={formatMoney(summary.net, currencySymbol, { sign: "always" })}
-          color={summary.net >= 0 ? Colors.success : Colors.danger}
-        />
-      </View>
-      <Text style={{ fontSize: 11, color: Colors.textTer, marginTop: 8 }}>
+    <Block style={styles.block}>
+      <SummaryLine label="Entradas">
+        <MoneyText amount={summary.incoming} variant="label" tone="income" />
+      </SummaryLine>
+      <SummaryLine label="Saídas">
+        <MoneyText amount={summary.outgoing} variant="label" />
+      </SummaryLine>
+      <SummaryLine label="Resultado" isTotal>
+        <MoneyText amount={summary.net} sign="always" variant="value" isColoredBySign />
+      </SummaryLine>
+      <AppText variant="caption" style={styles.note}>
         {summary.count} {summary.count === 1 ? "lançamento" : "lançamentos"} no período com estes filtros
-      </Text>
+      </AppText>
       {hasBalance ? (
-        <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 4 }}>
-          Saldo de {account.name} no app hoje:{" "}
-          <Text style={{ fontWeight: "700", color: Colors.text }}>{formatMoney(account.balance, currencySymbol)}</Text>
-        </Text>
+        <View style={styles.balance}>
+          <AppText variant="body" tone="muted" style={styles.balanceLabel} numberOfLines={1}>
+            Saldo de {account.name} no app hoje
+          </AppText>
+          <MoneyText amount={account.balance} variant="label" />
+        </View>
       ) : null}
-    </Card>
+    </Block>
   );
 }
+
+const styles = StyleSheet.create({
+  block: {
+    marginBottom: space.xl,
+  },
+  line: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: space.md,
+    paddingVertical: 2,
+  },
+  totalLine: {
+    marginTop: space.xs,
+    paddingTop: space.sm,
+    borderTopWidth: 1,
+    borderTopColor: palette.rule,
+  },
+  note: {
+    marginTop: space.sm,
+  },
+  balance: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: space.sm,
+    marginTop: space.sm,
+    paddingTop: space.sm,
+    borderTopWidth: 1,
+    borderTopColor: palette.rule,
+  },
+  balanceLabel: {
+    flexShrink: 1,
+  },
+});

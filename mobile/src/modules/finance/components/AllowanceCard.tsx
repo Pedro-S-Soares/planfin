@@ -1,13 +1,16 @@
 import { useCallback } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Card } from "../../../components/ui/Card";
+import { AppText } from "../../../components/ui/AppText";
+import { Block } from "../../../components/ui/Block";
+import { Button } from "../../../components/ui/Button";
+import { MoneyText } from "../../../components/ui/MoneyText";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { useAllowancePlanQuery, useDistributeAllowanceMutation } from "../../../graphql/__generated__/hooks";
 import { confirm } from "../../../lib/alert";
 import { toISODate } from "../../../lib/date";
-import { Colors, Radius } from "../../../theme/tokens";
+import { palette, radius, space } from "../../../theme";
 import { formatMoney, formatShortDate, toNumber } from "../format";
 import { useFinancialAccounts } from "../use-financial-accounts";
 import type { AppStackParamList } from "../../../../App";
@@ -42,14 +45,14 @@ export function AllowanceCard() {
 
   if (shares.length === 0) {
     return (
-      <TouchableOpacity onPress={() => navigation.navigate("AccountForm", { kind: "allowance" })} activeOpacity={0.85}>
-        <Card padding={16} style={{ marginBottom: 12 }}>
-          <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>MESADA DO CASAL</Text>
-          <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4 }}>
-            Crie uma conta de mesada para cada um. No fim do ciclo, o que sobrar é dividido meio a meio. ›
-          </Text>
-        </Card>
-      </TouchableOpacity>
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate("AccountForm", { kind: "allowance" })}>
+        <Block style={styles.spaced}>
+          <AppText variant="label">Mesada do casal</AppText>
+          <AppText variant="body" tone="muted" style={styles.gapTop}>
+            Crie uma conta de mesada para cada um. No fim do ciclo, o que sobrar é dividido meio a meio.
+          </AppText>
+        </Block>
+      </Pressable>
     );
   }
 
@@ -64,50 +67,82 @@ export function AllowanceCard() {
     );
 
   return (
-    <Card padding={16} style={{ marginBottom: 12 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
-        <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.7 }}>MESADA DO CICLO</Text>
-        <Text style={{ fontSize: 11, color: Colors.textTer }}>fecha {formatShortDate(plan.cycleEndDate)}</Text>
+    <Block style={styles.spaced}>
+      <View style={styles.header}>
+        <AppText variant="label">Mesada do ciclo</AppText>
+        <AppText variant="caption">fecha {formatShortDate(plan.cycleEndDate)}</AppText>
       </View>
-      <Text style={{ fontSize: 22, fontWeight: "800", color: amount > 0 ? Colors.text : Colors.textSec, marginTop: 4 }}>
-        {money(amount)}
-      </Text>
+      <MoneyText amount={amount} variant="amount" tone={amount > 0 ? "ink" : "muted"} style={styles.amount} />
       {amount > 0 ? (
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+        <View style={styles.shares}>
           {shares.map((s) => (
-            <View key={s.accountId ?? ""} style={{ flex: 1, backgroundColor: Colors.bg, borderRadius: Radius.md, padding: 10 }}>
-              <Text style={{ fontSize: 12, color: Colors.textSec }} numberOfLines={1}>{s.ownerName ?? s.accountName}</Text>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text }}>{money(s.amount)}</Text>
+            <View key={s.accountId ?? ""} style={styles.share}>
+              <AppText variant="caption" numberOfLines={1}>{s.ownerName ?? s.accountName}</AppText>
+              <MoneyText amount={s.amount} variant="label" />
             </View>
           ))}
         </View>
       ) : (
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4 }}>
+        <AppText variant="body" tone="muted">
           Por enquanto não sobra para mesada. Ela aparece sozinha quando sobrar dinheiro no fim do ciclo.
-        </Text>
+        </AppText>
       )}
       {shortfall > 0 ? (
-        <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 8 }}>
+        <AppText variant="caption" style={styles.gapTop}>
           {money(shortfall)} ficam na conta porque o próximo salário não cobre o que já está na fatura.
-        </Text>
+        </AppText>
       ) : null}
       {distributed > 0 ? (
-        <Text style={{ fontSize: 12, color: Colors.successText, marginTop: 8 }}>Já distribuído neste ciclo: {money(distributed)}</Text>
+        <AppText variant="caption" tone="income" style={styles.gapTop}>
+          Já distribuído neste ciclo: {money(distributed)}
+        </AppText>
       ) : null}
       {plan.canDistribute ? (
-        <TouchableOpacity
+        <Button
+          label={`Distribuir ${money(amount)}`}
+          isLoading={loading}
+          style={styles.action}
           onPress={handleDistribute}
-          disabled={loading}
-          activeOpacity={0.8}
-          style={{ marginTop: 12, backgroundColor: Colors.success, borderRadius: Radius.md, paddingVertical: 12, alignItems: "center" }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 14 }}>{loading ? "Distribuindo…" : `Distribuir ${money(amount)}`}</Text>
-        </TouchableOpacity>
+        />
       ) : amount > 0 ? (
-        <Text style={{ fontSize: 12, color: Colors.textTer, marginTop: 8 }}>
+        <AppText variant="caption" style={styles.gapTop}>
           A distribuição libera no fechamento, a partir de {formatShortDate(plan.opensOn)}.
-        </Text>
+        </AppText>
       ) : null}
-    </Card>
+    </Block>
   );
 }
+
+const styles = StyleSheet.create({
+  spaced: {
+    marginBottom: space.lg,
+  },
+  gapTop: {
+    marginTop: space.sm,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: space.sm,
+  },
+  amount: {
+    marginTop: space.xs,
+    marginBottom: space.xs,
+  },
+  shares: {
+    flexDirection: "row",
+    gap: space.sm,
+    marginTop: space.xs,
+  },
+  share: {
+    flex: 1,
+    minWidth: 0,
+    backgroundColor: palette.paper,
+    borderRadius: radius.control,
+    padding: space.md,
+  },
+  action: {
+    marginTop: space.md,
+  },
+});

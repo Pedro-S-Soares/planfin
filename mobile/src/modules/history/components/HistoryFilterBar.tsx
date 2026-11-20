@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-import { Ledger } from "../../../theme/tokens";
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import { Pressable, StyleSheet, View } from "react-native";
+import { AppText } from "../../../components/ui/AppText";
+import { layout, palette, radius, space } from "../../../theme";
 import type { FinancialAccount } from "../../finance/use-financial-accounts";
 import {
   DEFAULT_HISTORY_FILTERS,
@@ -47,47 +49,30 @@ function accountLabel(filter: AccountFilter, accounts: FinancialAccount[]): stri
 
 function DropdownButton({ label, isActive, onPress }: { label: string; isActive: boolean; onPress: () => void }) {
   return (
-    <TouchableOpacity
+    <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected: isActive }}
+      accessibilityLabel={label}
+      aria-pressed={isActive}
       onPress={onPress}
-      style={{
-        height: 36,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: isActive ? Ledger.accent : Ledger.rule,
-        backgroundColor: isActive ? Ledger.accentSoft : Ledger.sheet,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-      }}
+      style={[styles.dropdown, isActive ? styles.dropdownActive : null]}
     >
-      <Text style={{ fontSize: 14, fontWeight: "600", color: isActive ? Ledger.accent : Ledger.ink }}>{label}</Text>
-      <Text style={{ fontSize: 11, color: isActive ? Ledger.accent : Ledger.muted }}>▾</Text>
-    </TouchableOpacity>
+      <AppText variant="label" tone={isActive ? "accent" : "ink"}>{label}</AppText>
+      <MaterialCommunityIcons name="chevron-down" size={16} color={isActive ? palette.accent : palette.muted} />
+    </Pressable>
   );
 }
 
 function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <TouchableOpacity
+    <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Remover filtro ${label}`}
       onPress={onRemove}
-      style={{
-        height: 30,
-        paddingHorizontal: 10,
-        borderRadius: 999,
-        backgroundColor: Ledger.accentSoft,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-      }}
+      style={styles.activeChip}
     >
-      <Text style={{ fontSize: 13, fontWeight: "600", color: Ledger.accent }} numberOfLines={1}>{label}</Text>
-      <Text style={{ fontSize: 12, color: Ledger.accent }}>✕</Text>
-    </TouchableOpacity>
+      <AppText variant="label" tone="accent" numberOfLines={1}>{label}</AppText>
+      <MaterialCommunityIcons name="close" size={14} color={palette.accent} />
+    </Pressable>
   );
 }
 
@@ -139,24 +124,14 @@ export function HistoryFilterBar({ filters, accounts, onChange }: HistoryFilterB
   ];
 
   return (
-    <View
-      style={{
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        gap: 8,
-        backgroundColor: Ledger.sheet,
-        borderBottomWidth: 1,
-        borderBottomColor: Ledger.rule,
-      }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+    <View style={styles.bar}>
+      <View style={styles.row}>
         <DropdownButton label="Conta" isActive={isAccountActive} onPress={() => setOpenPicker("account")} />
-        <Text style={{ color: Ledger.muted }}>·</Text>
         <DropdownButton label="Tipo" isActive={isTypeActive} onPress={() => setOpenPicker("type")} />
       </View>
 
       {isAccountActive || isTypeActive ? (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+        <View style={styles.activeRow}>
           {isAccountActive ? (
             <ActiveChip
               label={accountLabel(filters.account, accounts)}
@@ -169,14 +144,14 @@ export function HistoryFilterBar({ filters, accounts, onChange }: HistoryFilterB
           {filters.nature !== "all" ? (
             <ActiveChip label={NATURE_LABEL[filters.nature]} onRemove={() => onChange({ ...filters, nature: "all" })} />
           ) : null}
-          <TouchableOpacity
+          <Pressable
             accessibilityRole="button"
             onPress={() => onChange(DEFAULT_HISTORY_FILTERS)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            style={{ paddingHorizontal: 4 }}
+            hitSlop={8}
+            style={styles.clear}
           >
-            <Text style={{ fontSize: 13, fontWeight: "600", color: Ledger.accent }}>limpar</Text>
-          </TouchableOpacity>
+            <AppText variant="label" tone="accent">Limpar</AppText>
+          </Pressable>
         </View>
       ) : null}
 
@@ -185,3 +160,52 @@ export function HistoryFilterBar({ filters, accounts, onChange }: HistoryFilterB
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bar: {
+    paddingHorizontal: layout.gutter,
+    paddingVertical: space.sm,
+    gap: space.sm,
+    backgroundColor: palette.sheet,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.rule,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.sm,
+  },
+  dropdown: {
+    height: 36,
+    paddingHorizontal: space.md,
+    borderRadius: radius.control,
+    borderWidth: 1,
+    borderColor: palette.rule,
+    backgroundColor: palette.sheet,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.xs,
+  },
+  dropdownActive: {
+    borderColor: palette.accent,
+    backgroundColor: palette.accentSoft,
+  },
+  activeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 6,
+  },
+  activeChip: {
+    height: 32,
+    paddingHorizontal: space.md,
+    borderRadius: radius.full,
+    backgroundColor: palette.accentSoft,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  clear: {
+    paddingHorizontal: space.xs,
+  },
+});

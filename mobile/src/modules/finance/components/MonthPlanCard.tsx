@@ -1,14 +1,16 @@
 import { useCallback } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Card } from "../../../components/ui/Card";
-import { Btn } from "../../../components/ui/Btn";
+import { AppText } from "../../../components/ui/AppText";
+import { Block } from "../../../components/ui/Block";
+import { Button } from "../../../components/ui/Button";
+import { MoneyText } from "../../../components/ui/MoneyText";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { usePeriod } from "../../../context/PeriodContext";
 import { useCyclePlanQuery } from "../../../graphql/__generated__/hooks";
 import { toISODate } from "../../../lib/date";
-import { Colors } from "../../../theme/tokens";
+import { palette, space } from "../../../theme";
 import { formatMoney, formatShortDate, toNumber } from "../format";
 import type { AppStackParamList } from "../../../../App";
 
@@ -37,55 +39,78 @@ export function MonthPlanCard() {
 
   if (shouldStartCycle) {
     return (
-      <Card padding={16} style={{ marginBottom: 12, borderWidth: 1.5, borderColor: Colors.primary }}>
-        <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.primaryText, letterSpacing: 0.6 }}>
-          NOVO CICLO · {formatShortDate(plan.next.purchaseStart)} A {formatShortDate(plan.next.lastPurchaseDate)}
-        </Text>
-        <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.text, marginTop: 4 }}>
+      <Block style={[styles.spaced, styles.highlight]}>
+        <AppText variant="caption" tone="accent">
+          Novo ciclo · {formatShortDate(plan.next.purchaseStart)} a {formatShortDate(plan.next.lastPurchaseDate)}
+        </AppText>
+        <AppText variant="baseStrong" style={styles.gapTop}>
           A fatura do {plan.cardName ?? "cartão"} fechou. Planeje o próximo ciclo.
-        </Text>
-        <Text style={{ fontSize: 13, color: Colors.textSec, marginTop: 4, marginBottom: 12, lineHeight: 18 }}>
+        </AppText>
+        <AppText variant="body" tone="muted" style={styles.paragraph}>
           {money(next)} livres para gastos variáveis, contando o salário de {formatShortDate(plan.next.salaryDate)}. Revise as
           entradas e os gastos avulsos e defina a meta diária.
-        </Text>
-        <Btn label="Começar o ciclo" size="sm" onPress={openPlan} />
-        <TouchableOpacity onPress={openPlan} style={{ marginTop: 10 }}>
-          <Text style={{ fontSize: 12, color: Colors.textSec }}>
+        </AppText>
+        <Button label="Começar o ciclo" onPress={openPlan} />
+        <Pressable accessibilityRole="button" onPress={openPlan} style={styles.gapTop}>
+          <AppText variant="caption">
             Fatura fechada (vence {formatShortDate(plan.current.dueDate)}):{" "}
             {current >= 0 ? `sobra ${money(current)}` : `faltam ${money(-current)}`} até o salário
-          </Text>
-        </TouchableOpacity>
-      </Card>
+          </AppText>
+        </Pressable>
+      </Block>
     );
   }
 
   return (
-    <TouchableOpacity onPress={openPlan} activeOpacity={0.85}>
-      <Card padding={16} style={{ marginBottom: 12 }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.6 }}>
+    <Pressable accessibilityRole="button" onPress={openPlan}>
+      <Block style={styles.spaced}>
+        <View style={styles.columns}>
+          <View style={styles.column}>
+            <AppText variant="caption">
               {isOpen
-                ? `FATURA ATUAL · ATÉ ${formatShortDate(plan.current.lastPurchaseDate)}`
-                : `FATURA FECHADA · ${formatShortDate(plan.current.dueDate)}`}
-            </Text>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: current >= 0 ? Colors.successText : Colors.danger, marginTop: 2 }}>
-              {money(current)}
-            </Text>
-            <Text style={{ fontSize: 11, color: Colors.textSec }}>{isOpen ? "ainda dá para gastar" : "sobra até o salário"}</Text>
+                ? `Fatura atual · até ${formatShortDate(plan.current.lastPurchaseDate)}`
+                : `Fatura fechada · ${formatShortDate(plan.current.dueDate)}`}
+            </AppText>
+            <MoneyText amount={current} variant="value" tone={current >= 0 ? "income" : "danger"} />
+            <AppText variant="caption">{isOpen ? "ainda dá para gastar" : "sobra até o salário"}</AppText>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.textSec, letterSpacing: 0.6 }}>
-              PRÓXIMA · DESDE {formatShortDate(plan.next.purchaseStart)}
-            </Text>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: next >= 0 ? Colors.text : Colors.danger, marginTop: 2 }}>
-              {money(next)}
-            </Text>
-            <Text style={{ fontSize: 11, color: Colors.textSec }}>para gastos variáveis</Text>
+          <View style={styles.column}>
+            <AppText variant="caption">Próxima · desde {formatShortDate(plan.next.purchaseStart)}</AppText>
+            <MoneyText amount={next} variant="value" tone={next >= 0 ? "ink" : "danger"} />
+            <AppText variant="caption">para gastos variáveis</AppText>
           </View>
         </View>
-        <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.primaryText, marginTop: 10 }}>Ver planejamento e meta diária ›</Text>
-      </Card>
-    </TouchableOpacity>
+        <AppText variant="label" tone="accent" style={styles.link}>
+          Ver planejamento e meta diária
+        </AppText>
+      </Block>
+    </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  spaced: {
+    marginBottom: space.lg,
+  },
+  highlight: {
+    borderColor: palette.accent,
+  },
+  gapTop: {
+    marginTop: space.sm,
+  },
+  paragraph: {
+    marginTop: space.xs,
+    marginBottom: space.md,
+  },
+  columns: {
+    flexDirection: "row",
+    gap: space.md,
+  },
+  column: {
+    flex: 1,
+    minWidth: 0,
+  },
+  link: {
+    marginTop: space.md,
+  },
+});

@@ -132,3 +132,33 @@ GIF do fluxo de conciliação: [depois-fluxo-conciliacao.gif](img/depois-fluxo-c
 - **Moeda**: `formatMoney` (em `src/lib/money.ts`) é o único formatador, com milhar. Modos de sinal: `auto` (saldos, "-" só se negativo), `flow` (lançamentos: "+" na entrada, gasto sem sinal) e `always` (diferenças e conta do planejamento).
 - **Excluir**: só dentro da folha de edição, como texto vermelho e sempre com confirmação (antes o gasto avulso era excluído sem perguntar).
 - **Console web**: a moeda escolhida era lida direto do `expo-secure-store`, que não existe no web; agora passa por `storage.ts`.
+
+## Redesenho, fase 1 (CX-67): tema único e componentes base
+
+Os tokens acima viraram um módulo só, `mobile/src/theme/`, e as telas mais usadas (Hoje, Histórico, Fatura e a folha de lançamento) foram reescritas com componentes, sem estilo inline. As outras telas seguem no visual antigo até a fase 2.
+
+**Tema** (`import { palette, textVariants, space, layout, radius, shadow } from "src/theme"`)
+- `colors.ts`: a paleta "extrato da casa", com o contraste de cada cor de texto anotado (todas passam AA, 4,5:1, sobre `paper` e `sheet`; texto branco sobre `accent` 7,2:1).
+- `typography.ts`: Manrope com fallback do sistema, escala 12 · 14 · 16 · 20 · 28 · 44, `tabularNums`. No web a fonte vem do Google Fonts (`public/index.html`, `display=swap`); no nativo, do `@expo-google-fonts/manrope` via expo-font (o bundle web não carrega os .ttf).
+- `spacing.ts` (base 4, margem 16, linha 56, coluna 560), `shape.ts` (raio 8/12/20/full; sombra só na folha e no botão flutuante).
+- `tokens.ts` ficou com o legado (`Colors`, `Shadow`…) para as telas ainda não migradas; `Ledger` e `TABULAR_NUMS` agora são apelidos do tema.
+
+**Componentes** (`mobile/src/components/ui/`)
+- `AppText` (variantes da escala), `MoneyText` (moeda com dígitos tabulares; cor pelo sinal opcional), `Block` / `ListBlock` (bloco branco sem sombra; linhas separadas por `rule`, sem borda na última), `ListRow` (ícone 32, título numa linha, detalhe 12, valor à direita), `DayHeader` / `SectionHeader` ("qua, 05/11", total do dia, "+" como ícone), `Button` (primário sólido, secundário accent-soft, destrutivo só texto), `Chip` / `ChipGroup` (36 de altura, raio full), `Sheet` / `SheetFooter` (folha com botão de salvar fixo no rodapé), `IconButton`, `ScreenHeader`, `EmptyState`.
+- Selos "Receita" e "Recorrente" viraram palavras no detalhe da linha. Rótulos sem CAIXA ALTA, nenhum gradiente nas telas migradas.
+
+**Fluxos conferidos** (local, dados falsos): filtrar por conta, rolar, "+" num dia → folha com dia e conta preenchidos → salvar: a linha aparece no lugar, filtro e rolagem mantidos ([depois](img/f1-fluxo-salvo-no-lugar.png)); editar valor na folha; excluir pela folha pede confirmação, cancelar mantém, aceitar remove ([folha](img/f1-fluxo-excluir-na-folha.png)); "+" na fatura abre com o cartão marcado; Home: Diário/Total, seletor de período em folha ([seletor](img/f1-depois-mobile-seletor-periodo.png)), "Lançar" com Gasto/Receita.
+
+| Tela | Antes | Depois |
+|---|---|---|
+| Hoje (390) | [topo](img/f1-antes-mobile-hoje.png) · [fim](img/f1-antes-mobile-hoje-fim.png) | [topo](img/f1-depois-mobile-hoje.png) · [fim](img/f1-depois-mobile-hoje-fim.png) |
+| Histórico (390) | [antes](img/f1-antes-mobile-historico.png) | [depois](img/f1-depois-mobile-historico.png) |
+| Folha: novo (390) | [antes](img/f1-antes-mobile-folha-nova.png) | [depois](img/f1-depois-mobile-folha-nova.png) |
+| Folha: editar (390) | [antes](img/f1-antes-mobile-folha-editar.png) | [depois](img/f1-depois-mobile-folha-editar.png) |
+| Fatura (390) | [topo](img/f1-antes-mobile-fatura.png) · [lista](img/f1-antes-mobile-fatura-lista.png) | [topo](img/f1-depois-mobile-fatura.png) · [lista](img/f1-depois-mobile-fatura-lista.png) |
+| Hoje (1280) | [antes](img/f1-antes-desktop-hoje.png) | [depois](img/f1-depois-desktop-hoje.png) |
+| Histórico (1280) | [antes](img/f1-antes-desktop-historico.png) | [depois](img/f1-depois-desktop-historico.png) |
+| Fatura (1280) | [antes](img/f1-antes-desktop-fatura.png) | [depois](img/f1-depois-desktop-fatura.png) |
+| Folha (1280) | [antes](img/f1-antes-desktop-folha-editar.png) | [depois](img/f1-depois-desktop-folha-editar.png) |
+
+**Fica para a fase 2**: emojis ainda nas abas (🏠 📋 💳), nas contas dos chips "Pago com" (🏦 💳) e na tela de Contas; telas não migradas (Contas, detalhe de conta/cartão, Painel, Categorias, Perfil, formulários de fixas, transferência, salário, planejamento) ainda usam `Card`, `Btn` com gradiente, `FieldInput` com CAIXA ALTA e `Colors` legados. `Card`, `Btn`, `FieldInput` e `Colors` saem quando a última tela migrar. O cabeçalho das telas empilhadas (react-navigation) ainda usa a fonte do sistema.

@@ -1,8 +1,10 @@
-import { Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { AppText } from "../../../components/ui/AppText";
+import { Button } from "../../../components/ui/Button";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { useRegisterSalaryMutation } from "../../../graphql/__generated__/hooks";
 import { confirm } from "../../../lib/alert";
-import { Colors, Radius } from "../../../theme/tokens";
+import { palette, radius, space } from "../../../theme";
 import { formatMoney, formatShortDate } from "../format";
 
 type SalaryBannerProps = {
@@ -29,21 +31,32 @@ export function SalaryBanner({ amount, date }: SalaryBannerProps) {
     );
 
   return (
-    <View style={{ backgroundColor: Colors.primaryLight, borderRadius: Radius.md, padding: 12, marginTop: 12 }}>
-      <Text style={{ fontSize: 13, color: Colors.primaryText, fontWeight: "700" }}>
+    <View style={styles.banner}>
+      <AppText variant="label" tone="accent">
         Salário de {formatShortDate(date)} ainda não registrado
-      </Text>
-      <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>Quando cair na conta, registre para o saldo ficar certo.</Text>
-      <TouchableOpacity
+      </AppText>
+      <AppText variant="caption">Quando cair na conta, registre para o saldo ficar certo.</AppText>
+      <Button
+        label={`Registrar ${formatMoney(amount, currency.symbol)}`}
+        size="sm"
+        isFullWidth={false}
+        isLoading={loading}
+        style={styles.action}
         onPress={handleRegister}
-        disabled={loading}
-        activeOpacity={0.8}
-        style={{ alignSelf: "flex-start", marginTop: 8, backgroundColor: Colors.primary, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 7 }}
-      >
-        <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
-          {loading ? "Registrando…" : `Registrar ${formatMoney(amount, currency.symbol)}`}
-        </Text>
-      </TouchableOpacity>
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  banner: {
+    backgroundColor: palette.accentSoft,
+    borderRadius: radius.control,
+    padding: space.md,
+    marginTop: space.md,
+  },
+  action: {
+    alignSelf: "flex-start",
+    marginTop: space.sm,
+  },
+});

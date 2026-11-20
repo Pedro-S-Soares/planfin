@@ -1,22 +1,25 @@
 import { useCallback, useMemo, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useQuery } from "@apollo/client/react";
 import { usePeriod } from "../context/PeriodContext";
 import { useAuth } from "../context/AuthContext";
-import { useCurrency } from "../context/CurrencyContext";
-import { formatPeriodMonths, formatWeekdayDate } from "../lib/date";
+import { formatPeriodMonths } from "../lib/date";
 import {
   EXPENSE_HISTORY_WITH_AUTHORS,
   type ExpenseDayWithAuthors,
   type ExpenseWithAuthor,
 } from "../graphql/expenses";
-import { Card } from "../components/ui/Card";
+import { ListBlock } from "../components/ui/Block";
+import { Button } from "../components/ui/Button";
+import { DayHeader } from "../components/ui/DayHeader";
+import { EmptyState } from "../components/ui/EmptyState";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { InlineError } from "../components/ui/InlineError";
-import { Colors } from "../theme/tokens";
+import { PlusIcon } from "../components/ui/PlusIcon";
+import { ScreenHeader } from "../components/ui/ScreenHeader";
+import { layout, palette, space } from "../theme";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { formatMoney } from "../modules/finance/format";
 import { useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import {
   DEFAULT_HISTORY_FILTERS,
@@ -36,32 +39,8 @@ import {
   editEntryState,
   type EntrySheetState,
 } from "../modules/history/entry-sheet";
+
 type ExpenseHistoryData = { expenseHistory: ExpenseDayWithAuthors[] };
-
-function dayTotalColor(total: number) {
-  return total > 0 ? Colors.success : Colors.textSec;
-}
-
-function AddDayButton({ onPress }: { onPress: () => void }) {
-  return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityLabel="Lançar neste dia"
-      onPress={onPress}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      style={{
-        height: 26,
-        paddingHorizontal: 10,
-        borderRadius: 999,
-        backgroundColor: Colors.primaryLight,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.primaryText }}>+ Lançar</Text>
-    </TouchableOpacity>
-  );
-}
 
 function authorLabel(author: ExpenseWithAuthor["createdBy"], currentUserId?: string) {
   if (!author) return null;
@@ -73,7 +52,6 @@ export function HistoryScreen() {
   usePageTitle("Planfin - Histórico");
   const { period, refetch: refetchPeriod } = usePeriod();
   const { user } = useAuth();
-  const { currency } = useCurrency();
   const { accounts } = useFinancialAccounts();
   const [filters, setFilters] = useState<HistoryFilters>(DEFAULT_HISTORY_FILTERS);
   const [sheet, setSheet] = useState<EntrySheetState>(CLOSED_SHEET);
@@ -116,43 +94,22 @@ export function HistoryScreen() {
   );
 
   const header = (
-    <View style={{
-      backgroundColor: Colors.surface,
-      paddingTop: Platform.OS === "ios" ? 58 : 24,
-      paddingBottom: 14,
-      paddingHorizontal: 18,
-      borderBottomWidth: 1,
-      borderBottomColor: Colors.border,
-    }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <View style={{ flexShrink: 1 }}>
-          <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.text, letterSpacing: -0.4 }}>
-            Histórico
-          </Text>
-          {periodLabel && (
-            <Text style={{ fontSize: 12, color: Colors.textSec, marginTop: 2 }}>
-              Período: {periodLabel}
-            </Text>
-          )}
-        </View>
-        {period ? (
-          <TouchableOpacity
-            accessibilityRole="button"
+    <ScreenHeader
+      title="Histórico"
+      subtitle={periodLabel ? `Período: ${periodLabel}` : null}
+      action={
+        period ? (
+          <Button
+            label="Lançar"
+            size="sm"
+            isFullWidth={false}
+            leading={<PlusIcon />}
+            accessibilityLabel="Lançar gasto ou receita"
             onPress={() => openCreate(defaultEntryDate(period.startDate, period.endDate))}
-            style={{
-              height: 40,
-              paddingHorizontal: 16,
-              borderRadius: 999,
-              backgroundColor: Colors.primary,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Text style={{ fontSize: 14, fontWeight: "700", color: "#fff" }}>+ Lançar</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-    </View>
+          />
+        ) : null
+      }
+    />
   );
 
   const filterBar = (
@@ -162,10 +119,10 @@ export function HistoryScreen() {
   // Only the first load replaces the list: refetches after a save keep it (and its scroll) on screen.
   if (loading && !data) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <View style={styles.root}>
         {header}
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={Colors.primary} />
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={palette.accent} />
         </View>
       </View>
     );
@@ -173,9 +130,9 @@ export function HistoryScreen() {
 
   if (error) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <View style={styles.root}>
         {header}
-        <View style={{ padding: 16 }}>
+        <View style={styles.errorBox}>
           <InlineError onRetry={refetch} />
         </View>
       </View>
@@ -183,14 +140,27 @@ export function HistoryScreen() {
   }
 
   if (days.length === 0) {
+    const isFiltered = hasActiveFilters(filters);
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+      <View style={styles.root}>
         {header}
         {filterBar}
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <Text style={{ color: Colors.textTer, fontSize: 15, textAlign: "center" }}>
-            {hasActiveFilters(filters) ? "Nenhum lançamento com esses filtros." : "Nenhum gasto registrado ainda."}
-          </Text>
+        <View style={styles.center}>
+          <EmptyState
+            message={isFiltered ? "Nenhum lançamento com esses filtros." : "Nenhum lançamento neste período ainda."}
+            action={
+              isFiltered ? (
+                <Button label="Limpar filtros" variant="secondary" isFullWidth={false} onPress={() => setFilters(DEFAULT_HISTORY_FILTERS)} />
+              ) : period ? (
+                <Button
+                  label="Lançar"
+                  isFullWidth={false}
+                  leading={<PlusIcon />}
+                  onPress={() => openCreate(defaultEntryDate(period.startDate, period.endDate))}
+                />
+              ) : null
+            }
+          />
         </View>
         {entrySheet}
       </View>
@@ -198,36 +168,23 @@ export function HistoryScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <View style={styles.root}>
       {header}
       {filterBar}
       <FlatList
         data={days}
         keyExtractor={(day) => day.date}
-        contentContainerStyle={{ paddingVertical: 14, paddingHorizontal: 16 }}
-        ListHeaderComponent={
-          <HistorySummaryCard summary={summary} account={filteredAccount} currencySymbol={currency.symbol} />
-        }
+        contentContainerStyle={styles.list}
+        ListHeaderComponent={<HistorySummaryCard summary={summary} account={filteredAccount} />}
         renderItem={({ item: day }) => (
-          <View style={{ marginBottom: 14 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8, paddingHorizontal: 2 }}>
-              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.text }}>
-                {formatWeekdayDate(day.date)}
-              </Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Text style={{ fontSize: 12, color: dayTotalColor(day.total), fontWeight: "600" }}>
-                  Total: {formatMoney(day.total, currency.symbol, { sign: "flow" })}
-                </Text>
-                <AddDayButton onPress={() => openCreate(day.date)} />
-              </View>
-            </View>
-            <Card padding={12}>
+          <View style={styles.day}>
+            <DayHeader date={day.date} total={day.total} onAdd={() => openCreate(day.date)} />
+            <ListBlock>
               {day.items.map((historyItem) => historyItem.kind === "transfer" ? (
                 <TransferRow
                   key={`transfer-${historyItem.transfer.id}`}
                   transfer={historyItem.transfer}
                   signedAmount={historyItem.signedAmount}
-                  currencySymbol={currency.symbol}
                 />
               ) : (
                 <ExpenseRow
@@ -237,7 +194,7 @@ export function HistoryScreen() {
                   authorLabel={authorLabel(historyItem.entry.createdBy, user?.id)}
                 />
               ))}
-            </Card>
+            </ListBlock>
           </View>
         )}
       />
@@ -245,3 +202,25 @@ export function HistoryScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: palette.paper,
+  },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorBox: {
+    padding: layout.gutter,
+  },
+  list: {
+    paddingVertical: layout.blockGap,
+    paddingHorizontal: layout.gutter,
+  },
+  day: {
+    marginBottom: space.xl,
+  },
+});

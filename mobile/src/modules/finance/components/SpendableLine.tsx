@@ -1,7 +1,8 @@
-import { Text, View } from "react-native";
-import { useCurrency } from "../../../context/CurrencyContext";
-import { Ledger, TABULAR_NUMS } from "../../../theme/tokens";
-import { formatMoney, formatShortDate, toNumber } from "../format";
+import { StyleSheet, View } from "react-native";
+import { AppText } from "../../../components/ui/AppText";
+import { MoneyText } from "../../../components/ui/MoneyText";
+import { space } from "../../../theme";
+import { formatShortDate, toNumber } from "../format";
 import { useFinancePanel } from "../use-finance-panel";
 
 /**
@@ -10,7 +11,6 @@ import { useFinancePanel } from "../use-finance-panel";
  * finance panel below invites the user to register them).
  */
 export function SpendableLine() {
-  const { currency } = useCurrency();
   const { panel } = useFinancePanel();
 
   if (!panel?.hasAccounts || panel.free == null) return null;
@@ -22,20 +22,33 @@ export function SpendableLine() {
     : `até ${formatShortDate(panel.horizonDate)}`;
 
   return (
-    <View style={{ marginTop: 12 }}>
-      <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-        <Text style={{ flexShrink: 1, fontSize: 14, color: Ledger.muted }} numberOfLines={1}>
+    <View style={styles.root}>
+      <View style={styles.row}>
+        <AppText variant="body" tone="muted" style={styles.label} numberOfLines={1}>
           Posso gastar {horizon}
-        </Text>
-        <Text style={{ fontSize: 14, fontWeight: "700", color: isShort ? Ledger.danger : Ledger.income, ...TABULAR_NUMS }}>
-          {formatMoney(free, currency.symbol)}
-        </Text>
+        </AppText>
+        <MoneyText amount={free} variant="label" tone={isShort ? "danger" : "income"} />
       </View>
       {isShort ? (
-        <Text style={{ fontSize: 12, color: Ledger.danger, marginTop: 2 }}>
+        <AppText variant="caption" tone="danger">
           Falta dinheiro para cobrir o que vence antes do próximo salário.
-        </Text>
+        </AppText>
       ) : null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    marginTop: space.md,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: space.sm,
+  },
+  label: {
+    flexShrink: 1,
+  },
+});
