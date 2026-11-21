@@ -6,7 +6,6 @@ import {
   useCategoriesQuery,
   useUpdateExpenseMutation,
   useDeleteExpenseMutation,
-  ActivePeriodDocument,
 } from "../../../graphql/__generated__/hooks";
 import { usePeriod } from "../../../context/PeriodContext";
 import { DatePickerField } from "../../../components/DatePickerField";
@@ -16,6 +15,7 @@ import { displayToAPI, formatCents } from "../../../lib/currency";
 import { AccountPicker } from "../../finance/components/AccountPicker";
 import { useFinancialAccounts } from "../../finance/use-financial-accounts";
 import { toast } from "../../../lib/toast";
+import { ENTRY_REFETCH_QUERIES } from "../../../lib/money-queries";
 import {
   CategoryField,
   DeleteEntryButton,
@@ -86,29 +86,13 @@ export function EditIncomeForm({ entry, onDone }: EditIncomeFormProps) {
   const [updateExpense, { loading: updating }] = useUpdateExpenseMutation({
     onCompleted: () => { refetch(); toast.success("Alteração salva"); onDone(); },
     onError: (error) => setError("root", { message: error.message }),
-    refetchQueries: [
-      { query: ActivePeriodDocument },
-      "ExpenseHistory",
-      "ExpenseHistoryWithAuthors",
-      "FinancialAccounts",
-      "Invoices",
-      "Invoice",
-      "AccountMovements",
-    ],
+    refetchQueries: ENTRY_REFETCH_QUERIES,
   });
 
   const [deleteExpense, { loading: deleting }] = useDeleteExpenseMutation({
     onCompleted: () => { refetch(); toast.success("Receita excluída"); onDone(); },
     onError: (error) => setError("root", { message: error.message }),
-    refetchQueries: [
-      { query: ActivePeriodDocument },
-      "ExpenseHistory",
-      "ExpenseHistoryWithAuthors",
-      "FinancialAccounts",
-      "Invoices",
-      "Invoice",
-      "AccountMovements",
-    ],
+    refetchQueries: ENTRY_REFETCH_QUERIES,
   });
 
   const onSubmit = (values: yup.InferType<typeof schema>) => {

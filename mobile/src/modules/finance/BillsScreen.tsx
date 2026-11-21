@@ -22,6 +22,7 @@ import { Text } from "../../components/ui/Text";
 import { MonthStepper } from "../../components/ui/MonthStepper";
 import { EntrySheet } from "../history/components/EntrySheet";
 import { CLOSED_SHEET, createEntryStateWith, type EntrySheetState } from "../history/entry-sheet";
+import { MONEY_QUERIES } from "../../lib/money-queries";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 type Occurrence = NonNullable<NonNullable<ReturnType<typeof useBillOccurrencesQuery>["data"]>["billOccurrences"]>[number];
@@ -73,8 +74,8 @@ export function BillsScreen() {
     variables: { month, today: toISODate(new Date()) },
     fetchPolicy: "cache-and-network",
   });
-  const [unpayBill] = useUnpayBillMutation({ refetchQueries: ["BillOccurrences", "FinancePanel", "FinancialAccounts"] });
-  const [unskipBill] = useUnskipBillMutation({ refetchQueries: ["BillOccurrences", "FinancePanel", "MonthPlan", "AllowancePlan"] });
+  const [unpayBill] = useUnpayBillMutation({ refetchQueries: MONEY_QUERIES });
+  const [unskipBill] = useUnskipBillMutation({ refetchQueries: MONEY_QUERIES });
 
   useFocusEffect(
     useCallback(() => {

@@ -13,6 +13,7 @@ import { formatMonth, toNumber } from "./format";
 import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
+import { MONEY_QUERIES } from "../../lib/money-queries";
 
 export function PayBillScreen() {
   usePageTitle("Planfin - Pagar despesa fixa");
@@ -23,7 +24,7 @@ export function PayBillScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [payBill, { loading }] = usePayBillMutation({
-    refetchQueries: ["BillOccurrences", "FinancePanel", "FinancialAccounts", "Invoices", "Invoice", "AccountMovements", "MonthPlan"],
+    refetchQueries: MONEY_QUERIES,
     onCompleted: () => navigation.goBack(),
     onError: (e) => setError(e.message),
   });

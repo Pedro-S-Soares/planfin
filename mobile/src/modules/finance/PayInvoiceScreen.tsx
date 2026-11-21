@@ -15,6 +15,7 @@ import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
+import { MONEY_QUERIES } from "../../lib/money-queries";
 
 export function PayInvoiceScreen() {
   usePageTitle("Planfin - Pagar fatura");
@@ -28,7 +29,7 @@ export function PayInvoiceScreen() {
   const from = chosenFrom === undefined ? primary?.id ?? null : chosenFrom;
 
   const [payInvoice, { loading }] = usePayInvoiceMutation({
-    refetchQueries: ["Invoices", "Invoice", "FinancialAccounts", "AccountMovements", "FinancePanel", "MonthPlan"],
+    refetchQueries: MONEY_QUERIES,
     onCompleted: () => navigation.goBack(),
     onError: (e) => setError(e.message),
   });

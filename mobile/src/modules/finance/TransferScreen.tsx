@@ -16,6 +16,7 @@ import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
+import { MONEY_QUERIES } from "../../lib/money-queries";
 
 const MONEY_KINDS = ["checking", "allowance", "reserve"] as const;
 
@@ -35,7 +36,7 @@ export function TransferScreen() {
   const to = toId ?? null;
 
   const [createTransfer, { loading }] = useCreateTransferMutation({
-    refetchQueries: ["FinancialAccounts", "AccountMovements", "FinancePanel"],
+    refetchQueries: MONEY_QUERIES,
     onCompleted: () => navigation.goBack(),
     onError: (e) => setError(e.message),
   });

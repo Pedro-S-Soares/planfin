@@ -10,6 +10,7 @@ import { formatMonth } from "./format";
 import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
+import { MONEY_QUERIES } from "../../lib/money-queries";
 
 /** Skips one month of a fixed bill without deleting it. */
 export function SkipBillScreen() {
@@ -20,7 +21,7 @@ export function SkipBillScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [skipBill, { loading }] = useSkipBillMutation({
-    refetchQueries: ["BillOccurrences", "FinancePanel", "MonthPlan", "AllowancePlan"],
+    refetchQueries: MONEY_QUERIES,
     onCompleted: () => navigation.goBack(),
     onError: (e) => setError(e.message),
   });

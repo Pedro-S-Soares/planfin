@@ -69,11 +69,58 @@ defmodule PlanfinBackend.Finance.Bills do
              Map.get(attrs, :account_id, bill.account_id),
              Map.get(attrs, :direction, bill.direction)
            ) do
-      bill
-      |> RecurringBill.changeset(Map.drop(attrs, [:group_id]))
-      |> Repo.update()
+      Repo.transaction(fn ->
+        with {:ok, updated} <-
+               bill |> RecurringBill.changeset(Map.drop(attrs, [:group_id])) |> Repo.update(),
+             :ok <- sync_one_off_entry(bill, updated) do
+          updated
+        else
+          {:error, reason} -> Repo.rollback(reason)
+        end
+      end)
       |> preload_bill()
     end
+  end
+
+  # A one-off item has a single occurrence: once paid (or charged on the card) that
+  # occurrence *is* the entry it created, and the lists show the entry's amount. So an
+  # edit of the item carries to that entry, or the edit would not show anywhere.
+  # Only what changed is carried, so a note edited in the history is kept. A recurring
+  # item is not touched: its paid months keep the real amount, the edit is for the next.
+  defp sync_one_off_entry(
+         %RecurringBill{once_month: month} = before,
+         %RecurringBill{once_month: month} = after_
+       )
+       when not is_nil(month) do
+    attrs =
+      %{}
+      |> put_changed(:amount, before.amount, after_.amount)
+      |> put_changed(:note, before.name, after_.name)
+      |> put_changed(:subcategory_id, before.subcategory_id, after_.subcategory_id)
+      |> put_changed(:account_id, before.account_id, after_.account_id)
+
+    case {attrs == %{}, Repo.get_by(BillPayment, bill_id: after_.id, month: month)} do
+      {false, %BillPayment{expense_id: expense_id}} when not is_nil(expense_id) ->
+        case Expenses.update_expense(after_.group_id, expense_id, attrs) do
+          {:ok, _expense} -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp sync_one_off_entry(_before, _after), do: :ok
+
+  defp put_changed(attrs, key, before, after_) do
+    same? =
+      case {before, after_} do
+        {%Decimal{} = a, %Decimal{} = b} -> Decimal.equal?(a, b)
+        {a, b} -> a == b
+      end
+
+    if same?, do: attrs, else: Map.put(attrs, key, after_)
   end
 
   def deactivate_bill(%RecurringBill{} = bill) do
