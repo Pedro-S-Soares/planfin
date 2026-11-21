@@ -4,7 +4,6 @@ import * as yup from "yup";
 import {
   useCategoriesQuery,
   useCreateExpenseMutation,
-  ActivePeriodDocument,
 } from "../../../graphql/__generated__/hooks";
 import { usePeriod } from "../../../context/PeriodContext";
 import { DatePickerField } from "../../../components/DatePickerField";
@@ -17,6 +16,7 @@ import { ToggleRow } from "../../finance/components/ToggleRow";
 import { defaultSpendingAccountId, useFinancialAccounts } from "../../finance/use-financial-accounts";
 import { parseCents } from "../../../lib/currency";
 import { toast } from "../../../lib/toast";
+import { ENTRY_REFETCH_QUERIES } from "../../../lib/money-queries";
 import { CategoryField, ExtraToggle, FieldLabel, MoreOptions, NoteField, EntryFormLayout } from "../components/entry-form-parts";
 import type { EntryFormParams } from "../entry-types";
 
@@ -79,15 +79,7 @@ export function AddIncomeForm({ params, onDone }: AddIncomeFormProps) {
   const [createExpense, { loading }] = useCreateExpenseMutation({
     onCompleted: () => { refetch(); toast.success("Receita registrada"); onDone(); },
     onError: (error) => setError("root", { message: error.message }),
-    refetchQueries: [
-      { query: ActivePeriodDocument },
-      "ExpenseHistory",
-      "ExpenseHistoryWithAuthors",
-      "FinancialAccounts",
-      "Invoices",
-      "Invoice",
-      "AccountMovements",
-    ],
+    refetchQueries: ENTRY_REFETCH_QUERIES,
   });
 
   const onSubmit = (values: yup.InferType<typeof schema>) => {

@@ -28,6 +28,7 @@ import type { AppStackParamList } from "../../../App";
 import { categoryColor, palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
 import { MonthStepper } from "../../components/ui/MonthStepper";
+import { MONEY_QUERIES } from "../../lib/money-queries";
 
 type BillFormValues = yup.InferType<typeof billFormSchema>;
 
@@ -136,7 +137,8 @@ function BillForm({ params, editing }: BillFormProps) {
   const accountId = chosenAccount === undefined ? defaultAccount : chosenAccount;
   const subcategories = categories.find((c) => c.id === watch("categoryId"))?.subcategories?.filter((s) => s !== null) ?? [];
 
-  const refetchQueries = ["RecurringBills", "BillOccurrences", "FinancePanel", "MonthPlan", "AllowancePlan", "CyclePlan"];
+  // Editing a paid one-off item also changes its entry (history, invoice, balances).
+  const refetchQueries = MONEY_QUERIES;
   const onCompleted = () => navigation.goBack();
   const onError = (e: Error) => setError("root", { message: e.message });
   const [createBill, { loading: creating }] = useCreateRecurringBillMutation({ refetchQueries, onCompleted, onError });
