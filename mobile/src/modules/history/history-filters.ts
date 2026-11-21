@@ -1,3 +1,4 @@
+import { ALL_CATEGORIES, isCategoryFilterActive, matchesCategory, type CategoryFilter } from "./category-filter";
 import type {
   ExpenseDayWithAuthors,
   ExpenseWithAuthor,
@@ -13,12 +14,14 @@ export type HistoryFilters = {
   account: AccountFilter;
   direction: DirectionFilter;
   nature: NatureFilter;
+  category: CategoryFilter;
 };
 
 export const DEFAULT_HISTORY_FILTERS: HistoryFilters = {
   account: { kind: "all" },
   direction: "all",
   nature: "all",
+  category: ALL_CATEGORIES,
 };
 
 /** Entries produced every month: fixed bills (paid or charged on the card), salary and benefit credits. */
@@ -46,9 +49,10 @@ function toNumber(value: string | null | undefined): number {
 }
 
 function entryItem(entry: ExpenseWithAuthor, filters: HistoryFilters): HistoryItem | null {
-  const { account, direction, nature } = filters;
+  const { account, direction, nature, category } = filters;
 
   if (account.kind === "account" && entry.account?.id !== account.id) return null;
+  if (!matchesCategory(entry, category)) return null;
   if (account.kind === "none" && entry.account) return null;
 
   const isIncoming = entry.type === "income";
@@ -66,8 +70,9 @@ function entryItem(entry: ExpenseWithAuthor, filters: HistoryFilters): HistoryIt
 function transferItem(transfer: HistoryTransfer, filters: HistoryFilters): HistoryItem | null {
   const { account, direction, nature } = filters;
 
-  // A transfer is neither a fixed bill nor a variable expense, and has no account-less side.
-  if (nature !== "all" || account.kind === "none") return null;
+  // A transfer is neither a fixed bill nor a variable expense, has no account-less side
+  // and no category.
+  if (nature !== "all" || account.kind === "none" || isCategoryFilterActive(filters.category)) return null;
 
   if (account.kind === "all") {
     return direction === "all" ? { kind: "transfer", transfer, signedAmount: null } : null;
@@ -115,5 +120,18 @@ export function summarizeHistory(days: HistoryDay[]): HistorySummary {
 }
 
 export function hasActiveFilters(filters: HistoryFilters): boolean {
-  return filters.account.kind !== "all" || filters.direction !== "all" || filters.nature !== "all";
+  return (
+    filters.account.kind !== "all" ||
+    filters.direction !== "all" ||
+    filters.nature !== "all" ||
+    isCategoryFilterActive(filters.category)
+  );
+}
+
+/**
+ * The money a category selection moved in the period: spending minus refunds for
+ * spending categories, received for income ones (whichever way the result goes).
+ */
+export function categoryFilterTotal(summary: HistorySummary): number {
+  return Math.abs(summary.net);
 }

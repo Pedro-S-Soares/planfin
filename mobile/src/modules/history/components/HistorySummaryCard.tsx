@@ -5,12 +5,14 @@ import { Block } from "../../../components/ui/Block";
 import { MoneyText } from "../../../components/ui/MoneyText";
 import { palette, space } from "../../../theme";
 import type { FinancialAccount } from "../../finance/use-financial-accounts";
-import type { HistorySummary } from "../history-filters";
+import { categoryFilterTotal, type HistorySummary } from "../history-filters";
 
 interface HistorySummaryCardProps {
   summary: HistorySummary;
   /** The account being filtered, to compare its balance in the app with the bank. */
   account: FinancialAccount | null;
+  /** With a category filter: what is selected ("Mercado") and the period ("nov 2026"), for the headline total. */
+  categoryHeadline?: { label: string; periodLabel: string | null } | null;
 }
 
 /** One line of the summary, like a statement's totals: label at the left, amount at the right. */
@@ -26,11 +28,20 @@ function SummaryLine({ label, isTotal = false, children }: { label: string; isTo
 }
 
 /** Totals of what the filters leave visible: in, out, result. */
-export function HistorySummaryCard({ summary, account }: HistorySummaryCardProps) {
+export function HistorySummaryCard({ summary, account, categoryHeadline }: HistorySummaryCardProps) {
   const hasBalance = account !== null && account.kind !== "credit_card" && account.balance != null;
 
   return (
     <Block style={styles.block}>
+      {categoryHeadline ? (
+        <View style={styles.headline} accessibilityRole="header">
+          <AppText variant="label" tone="muted" numberOfLines={2}>
+            {categoryHeadline.label}
+            {categoryHeadline.periodLabel ? ` em ${categoryHeadline.periodLabel}` : ""}
+          </AppText>
+          <MoneyText amount={categoryFilterTotal(summary)} variant="amount" />
+        </View>
+      ) : null}
       <SummaryLine label="Entradas">
         <MoneyText amount={summary.incoming} variant="label" tone="income" />
       </SummaryLine>
@@ -58,6 +69,13 @@ export function HistorySummaryCard({ summary, account }: HistorySummaryCardProps
 const styles = StyleSheet.create({
   block: {
     marginBottom: space.xl,
+  },
+  headline: {
+    gap: 2,
+    paddingBottom: space.md,
+    marginBottom: space.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: palette.rule,
   },
   line: {
     flexDirection: "row",

@@ -1,5 +1,6 @@
 import { View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { OTHER_CATEGORY_ID } from "./palette";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import type { AppStackParamList } from "../../../App";
@@ -98,14 +99,23 @@ export function DashboardScreen() {
           ) : null
         }
         side={
-          <ChartCard title="Onde vai o dinheiro" subtitle={view.comparedToPrevious ? "Por categoria · variação vs intervalo anterior · toque para detalhar" : "Por categoria · toque para ver o detalhe"} style={{ flex: 1 }}>
+          <ChartCard title="Onde vai o dinheiro" subtitle={view.comparedToPrevious ? "Por categoria · variação vs intervalo anterior · toque para detalhar" : range === "period" ? "Por categoria · toque para ver os lançamentos" : "Por categoria · toque para ver o detalhe"} style={{ flex: 1 }}>
             {() =>
               hasSpend ? (
                 <CategoryRanking
                   categories={view.ranked}
                   format={format}
                   compared={view.comparedToPrevious}
-                  onSelect={(categoryId) => navigation.navigate("CategoryDetail", { categoryId, range })}
+                  onSelect={(categoryId) =>
+                    // The history shows the period: in "Período atual" a category opens its entries there;
+                    // longer ranges (and "Outros", entries without category) keep the category detail.
+                    range === "period" && categoryId !== OTHER_CATEGORY_ID
+                      ? navigation.navigate("MainTabs", {
+                          screen: "History",
+                          params: { category: { categoryIds: [categoryId], subcategoryIds: [] } },
+                        } as never)
+                      : navigation.navigate("CategoryDetail", { categoryId, range })
+                  }
                 />
               ) : (
                 noSpend
