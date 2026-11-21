@@ -235,12 +235,16 @@ defmodule PlanfinBackend.BudgetDaysTest do
 
       assert Enum.all?(results, &match?({:ok, _}, &1))
 
+      # A request that started after the next day existed may close it too (it is past
+      # as well): settle with one more close, then the state is the same however they raced.
+      assert {:ok, _} = BudgetDays.close_past_days(period)
+
       days = days_of(period)
-      assert [first, next] = days
-      assert first.date == past_date and first.closed_at != nil
-      assert next.date == Date.add(past_date, 1)
-      # 100 + 10 - 60, the same for every request: never counted twice.
-      assert Decimal.equal?(next.carryover, Decimal.new("50.00"))
+      assert Enum.map(days, & &1.date) == [past_date, Date.add(past_date, 1), Date.utc_today()]
+      assert Enum.map(days, &(&1.closed_at != nil)) == [true, true, false]
+      # 100 + 10 - 60 = 50, then 100 + 50 - 0 = 150: never counted twice.
+      assert Decimal.equal?(Enum.at(days, 1).carryover, Decimal.new("50.00"))
+      assert Decimal.equal?(Enum.at(days, 2).carryover, Decimal.new("150.00"))
     end
 
     test "a request that read the day before another one closed it changes nothing",
