@@ -17,6 +17,8 @@ import { useFinancialAccounts } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
+import { EntrySheet } from "../history/components/EntrySheet";
+import { CLOSED_SHEET, createEntryStateWith, type EntrySheetState } from "../history/entry-sheet";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
@@ -24,6 +26,7 @@ export function CardDetailScreen() {
   usePageTitle("Planfin - Cartão");
   const navigation = useNavigation<Navigation>();
   const { params } = useRoute<RouteProp<AppStackParamList, "CardDetail">>();
+  const [sheet, setSheet] = useState<EntrySheetState>(CLOSED_SHEET);
   const { cards } = useFinancialAccounts();
   const card = cards.find((c) => c.id === params.cardId) ?? null;
   const { period } = usePeriod();
@@ -81,7 +84,7 @@ export function CardDetailScreen() {
       <Button
         label="Lançar compra antiga ou ajuste na fatura"
         variant="secondary"
-        onPress={() => navigation.navigate("AddExpense", { accountId: params.cardId, outsideBudget: true })}
+        onPress={() => setSheet(createEntryStateWith({ accountId: params.cardId, outsideBudget: true }))}
       />
 
       <Block padding={16} style={{ marginTop: 12 }}>
@@ -103,6 +106,11 @@ export function CardDetailScreen() {
       <View style={{ marginTop: 12 }}>
         <Button label="Editar cartão" size="sm" variant="secondary" onPress={() => navigation.navigate("AccountForm", { accountId: params.cardId })} />
       </View>
+      <EntrySheet
+        state={sheet}
+        onClose={() => setSheet(CLOSED_SHEET)}
+        onTypeChange={(type) => setSheet((current) => (current.mode === "create" ? { ...current, type } : current))}
+      />
     </ScrollView>
   );
 }

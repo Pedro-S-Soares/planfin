@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, FlatList, TouchableOpacity, ActivityIndicator, Modal, Share } from "react-native";
+import { View, FlatList, TouchableOpacity, ActivityIndicator, Share, StyleSheet } from "react-native";
 import { confirm } from "../lib/alert";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { useGroup } from "../context/GroupContext";
@@ -15,7 +15,9 @@ import { Block } from "../components/ui/Block";
 import { Button } from "../components/ui/Button";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { toast } from "../lib/toast";
-import { palette, radius } from "../theme";
+import { layout, palette, radius, space } from "../theme";
+import { Sheet } from "../components/ui/Sheet";
+import { FieldInput } from "../components/ui/FieldInput";
 import { Text } from "../components/ui/Text";
 import { TextInput } from "../components/ui/TextInput";
 import { Icon } from "../components/ui/Icon";
@@ -190,25 +192,8 @@ function GroupDetailModal({ group, canDelete, onClose, onLeave }: {
   }, [group.name]);
 
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: palette.paper }}>
-        {/* Header */}
-        <View style={{
-          backgroundColor: palette.sheet,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: 16,
-          paddingTop: 56,
-          borderBottomWidth: 1,
-          borderBottomColor: palette.rule,
-        }}>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: palette.ink }}>{group.name}</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Text style={{ color: palette.accent, fontSize: 15, fontWeight: "600" }}>Fechar</Text>
-          </TouchableOpacity>
-        </View>
-
+    <Sheet isOpen onClose={onClose} title={group.name}>
+      <>
         <View style={{ flex: 1, padding: 16 }}>
           <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted, marginBottom: 12 }}>
             Códigos de convite
@@ -274,8 +259,8 @@ function GroupDetailModal({ group, canDelete, onClose, onLeave }: {
         <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: palette.rule }}>
           <Button label={canDelete ? "Excluir grupo" : "Sair do grupo"} variant="destructive" onPress={onLeave} />
         </View>
-      </View>
-    </Modal>
+      </>
+    </Sheet>
   );
 }
 
@@ -295,36 +280,19 @@ function CreateGroupModal({ visible, onClose, onSubmit }: {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: palette.backdrop }}>
-        <View style={{ backgroundColor: palette.sheet, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: palette.ink, marginBottom: 16 }}>
-            Criar novo grupo
-          </Text>
-          <TextInput
-            style={{
-              borderWidth: 1.5,
-              borderColor: palette.rule,
-              borderRadius: radius.control,
-              paddingHorizontal: 16,
-              height: 52,
-              fontSize: 16,
-              color: palette.ink,
-              marginBottom: 16,
-            }}
-            placeholder="Nome do grupo"
-            placeholderTextColor={palette.muted}
-            value={name}
-            onChangeText={setName}
-            maxLength={80}
-            autoFocus
-          />
-          <Button label="Criar" onPress={handleSubmit} isLoading={busy} />
-          <View style={{ height: 8 }} />
-          <Button label="Cancelar" variant="secondary" onPress={onClose} isDisabled={busy} />
-        </View>
+    <Sheet isOpen={visible} onClose={onClose} title="Criar novo grupo" size="fit">
+      <View style={styles.sheetBody}>
+        <FieldInput
+          accessibilityLabel="Nome do grupo"
+          placeholder="Nome do grupo"
+          value={name}
+          onChange={setName}
+          maxLength={80}
+          autoFocus
+        />
+        <Button label="Criar" onPress={handleSubmit} isLoading={busy} />
       </View>
-    </Modal>
+    </Sheet>
   );
 }
 
@@ -348,40 +316,41 @@ function JoinGroupModal({ visible, onClose, onSubmit }: {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: palette.backdrop }}>
-        <View style={{ backgroundColor: palette.sheet, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
-          <Text style={{ fontSize: 18, fontWeight: "800", color: palette.ink, marginBottom: 16 }}>
-            Entrar com código
-          </Text>
-          <TextInput
-            style={{
-              borderWidth: 1.5,
-              borderColor: palette.rule,
-              borderRadius: radius.control,
-              height: 56,
-              textAlign: "center",
-              letterSpacing: 6,
-              fontSize: 22,
-              fontWeight: "800",
-              color: palette.ink,
-              marginBottom: 12,
-            }}
-            placeholder="AB12CD34"
-            placeholderTextColor={palette.muted}
-            value={code}
-            onChangeText={(v) => setCode(v.toUpperCase())}
-            maxLength={8}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            autoFocus
-          />
-          {error && <Text style={{ color: palette.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
-          <Button label="Entrar" onPress={handleSubmit} isLoading={busy} />
-          <View style={{ height: 8 }} />
-          <Button label="Cancelar" variant="secondary" onPress={onClose} isDisabled={busy} />
-        </View>
+    <Sheet isOpen={visible} onClose={onClose} title="Entrar com código" size="fit">
+      <View style={styles.sheetBody}>
+        <TextInput
+          accessibilityLabel="Código do convite"
+          style={{
+            borderWidth: 1.5,
+            borderColor: palette.rule,
+            borderRadius: radius.control,
+            height: 56,
+            textAlign: "center",
+            letterSpacing: 6,
+            fontSize: 22,
+            fontWeight: "800",
+            color: palette.ink,
+            marginBottom: 12,
+          }}
+          placeholder="AB12CD34"
+          placeholderTextColor={palette.muted}
+          value={code}
+          onChangeText={(v) => setCode(v.toUpperCase())}
+          maxLength={8}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          autoFocus
+        />
+        {error && <Text style={{ color: palette.danger, fontSize: 13, marginBottom: 12 }}>{error}</Text>}
+        <Button label="Entrar" onPress={handleSubmit} isLoading={busy} />
       </View>
-    </Modal>
+    </Sheet>
   );
 }
+
+const styles = StyleSheet.create({
+  sheetBody: {
+    paddingHorizontal: layout.gutter,
+    paddingBottom: space.lg,
+  },
+});

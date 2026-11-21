@@ -22,10 +22,6 @@ import { ForgotPasswordScreen } from "./src/screens/ForgotPasswordScreen";
 import { ResetPasswordScreen } from "./src/screens/ResetPasswordScreen";
 import { CreatePeriodScreen } from "./src/screens/CreatePeriodScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
-import { AddExpenseScreen } from "./src/screens/AddExpenseScreen";
-import { EditExpenseScreen } from "./src/screens/EditExpenseScreen";
-import { AddIncomeScreen } from "./src/screens/AddIncomeScreen";
-import { EditIncomeScreen } from "./src/screens/EditIncomeScreen";
 import { HistoryScreen } from "./src/screens/HistoryScreen";
 import { CategoriesScreen } from "./src/screens/CategoriesScreen";
 import { OnboardingGroupScreen } from "./src/screens/OnboardingGroupScreen";
@@ -55,6 +51,7 @@ import { MonthPlanScreen } from "./src/modules/finance/MonthPlanScreen";
 import type { AccountKind } from "./src/modules/finance/format";
 import { font, palette, useThemeFonts } from "./src/theme";
 import { Icon, type IconName } from "./src/components/ui/Icon";
+import { SHEET_ROUTE_OPTIONS, sheetScreen } from "./src/components/ui/SheetScreen";
 import { AddTabButton } from "./src/modules/history/components/AddTabButton";
 import { useQuickEntry } from "./src/modules/history/use-quick-entry";
 
@@ -67,18 +64,7 @@ export type AuthStackParamList = {
   ResetPassword: { token: string };
 };
 
-/** Optional presets when opening the new expense/income form. */
-export type EntryFormParams =
-  | {
-      /** null = no account (the history filtered by "Sem conta"). */
-      accountId?: string | null;
-      /** Start with "counts in budget" off (old purchases, salary, bills). */
-      outsideBudget?: boolean;
-      date?: string;
-      categoryId?: string;
-      subcategoryId?: string;
-    }
-  | undefined;
+export type { EntryFormParams } from "./src/modules/history/entry-types";
 
 export type AppStackParamList = {
   Onboarding: undefined;
@@ -89,20 +75,6 @@ export type AppStackParamList = {
   AdminInvites: undefined;
   EditPeriod: undefined;
   Periods: undefined;
-  AddExpense: EntryFormParams;
-  EditExpense: {
-    id: string;
-    amount: string;
-    date: string;
-    note?: string;
-    isExtra?: boolean;
-    subcategoryId?: string;
-    categoryId?: string;
-    accountId?: string;
-    countsInBudget?: boolean;
-    installmentCount?: number;
-  };
-  AddIncome: EntryFormParams;
   AccountForm: { accountId?: string; kind?: AccountKind };
   AccountDetail: { accountId: string };
   AdjustBalance: { accountId: string; balance: string };
@@ -124,18 +96,6 @@ export type AppStackParamList = {
   };
   CategoryDetail: { categoryId: string; range: RangeKey };
   Categories: undefined;
-  EditIncome: {
-    id: string;
-    amount: string;
-    date: string;
-    note?: string;
-    isExtra?: boolean;
-    subcategoryId?: string;
-    categoryId?: string;
-    accountId?: string;
-    countsInBudget?: boolean;
-    installmentCount?: number;
-  };
 };
 
 export type MainTabParamList = {
@@ -158,6 +118,17 @@ const HEADER_OPTIONS = {
 function modalOptions(title: string) {
   return { ...HEADER_OPTIONS, presentation: "modal" as const, title };
 }
+
+/** Create/edit routes open as the bottom sheet over the screen they came from. */
+const AccountFormSheet = sheetScreen(AccountFormScreen, "Conta");
+const AdjustBalanceSheet = sheetScreen(AdjustBalanceScreen, "Ajustar saldo");
+const PayInvoiceSheet = sheetScreen(PayInvoiceScreen, "Pagar fatura");
+const TransferSheet = sheetScreen(TransferScreen, "Transferir");
+const BillFormSheet = sheetScreen(BillFormScreen, "Item planejado");
+const PayBillSheet = sheetScreen(PayBillScreen, "Pagar despesa fixa");
+const SkipBillSheet = sheetScreen(SkipBillScreen, "Pular despesa fixa");
+const EditPeriodSheet = sheetScreen(EditPeriodScreen, "Editar período");
+const CreatePeriodSheet = sheetScreen(CreatePeriodScreen, "Novo planejamento");
 
 function pushOptions(title: string) {
   return { ...modalOptions(title), presentation: "card" as const };
@@ -298,8 +269,8 @@ function AppNavigator() {
           />
           <AppStack.Screen
             name="EditPeriod"
-            component={EditPeriodScreen}
-            options={modalOptions("Editar período")}
+            component={EditPeriodSheet}
+            options={SHEET_ROUTE_OPTIONS}
           />
           <AppStack.Screen
             name="CategoryDetail"
@@ -313,43 +284,23 @@ function AppNavigator() {
           />
           <AppStack.Screen
             name="CreatePeriod"
-            component={CreatePeriodScreen}
-            options={modalOptions("Novo planejamento")}
-          />
-          <AppStack.Screen
-            name="AddExpense"
-            component={AddExpenseScreen}
-            options={modalOptions("Novo gasto")}
-          />
-          <AppStack.Screen
-            name="EditExpense"
-            component={EditExpenseScreen}
-            options={modalOptions("Editar gasto")}
-          />
-          <AppStack.Screen
-            name="AddIncome"
-            component={AddIncomeScreen}
-            options={modalOptions("Nova receita")}
+            component={CreatePeriodSheet}
+            options={SHEET_ROUTE_OPTIONS}
           />
           <AppStack.Screen name="Categories" component={CategoriesScreen} options={pushOptions("Categorias")} />
-          <AppStack.Screen name="AccountForm" component={AccountFormScreen} options={modalOptions("Conta")} />
+          <AppStack.Screen name="AccountForm" component={AccountFormSheet} options={SHEET_ROUTE_OPTIONS} />
           <AppStack.Screen name="AccountDetail" component={AccountDetailScreen} options={pushOptions("Conta")} />
-          <AppStack.Screen name="AdjustBalance" component={AdjustBalanceScreen} options={modalOptions("Ajustar saldo")} />
+          <AppStack.Screen name="AdjustBalance" component={AdjustBalanceSheet} options={SHEET_ROUTE_OPTIONS} />
           <AppStack.Screen name="CardDetail" component={CardDetailScreen} options={pushOptions("Cartão")} />
           <AppStack.Screen name="Invoice" component={InvoiceScreen} options={pushOptions("Fatura")} />
-          <AppStack.Screen name="PayInvoice" component={PayInvoiceScreen} options={modalOptions("Pagar fatura")} />
-          <AppStack.Screen name="Transfer" component={TransferScreen} options={modalOptions("Transferir")} />
+          <AppStack.Screen name="PayInvoice" component={PayInvoiceSheet} options={SHEET_ROUTE_OPTIONS} />
+          <AppStack.Screen name="Transfer" component={TransferSheet} options={SHEET_ROUTE_OPTIONS} />
           <AppStack.Screen name="Bills" component={BillsScreen} options={pushOptions("Fixas, avulsas e entradas")} />
-          <AppStack.Screen name="BillForm" component={BillFormScreen} options={modalOptions("Item planejado")} />
-          <AppStack.Screen name="PayBill" component={PayBillScreen} options={modalOptions("Pagar despesa fixa")} />
-          <AppStack.Screen name="SkipBill" component={SkipBillScreen} options={modalOptions("Pular despesa fixa")} />
+          <AppStack.Screen name="BillForm" component={BillFormSheet} options={SHEET_ROUTE_OPTIONS} />
+          <AppStack.Screen name="PayBill" component={PayBillSheet} options={SHEET_ROUTE_OPTIONS} />
+          <AppStack.Screen name="SkipBill" component={SkipBillSheet} options={SHEET_ROUTE_OPTIONS} />
           <AppStack.Screen name="SalarySettings" component={SalarySettingsScreen} options={pushOptions("Salário e ciclo")} />
           <AppStack.Screen name="MonthPlan" component={MonthPlanScreen} options={pushOptions("Planejamento")} />
-          <AppStack.Screen
-            name="EditIncome"
-            component={EditIncomeScreen}
-            options={modalOptions("Editar receita")}
-          />
         </>
       )}
     </AppStack.Navigator>

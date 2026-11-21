@@ -1,16 +1,15 @@
-import type { AppStackParamList, EntryFormParams } from "../../../App";
+import type { EntryEditParams, EntryFormParams } from "./entry-types";
 import { toISODate } from "../../lib/date";
 import type { AccountFilter } from "./history-filters";
 
 export type EntryType = "expense" | "income";
 
-type EditEntryParams = AppStackParamList["EditExpense"];
 
 /** What the sheet over the history shows: nothing, a new entry, or an existing one. */
 export type EntrySheetState =
   | { mode: "closed" }
   | { mode: "create"; type: EntryType; params: EntryFormParams }
-  | { mode: "edit"; type: EntryType; entry: EditEntryParams };
+  | { mode: "edit"; type: EntryType; entry: EntryEditParams };
 
 export const CLOSED_SHEET: EntrySheetState = { mode: "closed" };
 
@@ -21,6 +20,11 @@ export const CLOSED_SHEET: EntrySheetState = { mode: "closed" };
 export function createEntryState(date: string, account: AccountFilter, type: EntryType = "expense"): EntrySheetState {
   const accountId = account.kind === "account" ? account.id : account.kind === "none" ? null : undefined;
   return { mode: "create", type, params: { date, accountId } };
+}
+
+/** A new entry with presets from elsewhere (a card's old purchase, a quota's purchase). */
+export function createEntryStateWith(params: EntryFormParams, type: EntryType = "expense"): EntrySheetState {
+  return { mode: "create", type, params };
 }
 
 /** Today, kept inside the period so a budget entry can be saved without touching the date. */

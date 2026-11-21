@@ -2,23 +2,20 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import {
   useCategoriesQuery,
   useUpdateExpenseMutation,
   useDeleteExpenseMutation,
   ActivePeriodDocument,
-} from "../graphql/__generated__/hooks";
-import { usePeriod } from "../context/PeriodContext";
-import { DatePickerField } from "../components/DatePickerField";
-import { CurrencyInput } from "../components/CurrencyInput";
-import { Button } from "../components/ui/Button";
-import { displayToAPI, formatCents } from "../lib/currency";
-import { usePageTitle } from "../hooks/usePageTitle";
-import { AccountPicker } from "../modules/finance/components/AccountPicker";
-import { useFinancialAccounts } from "../modules/finance/use-financial-accounts";
-import { toast } from "../lib/toast";
+} from "../../../graphql/__generated__/hooks";
+import { usePeriod } from "../../../context/PeriodContext";
+import { DatePickerField } from "../../../components/DatePickerField";
+import { CurrencyInput } from "../../../components/CurrencyInput";
+import { Button } from "../../../components/ui/Button";
+import { displayToAPI, formatCents } from "../../../lib/currency";
+import { AccountPicker } from "../../finance/components/AccountPicker";
+import { useFinancialAccounts } from "../../finance/use-financial-accounts";
+import { toast } from "../../../lib/toast";
 import {
   CategoryField,
   DeleteEntryButton,
@@ -27,8 +24,8 @@ import {
   MoreOptions,
   NoteField,
   EntryFormLayout,
-} from "../modules/history/components/entry-form-parts";
-import type { AppStackParamList } from "../../App";
+} from "../components/entry-form-parts";
+import type { EntryEditParams } from "../entry-types";
 
 const schema = yup.object({
   amount: yup
@@ -48,20 +45,13 @@ function apiToDisplay(apiAmount: string): string {
   return formatCents(cents);
 }
 
-export function EditIncomeScreen() {
-  usePageTitle("Planfin - Editar receita");
-  const navigation = useNavigation();
-  const route = useRoute<NativeStackScreenProps<AppStackParamList, "EditIncome">["route"]>();
-  return <EditIncomeForm entry={route.params} onDone={() => navigation.goBack()} />;
-}
-
 interface EditIncomeFormProps {
-  entry: AppStackParamList["EditIncome"];
+  entry: EntryEditParams;
   /** Called once the entry is saved or deleted. */
   onDone: () => void;
 }
 
-/** The edit-income form: its own screen, and the sheet opened over the history. */
+/** The edit-income form: the sheet opened over the history, the invoice and the tabs. */
 export function EditIncomeForm({ entry, onDone }: EditIncomeFormProps) {
   const { id, amount, date, note, isExtra, subcategoryId, categoryId, accountId: initialAccountId, countsInBudget } = entry;
   const { accounts } = useFinancialAccounts();
