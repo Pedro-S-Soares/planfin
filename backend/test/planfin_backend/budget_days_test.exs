@@ -5,6 +5,8 @@ defmodule PlanfinBackend.BudgetDaysTest do
   alias PlanfinBackend.Periods.{Period, BudgetDay}
   alias PlanfinBackend.Expenses.Expense
 
+  import Ecto.Query
+
   import PlanfinBackend.AccountsFixtures
 
   # Helper to create a period directly via Repo (avoids going through create_period/2)
@@ -197,6 +199,83 @@ defmodule PlanfinBackend.BudgetDaysTest do
 
       updated_period = Repo.get!(Period, period.id)
       assert updated_period.status == "active"
+    end
+  end
+
+  describe "close_past_days/2 with duplicate or concurrent requests" do
+    # Several activePeriod queries arrive together when the app opens (2026-11-21 in
+    # production): each one closed the same past day, and the second insert of the next
+    # day hit budget_days_period_id_date_index and returned a 500.
+    setup do
+      {user, group} = user_with_group_fixture()
+      period = insert_period(group.id)
+      past_date = Date.add(Date.utc_today(), -2)
+
+      bd =
+        insert_budget_day(period, %{
+          date: past_date,
+          daily_limit: Decimal.new("100.00"),
+          carryover: Decimal.new("10.00")
+        })
+
+      insert_expense(group, user, period, bd, "60.00")
+      %{period: period, bd: bd, past_date: past_date}
+    end
+
+    defp days_of(period) do
+      BudgetDay |> where([d], d.period_id == ^period.id) |> order_by(:date) |> Repo.all()
+    end
+
+    test "concurrent closes all succeed and leave one row per day with the same carryover",
+         %{period: period, past_date: past_date} do
+      results =
+        1..8
+        |> Task.async_stream(fn _ -> BudgetDays.close_past_days(period) end, max_concurrency: 8)
+        |> Enum.map(fn {:ok, result} -> result end)
+
+      assert Enum.all?(results, &match?({:ok, _}, &1))
+
+      days = days_of(period)
+      assert [first, next] = days
+      assert first.date == past_date and first.closed_at != nil
+      assert next.date == Date.add(past_date, 1)
+      # 100 + 10 - 60, the same for every request: never counted twice.
+      assert Decimal.equal?(next.carryover, Decimal.new("50.00"))
+    end
+
+    test "a request that read the day before another one closed it changes nothing",
+         %{period: period, bd: stale_bd, past_date: past_date} do
+      assert {:ok, _} = BudgetDays.close_past_days(period, Date.add(past_date, 1))
+      before = days_of(period)
+
+      # The slower request still holds the open day it read: closing it again is a no-op.
+      assert %BudgetDay{} = BudgetDays.close_day(stale_bd, period)
+      assert days_of(period) == before
+    end
+
+    test "the next day already inserted by another request is reused, not inserted again",
+         %{period: period, bd: bd, past_date: past_date} do
+      next_date = Date.add(past_date, 1)
+      insert_budget_day(period, %{date: next_date, carryover: Decimal.new("0.00")})
+
+      assert %BudgetDay{} = BudgetDays.close_day(bd, period)
+
+      assert [_, next] = days_of(period)
+      assert next.date == next_date
+      assert Decimal.equal?(next.carryover, Decimal.new("50.00"))
+    end
+
+    test "get_or_create_today returns the row another request created", %{period: period} do
+      today = Date.utc_today()
+
+      results =
+        1..8
+        |> Task.async_stream(fn _ -> BudgetDays.get_or_create_today(period, today) end,
+          max_concurrency: 8
+        )
+        |> Enum.map(fn {:ok, {:ok, day}} -> day.id end)
+
+      assert results |> Enum.uniq() |> length() == 1
     end
   end
 

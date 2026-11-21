@@ -61,6 +61,8 @@ defmodule PlanfinBackend.BudgetDays do
         {:ok, bd}
 
       nil ->
+        # Requests arriving together may all miss the row: the first insert wins and the
+        # others read the row it created, instead of failing on the unique index.
         %BudgetDay{}
         |> BudgetDay.changeset(%{
           period_id: period.id,
@@ -68,7 +70,12 @@ defmodule PlanfinBackend.BudgetDays do
           daily_limit: period.daily_limit,
           carryover: Decimal.new("0")
         })
-        |> Repo.insert()
+        |> Repo.insert(on_conflict: :nothing, conflict_target: [:period_id, :date])
+        |> case do
+          # On a conflict nothing is written but the struct keeps its client-side id: read the stored row.
+          {:ok, _} -> {:ok, Repo.get_by!(BudgetDay, period_id: period.id, date: today)}
+          error -> error
+        end
     end
   end
 
@@ -227,10 +234,32 @@ defmodule PlanfinBackend.BudgetDays do
     %{budget: budget, spent: spent, remaining: Decimal.sub(budget, spent)}
   end
 
-  # Closes a single budget_day and propagates carryover to the next day
-  # if the next day falls within the period and doesn't already exist.
-  defp close_day(%BudgetDay{} = budget_day, period) do
-    # Compute carryover: daily_limit + carryover - sum(expenses for this day)
+  @doc false
+  # Closes a single budget_day and carries its balance into the next day (if the next
+  # day is still in the period).
+  #
+  # Idempotent under concurrency: several activePeriod queries arrive together when the
+  # app opens and all try to close the same past day. The day row is locked and
+  # re-read inside a transaction, so only the first request closes it and the others see
+  # it closed and change nothing; the next day is upserted on (period_id, date). The
+  # carryover is always recomputed from the day itself, never added to, so money is
+  # never counted twice. Returns the closed day.
+  def close_day(%BudgetDay{} = budget_day, period) do
+    {:ok, closed} =
+      Repo.transaction(fn ->
+        locked =
+          BudgetDay
+          |> where([bd], bd.id == ^budget_day.id)
+          |> lock("FOR UPDATE")
+          |> Repo.one!()
+
+        if locked.closed_at, do: locked, else: do_close_day(locked, period)
+      end)
+
+    closed
+  end
+
+  defp do_close_day(%BudgetDay{} = budget_day, period) do
     # Uses group_id + date instead of budget_day_id to find related expenses.
     total_spent = get_total_spent_for_day(period.group_id, budget_day.date)
 
@@ -239,29 +268,22 @@ defmodule PlanfinBackend.BudgetDays do
       |> Decimal.add(budget_day.carryover)
       |> Decimal.sub(total_spent)
 
-    # Create next day's budget_day if applicable
     next_date = Date.add(budget_day.date, 1)
 
     if Date.compare(next_date, period.end_date) != :gt do
-      case Repo.get_by(BudgetDay, period_id: period.id, date: next_date) do
-        nil ->
-          %BudgetDay{}
-          |> BudgetDay.changeset(%{
-            period_id: period.id,
-            date: next_date,
-            daily_limit: budget_day.daily_limit,
-            carryover: carryover
-          })
-          |> Repo.insert!()
-
-        existing ->
-          existing
-          |> BudgetDay.changeset(%{carryover: carryover})
-          |> Repo.update!()
-      end
+      %BudgetDay{}
+      |> BudgetDay.changeset(%{
+        period_id: period.id,
+        date: next_date,
+        daily_limit: budget_day.daily_limit,
+        carryover: carryover
+      })
+      |> Repo.insert!(
+        on_conflict: [set: [carryover: carryover, updated_at: NaiveDateTime.utc_now(:second)]],
+        conflict_target: [:period_id, :date]
+      )
     end
 
-    # Mark the current day as closed
     budget_day
     |> BudgetDay.changeset(%{closed_at: DateTime.utc_now()})
     |> Repo.update!()
