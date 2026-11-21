@@ -1,26 +1,24 @@
 import { useForm, Controller } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import {
   useCategoriesQuery,
   useCreateExpenseMutation,
   ActivePeriodDocument,
-} from "../graphql/__generated__/hooks";
-import { usePeriod } from "../context/PeriodContext";
-import { DatePickerField } from "../components/DatePickerField";
-import { CurrencyInput } from "../components/CurrencyInput";
-import { Button } from "../components/ui/Button";
-import { toISODate } from "../lib/date";
-import { displayToAPI } from "../lib/currency";
-import { usePageTitle } from "../hooks/usePageTitle";
-import { AccountPicker } from "../modules/finance/components/AccountPicker";
-import { ToggleRow } from "../modules/finance/components/ToggleRow";
-import { defaultSpendingAccountId, useFinancialAccounts } from "../modules/finance/use-financial-accounts";
-import { parseCents } from "../lib/currency";
-import { toast } from "../lib/toast";
-import { CategoryField, ExtraToggle, FieldLabel, MoreOptions, NoteField, EntryFormLayout } from "../modules/history/components/entry-form-parts";
-import type { AppStackParamList, EntryFormParams } from "../../App";
+} from "../../../graphql/__generated__/hooks";
+import { usePeriod } from "../../../context/PeriodContext";
+import { DatePickerField } from "../../../components/DatePickerField";
+import { CurrencyInput } from "../../../components/CurrencyInput";
+import { Button } from "../../../components/ui/Button";
+import { toISODate } from "../../../lib/date";
+import { displayToAPI } from "../../../lib/currency";
+import { AccountPicker } from "../../finance/components/AccountPicker";
+import { ToggleRow } from "../../finance/components/ToggleRow";
+import { defaultSpendingAccountId, useFinancialAccounts } from "../../finance/use-financial-accounts";
+import { parseCents } from "../../../lib/currency";
+import { toast } from "../../../lib/toast";
+import { CategoryField, ExtraToggle, FieldLabel, MoreOptions, NoteField, EntryFormLayout } from "../components/entry-form-parts";
+import type { EntryFormParams } from "../entry-types";
 
 const schema = yup.object({
   amount: yup
@@ -38,20 +36,13 @@ const schema = yup.object({
   countsInBudget: yup.boolean().default(true),
 });
 
-export function AddIncomeScreen() {
-  usePageTitle("Planfin - Nova receita");
-  const navigation = useNavigation();
-  const { params } = useRoute<RouteProp<AppStackParamList, "AddIncome">>();
-  return <AddIncomeForm params={params} onDone={() => navigation.goBack()} />;
-}
-
 interface AddIncomeFormProps {
   params?: EntryFormParams;
   /** Called once the entry is saved. */
   onDone: () => void;
 }
 
-/** The new-income form: its own screen, and the sheet opened over the history. */
+/** The new-income form: the sheet opened over the history, the invoice and the tabs. */
 export function AddIncomeForm({ params, onDone }: AddIncomeFormProps) {
   const { period, refetch } = usePeriod();
   const { accounts } = useFinancialAccounts();

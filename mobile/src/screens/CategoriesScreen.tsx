@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, FlatList, TouchableOpacity, ActivityIndicator, Modal, Platform } from "react-native";
+import { View, FlatList, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
 import {
   useCategoriesQuery,
   useCreateCategoryMutation,
@@ -16,12 +16,15 @@ import { IconPicker } from "../components/ui/IconPicker";
 import { IconPickerButton } from "../components/ui/IconPickerButton";
 import { InlineError } from "../components/ui/InlineError";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { categoryColor, palette, radius } from "../theme";
+import { categoryColor, layout, palette, radius, space } from "../theme";
 import { Text } from "../components/ui/Text";
 import { TextInput } from "../components/ui/TextInput";
 import { Icon } from "../components/ui/Icon";
 import { AppText } from "../components/ui/AppText";
 import { ChipGroup } from "../components/ui/Chip";
+import { Sheet } from "../components/ui/Sheet";
+import { FieldInput } from "../components/ui/FieldInput";
+import { Button } from "../components/ui/Button";
 
 type Category = NonNullable<CategoriesQuery["categories"]>[number];
 type Subcategory = NonNullable<NonNullable<Category>["subcategories"]>[number];
@@ -275,96 +278,36 @@ export function CategoriesScreen() {
         }}
       />
 
-      {/* Edit Category Modal */}
-      <Modal
-        visible={editingCat !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setEditingCat(null)}
-      >
-        <View style={{
-          flex: 1,
-          backgroundColor: palette.backdrop,
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-        }}>
-          <View style={{
-            backgroundColor: palette.sheet,
-            borderRadius: radius.block,
-            padding: 24,
-            width: "100%",
-            gap: 16,
-          }}>
-            <Text style={{ fontSize: 17, fontWeight: "800", color: palette.ink }}>
-              Editar categoria
-            </Text>
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <IconPickerButton
-                icon={editIcon}
-                name={editName}
-                size={44}
-                onPress={() => setIsEditIconPickerOpen(true)}
-              />
-              <TextInput
-                style={{
-                  flex: 1,
-                  height: 44,
-                  borderWidth: 1.5,
-                  borderColor: palette.rule,
-                  borderRadius: radius.control,
-                  paddingHorizontal: 12,
-                  fontSize: 15,
-                  color: palette.ink,
-                  backgroundColor: palette.sheet,
-                }}
+      <Sheet isOpen={editingCat !== null} onClose={() => setEditingCat(null)} title="Editar categoria" size="fit">
+        <View style={{ paddingHorizontal: layout.gutter, paddingBottom: space.lg, gap: space.sm }}>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <IconPickerButton
+              icon={editIcon}
+              name={editName}
+              size={48}
+              onPress={() => setIsEditIconPickerOpen(true)}
+            />
+            <View style={{ flex: 1 }}>
+              <FieldInput
+                accessibilityLabel="Nome da categoria"
                 placeholder="Nome da categoria"
-                placeholderTextColor={palette.muted}
                 value={editName}
-                onChangeText={setEditName}
+                onChange={setEditName}
                 autoFocus
               />
             </View>
-            <TypeToggle value={editType} onChange={setEditType} />
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <TouchableOpacity
-                onPress={() => setEditingCat(null)}
-                style={{
-                  flex: 1,
-                  height: 44,
-                  borderRadius: radius.control,
-                  borderWidth: 1.5,
-                  borderColor: palette.rule,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: palette.muted }}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSaveEdit}
-                style={{
-                  flex: 1,
-                  height: 44,
-                  borderRadius: radius.control,
-                  backgroundColor: palette.accent,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text style={{ fontSize: 14, fontWeight: "700", color: palette.onAccent }}>Salvar</Text>
-              </TouchableOpacity>
-            </View>
           </View>
+          <TypeToggle value={editType} onChange={setEditType} />
+          <Button label="Salvar" onPress={handleSaveEdit} />
         </View>
-        {/* Nested inside the edit Modal: iOS cannot present two sibling Modals at once. */}
+        {/* Nested inside the sheet's Modal: iOS cannot present two sibling Modals at once. */}
         <IconPicker
           visible={isEditIconPickerOpen}
           value={editIcon}
           onSelect={setEditIcon}
           onClose={() => setIsEditIconPickerOpen(false)}
         />
-      </Modal>
+      </Sheet>
 
       <IconPicker
         visible={isNewIconPickerOpen}

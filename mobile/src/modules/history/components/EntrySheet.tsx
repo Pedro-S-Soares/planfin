@@ -1,10 +1,10 @@
 import { StyleSheet, View } from "react-native";
 import { ChipGroup } from "../../../components/ui/Chip";
 import { Sheet } from "../../../components/ui/Sheet";
-import { AddExpenseForm } from "../../../screens/AddExpenseScreen";
-import { AddIncomeForm } from "../../../screens/AddIncomeScreen";
-import { EditExpenseForm } from "../../../screens/EditExpenseScreen";
-import { EditIncomeForm } from "../../../screens/EditIncomeScreen";
+import { AddExpenseForm } from "../forms/AddExpenseForm";
+import { AddIncomeForm } from "../forms/AddIncomeForm";
+import { EditExpenseForm } from "../forms/EditExpenseForm";
+import { EditIncomeForm } from "../forms/EditIncomeForm";
 import { layout, space } from "../../../theme";
 import type { EntrySheetState, EntryType } from "../entry-sheet";
 

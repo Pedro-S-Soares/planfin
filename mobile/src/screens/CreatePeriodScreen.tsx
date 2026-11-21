@@ -104,10 +104,13 @@ export function CreatePeriodScreen() {
     });
   };
 
+  // First run (no period yet) this is the whole screen; later it opens as a sheet, which has its own title.
+  const isFirstRun = !navigation.canGoBack();
+
   return (
     <View style={{ flex: 1, backgroundColor: palette.sheet }}>
       {/* Header */}
-      <View style={{
+      {isFirstRun ? <View style={{
         backgroundColor: palette.paper,
         paddingTop: 62,
         paddingBottom: 22,
@@ -121,7 +124,7 @@ export function CreatePeriodScreen() {
         <Text style={{ fontSize: 13, color: palette.muted, marginTop: 4, lineHeight: 20 }}>
           Defina o período, o limite diário e o orçamento total.
         </Text>
-      </View>
+      </View> : null}
 
       <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 22 }}>
         <TouchableOpacity

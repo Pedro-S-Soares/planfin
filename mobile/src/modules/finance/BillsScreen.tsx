@@ -20,6 +20,8 @@ import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
 import { MonthStepper } from "../../components/ui/MonthStepper";
+import { EntrySheet } from "../history/components/EntrySheet";
+import { CLOSED_SHEET, createEntryStateWith, type EntrySheetState } from "../history/entry-sheet";
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 type Occurrence = NonNullable<NonNullable<ReturnType<typeof useBillOccurrencesQuery>["data"]>["billOccurrences"]>[number];
@@ -59,6 +61,7 @@ export function BillsScreen() {
   usePageTitle("Planfin - Fixas, avulsas e entradas");
   const navigation = useNavigation<Navigation>();
   const { params } = useRoute<RouteProp<AppStackParamList, "Bills">>();
+  const [sheet, setSheet] = useState<EntrySheetState>(CLOSED_SHEET);
   const { currency } = useCurrency();
   const [month, setMonth] = useState(params?.month || monthOf(new Date()));
   const [accountFilter, setAccountFilter] = useState<string | null>(null);
@@ -171,11 +174,13 @@ export function BillsScreen() {
                   })
                 }
                 onAddPurchase={() =>
-                  navigation.navigate("AddExpense", {
-                    accountId: bill.account?.id ?? undefined,
-                    categoryId: bill.subcategory?.categoryId ?? undefined,
-                    subcategoryId: bill.subcategory?.id ?? undefined,
-                  })
+                  setSheet(
+                    createEntryStateWith({
+                      accountId: bill.account?.id ?? undefined,
+                      categoryId: bill.subcategory?.categoryId ?? undefined,
+                      subcategoryId: bill.subcategory?.id ?? undefined,
+                    }),
+                  )
                 }
                 onSkip={() => navigation.navigate("SkipBill", { billId, month, name: bill.name ?? "", isCard })}
                 onUnskip={() => unskipBill({ variables: { billId, month } })}
@@ -224,6 +229,11 @@ export function BillsScreen() {
         você marca como pagas.
       </Text>
       <Button label="+ Novo item" onPress={() => navigation.navigate("BillForm", {})} />
+      <EntrySheet
+        state={sheet}
+        onClose={() => setSheet(CLOSED_SHEET)}
+        onTypeChange={(type) => setSheet((current) => (current.mode === "create" ? { ...current, type } : current))}
+      />
     </ScrollView>
   );
 }

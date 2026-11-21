@@ -26,31 +26,50 @@ const ANIMATION = Platform.OS === "web" ? "fade" : "slide";
  * 90% of the height on a phone, a centered 560px column on a wide screen.
  */
 export function Sheet({ isOpen, onClose, title, size = "tall", children }: SheetProps) {
+  return (
+    <Modal visible={isOpen} transparent animationType={ANIMATION} onRequestClose={onClose}>
+      {isOpen ? (
+        <SheetFrame onClose={onClose} title={title} size={size}>
+          {children}
+        </SheetFrame>
+      ) : null}
+    </Modal>
+  );
+}
+
+interface SheetFrameProps {
+  onClose: () => void;
+  title: string;
+  size?: "tall" | "fit";
+  children: ReactNode;
+}
+
+/**
+ * The sheet itself (dimmed backdrop, handle, title, close) without the Modal: used by
+ * `Sheet`, and by navigation routes presented as a transparent modal (see sheetScreen).
+ */
+export function SheetFrame({ onClose, title, size = "tall", children }: SheetFrameProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <Modal visible={isOpen} transparent animationType={ANIMATION} onRequestClose={onClose}>
-      <View style={styles.root}>
-        <Pressable accessibilityLabel="Fechar" onPress={onClose} style={styles.backdrop} />
-        {isOpen ? (
-          <View
-            accessibilityViewIsModal
-            style={[styles.sheet, size === "tall" ? styles.tall : styles.fit, { paddingBottom: insets.bottom }]}
-          >
-            <View style={styles.handleArea}>
-              <View style={styles.handle} />
-            </View>
-            <View style={styles.header}>
-              <AppText variant="title" accessibilityRole="header" style={styles.title} numberOfLines={1}>
-                {title}
-              </AppText>
-              <IconButton icon="close" tone="plain" accessibilityLabel="Fechar" onPress={onClose} />
-            </View>
-            {children}
-          </View>
-        ) : null}
+    <View style={styles.root}>
+      <Pressable accessibilityLabel="Fechar" onPress={onClose} style={styles.backdrop} />
+      <View
+        accessibilityViewIsModal
+        style={[styles.sheet, size === "tall" ? styles.tall : styles.fit, { paddingBottom: insets.bottom }]}
+      >
+        <View style={styles.handleArea}>
+          <View style={styles.handle} />
+        </View>
+        <View style={styles.header}>
+          <AppText variant="title" accessibilityRole="header" style={styles.title} numberOfLines={1}>
+            {title}
+          </AppText>
+          <IconButton icon="close" tone="plain" accessibilityLabel="Fechar" onPress={onClose} />
+        </View>
+        {children}
       </View>
-    </Modal>
+    </View>
   );
 }
 
