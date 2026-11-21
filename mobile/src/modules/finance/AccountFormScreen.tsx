@@ -19,7 +19,8 @@ import { accountFormSchema, type AccountFormValues } from "./account-form-schema
 import { FormLabel } from "./components/FormLabel";
 import { ToggleRow } from "./components/ToggleRow";
 import { ACCOUNT_KIND_ICON, ACCOUNT_KIND_LABEL, signedApiAmount, toNumber, type AccountKind } from "./format";
-import { useFinancialAccounts } from "./use-financial-accounts";
+import { useFinancialAccounts, type FinancialAccount } from "./use-financial-accounts";
+import { EditGate } from "../../components/ui/EditGate";
 import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
@@ -35,12 +36,32 @@ const KIND_HINT: Record<AccountKind, string> = {
 };
 
 export function AccountFormScreen() {
-  const navigation = useNavigation();
   const { params } = useRoute<RouteProp<AppStackParamList, "AccountForm">>();
-  const { accounts } = useFinancialAccounts();
+  const { accounts, loading, refetch } = useFinancialAccounts();
   const editing = params.accountId ? accounts.find((a) => a.id === params.accountId) ?? null : null;
-  usePageTitle(editing ? "Planfin - Editar conta" : "Planfin - Nova conta");
+  usePageTitle(params.accountId ? "Planfin - Editar conta" : "Planfin - Nova conta");
 
+  return (
+    <EditGate
+      id={params.accountId}
+      record={editing}
+      loading={loading}
+      onRetry={() => refetch()}
+      missingMessage="Não achamos esta conta. Ela pode ter sido excluída."
+    >
+      {(account) => <AccountForm key={account?.id ?? "new"} params={params} editing={account} />}
+    </EditGate>
+  );
+}
+
+interface AccountFormProps {
+  params: AppStackParamList["AccountForm"];
+  /** The saved account, or null for a new one. */
+  editing: FinancialAccount | null;
+}
+
+function AccountForm({ params, editing }: AccountFormProps) {
+  const navigation = useNavigation();
   const { activeGroup } = useGroup();
   const { data: membersData } = useGroupMembersQuery({
     variables: { groupId: activeGroup?.id ?? "" },
@@ -50,7 +71,8 @@ export function AccountFormScreen() {
 
   const { control, handleSubmit, watch, setError, formState: { errors } } = useForm({
     resolver: yupResolver(accountFormSchema),
-    values: editing
+    // The form starts from the saved account: mounted only once it is loaded (see EditGate).
+    defaultValues: editing
       ? {
           name: editing.name,
           kind: editing.kind,
@@ -62,18 +84,17 @@ export function AccountFormScreen() {
           monthlyCredit: formatCents(Math.round(toNumber(editing.monthlyCredit) * 100)),
           creditDay: editing.creditDay ? String(editing.creditDay) : "",
         }
-      : undefined,
-    defaultValues: {
-      name: "",
-      kind: params.kind ?? "checking",
-      balance: "0,00",
-      isNegative: false,
-      closingDay: "5",
-      dueDay: "15",
-      ownerUserId: null,
-      monthlyCredit: "0,00",
-      creditDay: "1",
-    },
+      : {
+          name: "",
+          kind: params.kind ?? "checking",
+          balance: "0,00",
+          isNegative: false,
+          closingDay: "5",
+          dueDay: "15",
+          ownerUserId: null,
+          monthlyCredit: "0,00",
+          creditDay: "1",
+        },
   });
   const kind = watch("kind");
 
