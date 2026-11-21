@@ -13,7 +13,9 @@ import {
   useDeleteRecurringBillMutation,
   useRecurringBillsQuery,
   useUpdateRecurringBillMutation,
+  type RecurringBillsQuery,
 } from "../../graphql/__generated__/hooks";
+import { EditGate } from "../../components/ui/EditGate";
 import { confirm } from "../../lib/alert";
 import { displayToAPI, formatCents } from "../../lib/currency";
 import { usePageTitle } from "../../hooks/usePageTitle";
@@ -58,48 +60,70 @@ function lastOccurrenceText(month: string, day: number, account: FinancialAccoun
   return `Último pagamento em ${formatShortDate(date)}/${year}. ${stops}`;
 }
 
+type EditingBill = NonNullable<NonNullable<RecurringBillsQuery["recurringBills"]>[number]>;
+
 export function BillFormScreen() {
-  const navigation = useNavigation();
   const { params } = useRoute<RouteProp<AppStackParamList, "BillForm">>();
   usePageTitle(params.billId ? "Planfin - Editar item planejado" : "Planfin - Novo item planejado");
+  // Always ask the server: creating an item doesn't refresh this list (the query is skipped
+  // then), so the cached one may not have the item being edited yet.
+  const { data, loading, refetch } = useRecurringBillsQuery({ skip: !params.billId, fetchPolicy: "cache-and-network" });
+  const editing = data?.recurringBills?.find((b) => b?.id === params.billId) ?? null;
+
+  return (
+    <EditGate
+      id={params.billId}
+      record={editing}
+      loading={loading}
+      onRetry={() => refetch()}
+      missingMessage="Não achamos este item. Ele pode ter sido excluído."
+    >
+      {(bill) => <BillForm key={bill?.id ?? "new"} params={params} editing={bill} />}
+    </EditGate>
+  );
+}
+
+interface BillFormProps {
+  params: AppStackParamList["BillForm"];
+  /** The saved item, or null for a new one. */
+  editing: EditingBill | null;
+}
+
+function BillForm({ params, editing }: BillFormProps) {
+  const navigation = useNavigation();
   const { accounts } = useFinancialAccounts();
-  const { data: billsData } = useRecurringBillsQuery({ skip: !params.billId });
-  const editing = billsData?.recurringBills?.find((b) => b?.id === params.billId) ?? null;
   const initialDirection = editing?.direction === "income" ? "income" : params.direction ?? "expense";
   const { data: catData } = useCategoriesQuery();
   const allCategories = catData?.categories?.filter((c) => c !== null) ?? [];
 
-  const editingCategoryId =
-    allCategories.find((c) => c.subcategories?.some((s) => s?.id === editing?.subcategory?.id))?.id ?? "";
-
+  // The form starts from the saved item: mounted only once it is loaded (see EditGate).
   const { control, handleSubmit, watch, setError, formState: { errors } } = useForm({
     resolver: yupResolver(billFormSchema),
-    values: editing
+    defaultValues: editing
       ? {
           name: editing.name ?? "",
           amount: formatCents(Math.round(toNumber(editing.amount) * 100)),
           dueDay: String(editing.dueDay ?? ""),
           accountId: editing.account?.id ?? null,
-          categoryId: editingCategoryId,
+          categoryId: editing.subcategory?.categoryId ?? "",
           subcategoryId: editing.subcategory?.id ?? "",
           direction: initialDirection,
           onceMonth: editing.onceMonth ?? "",
           lastMonth: editing.lastMonth ?? "",
           kind: editing.kind === "quota" ? "quota" : "fixed",
         }
-      : undefined,
-    defaultValues: {
-      name: "",
-      amount: "0,00",
-      dueDay: String(params.dueDay ?? 10),
-      accountId: undefined,
-      categoryId: "",
-      subcategoryId: "",
-      direction: params.direction ?? "expense",
-      onceMonth: params.once ? params.month ?? monthOf(new Date()) : "",
-      lastMonth: "",
-      kind: "fixed",
-    },
+      : {
+          name: "",
+          amount: "0,00",
+          dueDay: String(params.dueDay ?? 10),
+          accountId: undefined,
+          categoryId: "",
+          subcategoryId: "",
+          direction: initialDirection,
+          onceMonth: params.once ? params.month ?? monthOf(new Date()) : "",
+          lastMonth: "",
+          kind: "fixed",
+        },
   });
   const direction = watch("direction");
   const isIncome = direction === "income";
