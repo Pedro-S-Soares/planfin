@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery } from "@apollo/client/react";
 import { usePeriod } from "../context/PeriodContext";
 import { useAuth } from "../context/AuthContext";
@@ -20,12 +20,22 @@ import { PlusIcon } from "../components/ui/PlusIcon";
 import { ScreenHeader } from "../components/ui/ScreenHeader";
 import { layout, palette, space } from "../theme";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useSessionState } from "../lib/session-state";
+import { useFilterCategories } from "../modules/history/use-filter-categories";
+import {
+  categoryEntryPresets,
+  categoryFilterLabel,
+  isCategoryFilterActive,
+  type CategoryFilter,
+} from "../modules/history/category-filter";
+import type { MainTabParamList } from "../../App";
 import { useFinancialAccounts } from "../modules/finance/use-financial-accounts";
 import {
   DEFAULT_HISTORY_FILTERS,
   filterHistory,
   hasActiveFilters,
   summarizeHistory,
+  categoryFilterTotal,
   type HistoryFilters,
 } from "../modules/history/history-filters";
 import { HistoryFilterBar } from "../modules/history/components/HistoryFilterBar";
@@ -53,7 +63,18 @@ export function HistoryScreen() {
   const { period, refetch: refetchPeriod } = usePeriod();
   const { user } = useAuth();
   const { accounts } = useFinancialAccounts();
-  const [filters, setFilters] = useState<HistoryFilters>(DEFAULT_HISTORY_FILTERS);
+  const [filters, setFilters] = useSessionState<HistoryFilters>("history-filters", DEFAULT_HISTORY_FILTERS);
+  const categories = useFilterCategories();
+  const navigation = useNavigation();
+  const { params } = useRoute<RouteProp<MainTabParamList, "History">>();
+
+  // Opened from a category of the Painel: show just that category (the other filters are dropped).
+  const requestedCategory = params?.category;
+  useEffect(() => {
+    if (!requestedCategory) return;
+    setFilters({ ...DEFAULT_HISTORY_FILTERS, category: requestedCategory });
+    navigation.setParams({ category: undefined } as never);
+  }, [requestedCategory, navigation, setFilters]);
   const [sheet, setSheet] = useState<EntrySheetState>(CLOSED_SHEET);
 
   const { data, loading, error, refetch } = useQuery<ExpenseHistoryData>(
@@ -82,8 +103,23 @@ export function HistoryScreen() {
     : null;
 
   const periodLabel = formatPeriodMonths(period?.startDate, period?.endDate);
+  const previewCategory = useCallback(
+    (category: CategoryFilter) => {
+      const preview = summarizeHistory(filterHistory(rawDays ?? [], { ...filters, category }));
+      return { count: preview.count, total: categoryFilterTotal(preview) };
+    },
+    [rawDays, filters],
+  );
+  const categoryHeadline = isCategoryFilterActive(filters.category)
+    ? { label: categoryFilterLabel(filters.category, categories), periodLabel }
+    : null;
 
-  const openCreate = (date: string) => setSheet(createEntryState(date, filters.account));
+  // A new entry while filtered by one category starts in it.
+  const openCreate = (date: string) => {
+    const { type, ...presets } = categoryEntryPresets(filters.category, categories);
+    const state = createEntryState(date, filters.account, type);
+    setSheet(state.mode === "create" ? { ...state, params: { ...state.params, ...presets } } : state);
+  };
   const closeSheet = () => setSheet(CLOSED_SHEET);
   const entrySheet = (
     <EntrySheet
@@ -113,7 +149,13 @@ export function HistoryScreen() {
   );
 
   const filterBar = (
-    <HistoryFilterBar filters={filters} accounts={accounts} onChange={setFilters} />
+    <HistoryFilterBar
+      filters={filters}
+      accounts={accounts}
+      onChange={setFilters}
+      categories={categories}
+      previewCategory={previewCategory}
+    />
   );
 
   // Only the first load replaces the list: refetches after a save keep it (and its scroll) on screen.
@@ -175,7 +217,9 @@ export function HistoryScreen() {
         data={days}
         keyExtractor={(day) => day.date}
         contentContainerStyle={styles.list}
-        ListHeaderComponent={<HistorySummaryCard summary={summary} account={filteredAccount} />}
+        ListHeaderComponent={
+          <HistorySummaryCard summary={summary} account={filteredAccount} categoryHeadline={categoryHeadline} />
+        }
         renderItem={({ item: day }) => (
           <View style={styles.day}>
             <DayHeader date={day.date} total={day.total} onAdd={() => openCreate(day.date)} />

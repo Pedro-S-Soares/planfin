@@ -12,14 +12,25 @@ import {
   type NatureFilter,
 } from "../history-filters";
 import { OptionSheet, type SheetSection } from "./OptionSheet";
+import { CategoryFilterSheet } from "./CategoryFilterSheet";
+import {
+  categoryFilterParts,
+  isCategoryFilterActive,
+  removeCategoryFilterPart,
+  type CategoryFilter,
+  type FilterCategory,
+} from "../category-filter";
 
 interface HistoryFilterBarProps {
   filters: HistoryFilters;
   accounts: FinancialAccount[];
   onChange: (filters: HistoryFilters) => void;
+  categories: FilterCategory[];
+  /** Entries and money a category selection would show (for the picker's button). */
+  previewCategory: (filter: CategoryFilter) => { count: number; total: number };
 }
 
-type OpenPicker = "none" | "account" | "type";
+type OpenPicker = "none" | "account" | "type" | "category";
 
 const DIRECTION_LABEL: Record<DirectionFilter, string> = {
   all: "Entradas e saídas",
@@ -47,7 +58,7 @@ function accountLabel(filter: AccountFilter, accounts: FinancialAccount[]): stri
   return accounts.find((a) => a.id === filter.id)?.name ?? "Conta";
 }
 
-function DropdownButton({ label, isActive, onPress }: { label: string; isActive: boolean; onPress: () => void }) {
+export function DropdownButton({ label, isActive, onPress }: { label: string; isActive: boolean; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -62,7 +73,7 @@ function DropdownButton({ label, isActive, onPress }: { label: string; isActive:
   );
 }
 
-function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+export function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -77,15 +88,17 @@ function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }
 }
 
 /**
- * The history filters in one compact row ("Conta ▾ · Tipo ▾"). Chips appear only for
+ * The history filters in one compact row ("Conta ▾ · Tipo ▾ · Categoria ▾"). Chips appear only for
  * the filters in use, each removable, with "limpar" to drop them all.
  */
-export function HistoryFilterBar({ filters, accounts, onChange }: HistoryFilterBarProps) {
+export function HistoryFilterBar({ filters, accounts, onChange, categories, previewCategory }: HistoryFilterBarProps) {
   const [openPicker, setOpenPicker] = useState<OpenPicker>("none");
   const closePicker = () => setOpenPicker("none");
 
   const isAccountActive = filters.account.kind !== "all";
   const isTypeActive = filters.direction !== "all" || filters.nature !== "all";
+  const isCategoryActive = isCategoryFilterActive(filters.category);
+  const categoryParts = categoryFilterParts(filters.category, categories);
 
   const accountFilters: AccountFilter[] = [
     { kind: "all" },
@@ -128,9 +141,10 @@ export function HistoryFilterBar({ filters, accounts, onChange }: HistoryFilterB
       <View style={styles.row}>
         <DropdownButton label="Conta" isActive={isAccountActive} onPress={() => setOpenPicker("account")} />
         <DropdownButton label="Tipo" isActive={isTypeActive} onPress={() => setOpenPicker("type")} />
+        <DropdownButton label="Categoria" isActive={isCategoryActive} onPress={() => setOpenPicker("category")} />
       </View>
 
-      {isAccountActive || isTypeActive ? (
+      {isAccountActive || isTypeActive || isCategoryActive ? (
         <View style={styles.activeRow}>
           {isAccountActive ? (
             <ActiveChip
@@ -144,6 +158,13 @@ export function HistoryFilterBar({ filters, accounts, onChange }: HistoryFilterB
           {filters.nature !== "all" ? (
             <ActiveChip label={NATURE_LABEL[filters.nature]} onRemove={() => onChange({ ...filters, nature: "all" })} />
           ) : null}
+          {categoryParts.map((part) => (
+            <ActiveChip
+              key={`${part.kind}-${part.id}`}
+              label={part.label}
+              onRemove={() => onChange({ ...filters, category: removeCategoryFilterPart(filters.category, part) })}
+            />
+          ))}
           <Pressable
             accessibilityRole="button"
             onPress={() => onChange(DEFAULT_HISTORY_FILTERS)}
@@ -157,6 +178,14 @@ export function HistoryFilterBar({ filters, accounts, onChange }: HistoryFilterB
 
       <OptionSheet title="Conta" sections={accountSections} isOpen={openPicker === "account"} onClose={closePicker} />
       <OptionSheet title="Tipo" sections={typeSections} isOpen={openPicker === "type"} onClose={closePicker} />
+      <CategoryFilterSheet
+        isOpen={openPicker === "category"}
+        onClose={closePicker}
+        categories={categories}
+        value={filters.category}
+        onApply={(category) => onChange({ ...filters, category })}
+        preview={previewCategory}
+      />
     </View>
   );
 }
@@ -172,6 +201,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: space.sm,
   },

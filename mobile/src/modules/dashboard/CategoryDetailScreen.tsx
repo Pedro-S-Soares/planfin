@@ -19,6 +19,8 @@ import { SubcategoryCompare } from "./components/SubcategoryCompare";
 import { TrendChart } from "./components/TrendChart";
 import { formatDay } from "./analytics";
 import { useCategoryDetailController } from "./use-category-detail-controller";
+import { OTHER_CATEGORY_ID } from "./palette";
+import { Button } from "../../components/ui/Button";
 import { percent, signedPercent, useMoney } from "./use-money";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
@@ -73,6 +75,22 @@ export function CategoryDetailScreen({ navigation, route }: Props) {
         }
         subtitle={view.windowLabel}
       />
+      {category.id !== OTHER_CATEGORY_ID ? (
+        <View style={{ alignSelf: "flex-start", marginBottom: 16 }}>
+          <Button
+            label="Ver lançamentos no histórico"
+            variant="secondary"
+            size="sm"
+            isFullWidth={false}
+            onPress={() =>
+              navigation.navigate("MainTabs", {
+                screen: "History",
+                params: { category: { categoryIds: [category.id], subcategoryIds: [] } },
+              } as never)
+            }
+          />
+        </View>
+      ) : null}
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
         <Stat

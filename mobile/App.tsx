@@ -49,6 +49,7 @@ import { SkipBillScreen } from "./src/modules/finance/SkipBillScreen";
 import { SalarySettingsScreen } from "./src/modules/finance/SalarySettingsScreen";
 import { MonthPlanScreen } from "./src/modules/finance/MonthPlanScreen";
 import type { AccountKind } from "./src/modules/finance/format";
+import type { CategoryFilter } from "./src/modules/history/category-filter";
 import { font, palette, useThemeFonts } from "./src/theme";
 import { Icon, type IconName } from "./src/components/ui/Icon";
 import { SHEET_ROUTE_OPTIONS, sheetScreen } from "./src/components/ui/SheetScreen";
@@ -100,7 +101,8 @@ export type AppStackParamList = {
 
 export type MainTabParamList = {
   Home: undefined;
-  History: undefined;
+  /** `category`: open filtered by it (from a category of the Painel). */
+  History: { category?: CategoryFilter } | undefined;
   Add: undefined;
   Accounts: undefined;
   Dashboard: undefined;

@@ -22,6 +22,27 @@ import { EntrySheet } from "../history/components/EntrySheet";
 import { CLOSED_SHEET, createEntryState, editEntryState, type EntrySheetState } from "../history/entry-sheet";
 import { formatMonth, formatShortDate, isInvoiceStatus, toNumber } from "./format";
 import type { AppStackParamList } from "../../../App";
+import { useSessionState } from "../../lib/session-state";
+import { CategoryFilterRow } from "../history/components/CategoryFilterRow";
+import { useFilterCategories } from "../history/use-filter-categories";
+import {
+  ALL_CATEGORIES,
+  categoryEntryPresets,
+  categoryFilterLabel,
+  isCategoryFilterActive,
+  matchesCategory,
+  type CategoryFilter,
+} from "../history/category-filter";
+
+type InvoiceEntry = { amount?: string | null; type?: string | null };
+
+/** What entries add to the invoice: purchases minus refunds. */
+function invoiceSum(entries: InvoiceEntry[]): number {
+  return entries.reduce((sum, e) => {
+    const amount = parseFloat(e.amount ?? "0") || 0;
+    return sum + (e.type === "income" ? -amount : amount);
+  }, 0);
+}
 
 type Navigation = NativeStackNavigationProp<AppStackParamList>;
 
@@ -34,6 +55,8 @@ export function InvoiceScreen() {
     fetchPolicy: "cache-and-network",
   });
   const [sheet, setSheet] = useState<EntrySheetState>(CLOSED_SHEET);
+  const [categoryFilter, setCategoryFilter] = useSessionState<CategoryFilter>(`invoice-category-${params.cardId}`, ALL_CATEGORIES);
+  const categories = useFilterCategories();
 
   if (loading && !data) return <ActivityIndicator color={palette.accent} style={styles.loading} />;
   if (error || !data?.invoice) {
@@ -45,9 +68,20 @@ export function InvoiceScreen() {
   }
 
   const invoice = data.invoice;
-  const entries = invoice.entries?.filter((e) => e !== null) ?? [];
+  const allEntries = invoice.entries?.filter((e) => e !== null) ?? [];
+  const isFiltered = isCategoryFilterActive(categoryFilter);
+  const entries = allEntries.filter((e) => matchesCategory(e, categoryFilter));
   const days = groupInvoiceByDay(entries, invoice.startDate ?? params.month);
-  const openCreate = (date: string) => setSheet(createEntryState(date, { kind: "account", id: params.cardId }));
+  const previewCategory = (filter: CategoryFilter) => {
+    const picked = allEntries.filter((e) => matchesCategory(e, filter));
+    return { count: picked.length, total: invoiceSum(picked) };
+  };
+  // A new purchase while filtered by one category starts in it.
+  const openCreate = (date: string) => {
+    const { type, ...presets } = categoryEntryPresets(categoryFilter, categories);
+    const state = createEntryState(date, { kind: "account", id: params.cardId }, type);
+    setSheet(state.mode === "create" ? { ...state, params: { ...state.params, ...presets } } : state);
+  };
   const canPay = toNumber(invoice.remaining) > 0;
   const isEarly = invoice.status === "open" || invoice.status === "upcoming";
   const addButton = (
@@ -103,10 +137,30 @@ export function InvoiceScreen() {
         ) : null}
       </Block>
 
-      <SectionHeader title={`Lançamentos (${entries.length})`} trailing={entries.length > 0 ? addButton : null} />
+      <SectionHeader title={isFiltered ? `Lançamentos (${entries.length} de ${allEntries.length})` : `Lançamentos (${entries.length})`} trailing={entries.length > 0 ? addButton : null} />
+      {allEntries.length > 0 ? (
+        <CategoryFilterRow value={categoryFilter} onChange={setCategoryFilter} categories={categories} preview={previewCategory} />
+      ) : null}
+      {isFiltered && entries.length > 0 ? (
+        <Block style={styles.filterTotal}>
+          <AppText variant="label" tone="muted" numberOfLines={2}>
+            {categoryFilterLabel(categoryFilter, categories)} nesta fatura
+          </AppText>
+          <MoneyText amount={invoiceSum(entries)} variant="value" />
+        </Block>
+      ) : null}
       {entries.length === 0 ? (
         <Block>
-          <EmptyState message="Nenhum lançamento nesta fatura." action={addButton} />
+          <EmptyState
+            message={isFiltered ? "Nenhum lançamento desta categoria nesta fatura." : "Nenhum lançamento nesta fatura."}
+            action={
+              isFiltered ? (
+                <Button label="Limpar filtro" variant="secondary" isFullWidth={false} onPress={() => setCategoryFilter(ALL_CATEGORIES)} />
+              ) : (
+                addButton
+              )
+            }
+          />
         </Block>
       ) : (
         days.map((day) => (
@@ -174,6 +228,13 @@ const styles = StyleSheet.create({
   pay: {
     marginTop: space.lg,
     gap: space.sm,
+  },
+  filterTotal: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    gap: space.md,
+    marginBottom: space.sm,
   },
   day: {
     marginTop: space.md,
