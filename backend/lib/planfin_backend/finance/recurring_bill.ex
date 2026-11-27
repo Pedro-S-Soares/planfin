@@ -37,6 +37,9 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     field :last_month, :date
     field :kind, :string, default: "fixed"
     field :partner_income, :boolean, default: false
+    # Quota in the invoice model (purchases chosen explicitly). False: a quota from
+    # before it, still matched by subcategory and calendar month (see Finance.Quotas).
+    field :per_invoice, :boolean, default: false
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :account, PlanfinBackend.Finance.Account
@@ -60,7 +63,8 @@ defmodule PlanfinBackend.Finance.RecurringBill do
       :once_month,
       :last_month,
       :kind,
-      :partner_income
+      :partner_income,
+      :per_invoice
     ])
     |> update_change(:once_month, &first_of_month/1)
     |> update_change(:last_month, &first_of_month/1)

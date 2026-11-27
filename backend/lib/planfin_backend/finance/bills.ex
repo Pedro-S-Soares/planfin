@@ -56,7 +56,7 @@ defmodule PlanfinBackend.Finance.Bills do
   def create_bill(group_id, attrs) do
     with :ok <- validate_account(group_id, attrs[:account_id], attrs[:direction]) do
       %RecurringBill{}
-      |> RecurringBill.changeset(Map.put(attrs, :group_id, group_id))
+      |> RecurringBill.changeset(attrs |> Map.put(:group_id, group_id) |> invoice_model())
       |> Repo.insert()
       |> preload_bill()
     end
@@ -71,7 +71,9 @@ defmodule PlanfinBackend.Finance.Bills do
            ) do
       Repo.transaction(fn ->
         with {:ok, updated} <-
-               bill |> RecurringBill.changeset(Map.drop(attrs, [:group_id])) |> Repo.update(),
+               bill
+               |> RecurringBill.changeset(attrs |> Map.drop([:group_id]) |> invoice_model(bill))
+               |> Repo.update(),
              :ok <- sync_one_off_entry(bill, updated) do
           updated
         else
@@ -80,6 +82,14 @@ defmodule PlanfinBackend.Finance.Bills do
       end)
       |> preload_bill()
     end
+  end
+
+  # Every quota created or saved from now on is in the invoice model; a legacy
+  # quota converts when it is edited (its old purchases are left as they are).
+  defp invoice_model(attrs, bill \\ %RecurringBill{}) do
+    if Map.get(attrs, :kind, bill.kind) == "quota",
+      do: Map.put(attrs, :per_invoice, true),
+      else: attrs
   end
 
   # A one-off item has a single occurrence: once paid (or charged on the card) that

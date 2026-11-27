@@ -45,7 +45,7 @@ defmodule PlanfinBackend.Expenses do
          :ok <- validate_quota(group_id, Map.get(attrs, :quota_id)) do
       counts_in_budget =
         counts_in_budget?(Map.get(attrs, :counts_in_budget, true), account) and
-          is_nil(Map.get(attrs, :quota_id))
+          is_nil(Map.get(attrs, :quota_id)) and not legacy_quota_expense?(group_id, attrs)
 
       options = Map.take(attrs, [:first_invoice, :amount_per_installment, :today])
 
@@ -251,6 +251,13 @@ defmodule PlanfinBackend.Expenses do
       else: Map.put(attrs, :quota_id, nil)
   end
 
+  # A purchase in the subcategory of a legacy quota (one from before the invoice
+  # model) keeps going outside the daily budget by itself, as it always did.
+  defp legacy_quota_expense?(group_id, attrs) do
+    Map.get(attrs, :type, "expense") == "expense" and
+      PlanfinBackend.Finance.Quotas.legacy_subcategory?(group_id, Map.get(attrs, :subcategory_id))
+  end
+
   defp validate_quota(group_id, quota_id) do
     if PlanfinBackend.Finance.Quotas.valid?(group_id, quota_id),
       do: :ok,
@@ -327,7 +334,14 @@ defmodule PlanfinBackend.Expenses do
       else: Map.put(attrs, :quota_id, nil)
   end
 
-  defp moved_into_quota?(attrs), do: not is_nil(Map.get(attrs, :quota_id))
+  defp moved_into_quota?(expense, attrs) do
+    not is_nil(Map.get(attrs, :quota_id)) or
+      (Map.has_key?(attrs, :subcategory_id) and
+         legacy_quota_expense?(expense.group_id, %{
+           type: Map.get(attrs, :type, expense.type),
+           subcategory_id: attrs.subcategory_id
+         }))
+  end
 
   # A purchase taken out of its quota comes back to the daily budget when the
   # active period holds its date; otherwise (an old purchase) it stays outside.
@@ -363,7 +377,7 @@ defmodule PlanfinBackend.Expenses do
 
     cond do
       match?(%{kind: kind} when kind in ["allowance", "reserve"], account) or
-          moved_into_quota?(attrs) ->
+          moved_into_quota?(expense, attrs) ->
         {:ok, Map.merge(attrs, %{counts_in_budget: false, period_id: nil, budget_day_id: nil})}
 
       is_nil(expense.period) ->

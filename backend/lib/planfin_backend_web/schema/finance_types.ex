@@ -84,8 +84,11 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
 
   object :recurring_bill do
     field :id, :id
-    @desc "fixed | quota (monthly spending allowance consumed by its subcategory)"
+    @desc "fixed | quota (spending allowance consumed by the purchases linked to it)"
     field :kind, :string
+
+    @desc "Quota in the invoice model; false = quota from before it (matched by subcategory, calendar month)"
+    field :per_invoice, :boolean
     @desc "expense | income"
     field :direction, :string
     @desc "YYYY-MM when it happens only in that month"

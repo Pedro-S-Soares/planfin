@@ -30,7 +30,9 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
   const quota = toNumber(o.bill?.amount);
   const spent = toNumber(o.quotaSpent);
   const isIncome = o.bill?.direction === "income";
-  const recurrence = isQuota
+  const recurrence = isQuota && !o.bill?.perInvoice
+    ? "cota do mês (pela categoria)"
+    : isQuota
     ? o.bill?.onceMonth
       ? `cota só ${isCard ? "da fatura de" : "de"} ${formatMonth(o.bill.onceMonth)}`
       : isCard

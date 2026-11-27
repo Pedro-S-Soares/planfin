@@ -217,6 +217,13 @@ function BillForm({ params, editing }: BillFormProps) {
                 <Chip label="Valor fixo" selected={value !== "quota"} onPress={() => onChange("fixed")} />
                 <Chip label="Cota de gasto" selected={value === "quota"} onPress={() => onChange("quota")} />
               </View>
+              {value === "quota" && editing?.kind === "quota" && !editing.perInvoice ? (
+                <Text style={{ fontSize: 12, color: palette.warning, marginTop: 8, lineHeight: 17 }}>
+                  Esta cota está no formato antigo: soma sozinha as compras da categoria no mês. Ao salvar, ela passa a
+                  valer por fatura e as compras novas entram nela só quando você escolher "Entra na cota". As compras
+                  antigas continuam como estão.
+                </Text>
+              ) : null}
               {value === "quota" ? (
                 <Text style={{ fontSize: 12, color: palette.muted, marginTop: 8, lineHeight: 17 }}>
                   Um valor reservado na {periodWord} e gasto aos poucos, como R$ 150 de lavagem do carro. Ao lançar uma

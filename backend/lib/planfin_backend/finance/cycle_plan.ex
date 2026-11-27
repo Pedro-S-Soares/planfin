@@ -646,7 +646,9 @@ defmodule PlanfinBackend.Finance.CyclePlan do
 
   defp one_off?(occ), do: not is_nil(occ.bill.once_month)
 
-  defp quota?(occ), do: occ.bill.kind == "quota"
+  # Invoice-model quotas are planned apart (quota_items/3); legacy ones keep
+  # going through the bill lists as before.
+  defp quota?(occ), do: occ.bill.kind == "quota" and occ.bill.per_invoice
 
   defp item(occ), do: %{label: occ.bill.name, date: occ.due_date, amount: occ.amount}
 

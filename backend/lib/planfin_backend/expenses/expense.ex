@@ -20,8 +20,6 @@ defmodule PlanfinBackend.Expenses.Expense do
     field :installment_number, :integer
     field :installment_count, :integer
     field :source, :string
-    # Spending quota this purchase uses (chosen by the user); see Finance.Quotas.
-    field :quota_backfilled, :boolean, default: false
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :created_by, PlanfinBackend.Accounts.User, type: :integer

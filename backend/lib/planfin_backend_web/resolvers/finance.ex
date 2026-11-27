@@ -837,6 +837,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
     %{
       id: bill.id,
       kind: bill.kind,
+      per_invoice: bill.per_invoice,
       direction: bill.direction,
       once_month:
         bill.once_month && Invoices.format_month({bill.once_month.year, bill.once_month.month}),

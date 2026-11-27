@@ -15,6 +15,13 @@ defmodule PlanfinBackend.Finance.Quotas do
     (`excess_between/3`, added by `BudgetDays` and `Periods` to the spent totals).
   * **Underspend goes to the next cycle.** The plan reserves a quota at its full
     value; what was not spent comes back once its invoice closes (see `CyclePlan`).
+
+  **Legacy quotas** (`per_invoice: false`, every quota created before this model)
+  keep the old rule untouched: their month is the calendar month, their spending
+  is every expense of their subcategory in it, and a new purchase of that
+  subcategory goes outside the daily budget by itself. No excess reaches the
+  daily budget. Editing one (saving its form) moves it to the invoice model; old
+  purchases are never rewritten.
   """
 
   import Ecto.Query, warn: false
@@ -23,16 +30,21 @@ defmodule PlanfinBackend.Finance.Quotas do
   alias PlanfinBackend.Expenses.Expense
   alias PlanfinBackend.Finance.{Account, Bills, Invoices, RecurringBill}
 
-  @doc "Active quotas of the group, with account and subcategory."
+  @doc "Active quotas of the group in the invoice model, with account and subcategory."
   def list(group_id) do
     RecurringBill
-    |> where([b], b.group_id == ^group_id and b.active == true and b.kind == "quota")
+    |> where(
+      [b],
+      b.group_id == ^group_id and b.active == true and b.kind == "quota" and b.per_invoice == true
+    )
     |> order_by([b], asc: b.name)
     |> preload([:account, subcategory: :category])
     |> Repo.all()
   end
 
-  def card?(%RecurringBill{account: %Account{kind: "credit_card"}}), do: true
+  def legacy?(%RecurringBill{per_invoice: per_invoice}), do: not per_invoice
+
+  def card?(%RecurringBill{per_invoice: true, account: %Account{kind: "credit_card"}}), do: true
   def card?(_quota), do: false
 
   @doc "The invoice (card) or calendar month whose quota a purchase dated `date` uses."
@@ -59,6 +71,22 @@ defmodule PlanfinBackend.Finance.Quotas do
   end
 
   @doc "What the purchases linked to the quota add up to in `month`."
+  def spent(%RecurringBill{per_invoice: false} = quota, {year, mon}) do
+    # Legacy rule: every expense of the subcategory in the calendar month.
+    from = Date.new!(year, mon, 1)
+    to = Date.end_of_month(from)
+
+    Expense
+    |> where(
+      [e],
+      e.group_id == ^quota.group_id and e.subcategory_id == ^quota.subcategory_id and
+        e.type == "expense" and e.date >= ^from and e.date <= ^to
+    )
+    |> select([e], sum(e.amount))
+    |> Repo.one()
+    |> Kernel.||(Decimal.new("0"))
+  end
+
   def spent(%RecurringBill{} = quota, month) do
     {from, to} = window(quota, month)
 
@@ -117,7 +145,7 @@ defmodule PlanfinBackend.Finance.Quotas do
     |> where(
       [e, q],
       e.group_id == ^group_id and e.type == "expense" and e.date >= ^from and e.date <= ^to and
-        q.active == true and q.kind == "quota"
+        q.active == true and q.kind == "quota" and q.per_invoice == true
     )
     |> select([e, q], {e, q})
     |> Repo.all()
@@ -135,14 +163,31 @@ defmodule PlanfinBackend.Finance.Quotas do
     |> elem(0)
   end
 
-  @doc "Whether `quota_id` is an active quota of the group."
+  @doc "Whether `quota_id` is an active invoice-model quota of the group."
   def valid?(_group_id, nil), do: true
 
   def valid?(group_id, quota_id) do
     RecurringBill
     |> where(
       [b],
-      b.id == ^quota_id and b.group_id == ^group_id and b.kind == "quota" and b.active == true
+      b.id == ^quota_id and b.group_id == ^group_id and b.kind == "quota" and b.active == true and
+        b.per_invoice == true
+    )
+    |> Repo.exists?()
+  end
+
+  @doc """
+  Whether an expense in `subcategory_id` falls in a legacy quota of the group:
+  such purchases keep going outside the daily budget by themselves, as before.
+  """
+  def legacy_subcategory?(_group_id, nil), do: false
+
+  def legacy_subcategory?(group_id, subcategory_id) do
+    RecurringBill
+    |> where(
+      [b],
+      b.group_id == ^group_id and b.active == true and b.kind == "quota" and
+        b.per_invoice == false and b.subcategory_id == ^subcategory_id
     )
     |> Repo.exists?()
   end
