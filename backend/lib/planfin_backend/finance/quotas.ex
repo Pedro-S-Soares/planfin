@@ -124,7 +124,9 @@ defmodule PlanfinBackend.Finance.Quotas do
   Part of the group's quota purchases dated from `from` to `to` that went beyond
   their quota. Purchases fill a quota in date order (then by when they were
   typed): the one that crosses the limit counts only its excess, the next ones
-  count whole. This money comes out of the daily budget.
+  count whole. This money comes out of the daily budget. A linked purchase that
+  already counts in the budget (one from before the quota was converted) fills
+  the quota but adds no excess: it is in the daily budget once already.
   """
   def excess_between(group_id, %Date{} = from, %Date{} = to) do
     # A quota month spans at most a month, so the purchases before `from` that
@@ -135,7 +137,9 @@ defmodule PlanfinBackend.Finance.Quotas do
     |> linked_purchases(lookback, to)
     |> Enum.group_by(fn {expense, quota} -> {quota.id, month_for(quota, expense.date)} end)
     |> Enum.flat_map(fn {_key, purchases} -> excess_per_purchase(purchases) end)
-    |> Enum.filter(fn {expense, _excess} -> in_range?(expense.date, from, to) end)
+    |> Enum.filter(fn {expense, _excess} ->
+      not expense.counts_in_budget and in_range?(expense.date, from, to)
+    end)
     |> Enum.reduce(Decimal.new("0"), fn {_expense, excess}, acc -> Decimal.add(acc, excess) end)
   end
 

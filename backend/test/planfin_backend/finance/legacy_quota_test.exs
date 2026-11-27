@@ -178,4 +178,18 @@ defmodule PlanfinBackend.Finance.LegacyQuotaTest do
     new_purchase = spend(ctx, "40", ~D[2026-10-15])
     assert new_purchase.counts_in_budget
   end
+
+  test "a legacy card quota created after the closing still exists in its calendar month" do
+    ctx = setup_group()
+    bill = quota(ctx, ctx.card.id)
+
+    bill =
+      bill
+      |> Ecto.Changeset.change(inserted_at: ~N[2026-11-07 10:00:00])
+      |> Repo.update!()
+      |> Repo.preload(:account, force: true)
+
+    assert Bills.exists_in?(bill, {2026, 11})
+    refute Bills.exists_in?(bill, {2026, 10})
+  end
 end

@@ -240,9 +240,14 @@ defmodule PlanfinBackend.Finance.Bills do
   def exists_in?(%RecurringBill{once_month: %Date{} = once}, month),
     do: {once.year, once.month} == month
 
-  # A card quota starts in the invoice that was open when it was created.
+  # A card quota in the invoice model starts in the invoice that was open when it
+  # was created (a legacy one keeps calendar months, below).
   def exists_in?(
-        %RecurringBill{kind: "quota", account: %Account{kind: "credit_card"} = card} = quota,
+        %RecurringBill{
+          kind: "quota",
+          per_invoice: true,
+          account: %Account{kind: "credit_card"} = card
+        } = quota,
         month
       ) do
     first = Invoices.month_for(card, NaiveDateTime.to_date(quota.inserted_at))
