@@ -84,7 +84,16 @@ export type AppStackParamList = {
   PayInvoice: { cardId: string; month: string; remaining: string };
   Bills: { month?: string } | undefined;
   BillForm: { billId?: string; direction?: "expense" | "income"; once?: boolean; month?: string; dueDay?: number };
-  PayBill: { billId: string; month: string; amount: string; name: string; isCard: boolean; isIncome?: boolean };
+  PayBill: {
+    billId: string;
+    month: string;
+    amount: string;
+    name: string;
+    isCard: boolean;
+    isIncome?: boolean;
+    /** A planned one-off without a day: registering it is the real purchase. */
+    isPlanned?: boolean;
+  };
   SkipBill: { billId: string; month: string; name: string; isCard: boolean };
   SalarySettings: undefined;
   MonthPlan: undefined;
@@ -127,7 +136,7 @@ const AdjustBalanceSheet = sheetScreen(AdjustBalanceScreen, "Ajustar saldo");
 const PayInvoiceSheet = sheetScreen(PayInvoiceScreen, "Pagar fatura");
 const TransferSheet = sheetScreen(TransferScreen, "Transferir");
 const BillFormSheet = sheetScreen(BillFormScreen, "Item planejado");
-const PayBillSheet = sheetScreen(PayBillScreen, "Pagar despesa fixa");
+const PayBillSheet = sheetScreen(PayBillScreen, "Registrar pagamento");
 const SkipBillSheet = sheetScreen(SkipBillScreen, "Pular despesa fixa");
 const EditPeriodSheet = sheetScreen(EditPeriodScreen, "Editar período");
 const CreatePeriodSheet = sheetScreen(CreatePeriodScreen, "Novo planejamento");

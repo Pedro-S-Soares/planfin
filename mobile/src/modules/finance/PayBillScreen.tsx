@@ -44,11 +44,27 @@ export function PayBillScreen() {
       </Text>
       <FormLabel>Valor real</FormLabel>
       <CurrencyInput value={amount} onChange={setAmount} autoFocus />
-      <FormLabel>{params.isIncome ? "Data em que entrou" : params.isCard ? "Data da cobrança" : "Data do pagamento"}</FormLabel>
+      <FormLabel>
+        {params.isIncome
+          ? "Data em que entrou"
+          : params.isPlanned && params.isCard
+            ? "Data da compra"
+            : params.isCard
+              ? "Data da cobrança"
+              : "Data do pagamento"}
+      </FormLabel>
       <DatePickerField value={date} onChange={setDate} />
       {error ? <Text style={{ color: palette.danger, textAlign: "center", marginBottom: 12 }}>{error}</Text> : null}
       <Button
-        label={params.isIncome ? "Registrar recebimento" : params.isCard ? "Lançar na fatura agora" : "Registrar pagamento"}
+        label={
+          params.isIncome
+            ? "Registrar recebimento"
+            : params.isPlanned && params.isCard
+              ? "Lançar compra"
+              : params.isCard
+                ? "Lançar na fatura agora"
+                : "Registrar pagamento"
+        }
         onPress={handlePay}
         isLoading={loading}
       />

@@ -30,6 +30,8 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
   const quota = toNumber(o.bill?.amount);
   const spent = toNumber(o.quotaSpent);
   const isIncome = o.bill?.direction === "income";
+  // A planned expense without a day: it waits for the real purchase (never charged by itself).
+  const isDateless = !!o.bill?.noDueDay;
   const recurrence = isQuota && !o.bill?.perInvoice
     ? "cota do mês (pela categoria)"
     : isQuota
@@ -38,6 +40,8 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
       : isCard
         ? "cota de toda fatura"
         : "cota do mês"
+    : isDateless && o.bill?.onceMonth
+      ? `sem data · ${isCard ? "fatura de" : "em"} ${formatMonth(o.bill.onceMonth)}`
     : o.bill?.onceMonth
       ? `só em ${formatMonth(o.bill.onceMonth)}`
       : `todo dia ${o.bill?.dueDay}${o.bill?.lastMonth ? ` até ${formatMonth(o.bill.lastMonth)}` : ""}`;
@@ -48,7 +52,18 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
     spent > quota
       ? `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · passou ${formatMoney(spent - quota, currency.symbol)}, saiu do limite diário`
       : `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · ${isPaid ? (isCard ? "fatura fechada" : "mês encerrado") : `resta ${formatMoney(quota - spent, currency.symbol)}`}`;
-  const statusText = isSkipped
+  const datelessText = isPaid
+    ? `${isCard ? "Compra lançada" : "Paga"} em ${formatShortDate(o.paidOn)}`
+    : isOverdue
+      ? isCard
+        ? "A fatura fechou sem a compra"
+        : "O mês acabou sem o pagamento"
+      : isCard
+        ? "Lance a compra quando acontecer"
+        : "Registre o pagamento quando acontecer";
+  const statusText = isDateless && !isSkipped
+    ? datelessText
+    : isSkipped
     ? `Pulada neste mês${o.note ? `: ${o.note}` : ""}${next}`
     : isQuota
       ? quotaText
@@ -85,11 +100,15 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
       ? "Voltar"
       : isIncome
         ? "Receber"
-        : isCard
-          ? "Lançar agora"
-          : "Pagar";
+        : isDateless
+          ? isCard
+            ? "Lançar compra"
+            : "Pagar"
+          : isCard
+            ? "Lançar agora"
+            : "Pagar";
   // Card bills enter the invoice by themselves: launching early is a secondary action.
-  const isPrimaryAction = (isQuota && !isSkipped) || (!isPaid && !isSkipped && !isCard);
+  const isPrimaryAction = (isQuota && !isSkipped) || (!isPaid && !isSkipped && (!isCard || isDateless));
   const canSkip = !isPaid && !isSkipped && !isBeforeStart && !(isQuota && spent > 0);
   const onAction = isSkipped ? onUnskip : isQuota ? onAddPurchase : isPaid ? onUndo : onPay;
 

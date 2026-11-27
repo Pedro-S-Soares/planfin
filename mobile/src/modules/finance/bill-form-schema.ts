@@ -8,7 +8,11 @@ export const billFormSchema = yup.object({
     .test("not-zero", "Informe um valor maior que zero", (v) => !!v && v !== "0,00"),
   dueDay: yup
     .string()
-    .test("day", "Entre 1 e 31", (v, ctx) => ctx.parent.kind === "quota" || (!!v && Number(v) >= 1 && Number(v) <= 31)),
+    .test(
+      "day",
+      "Entre 1 e 31",
+      (v, ctx) => ctx.parent.kind === "quota" || ctx.parent.noDueDay || (!!v && Number(v) >= 1 && Number(v) <= 31),
+    ),
   accountId: yup.string().nullable().optional(),
   categoryId: yup.string().optional(),
   subcategoryId: yup.string().optional(),
@@ -19,4 +23,6 @@ export const billFormSchema = yup.object({
   onceMonth: yup.string().default(""),
   // "" = no end; "YYYY-MM" = last month of a recurring item
   lastMonth: yup.string().default(""),
+  // A one-off expense planned without a day: only its invoice (card) or month
+  noDueDay: yup.boolean().default(false),
 });

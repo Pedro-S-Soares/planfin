@@ -39,3 +39,9 @@ Banco local `planfin_quota_restore` (dados fake com cotas na mesma subcategoria,
 anterior à cota, compra no orçamento, parcela e pagamento de fixa). Checksum de todas as colunas antigas de
 `expenses`, `recurring_bills` e `bill_payments`: **idêntico** antes da migração, depois dela e depois do rollback.
 Nenhuma linha recebeu `quota_id`.
+
+## Despesa prevista sem data (CX-76)
+
+`20261127000002_add_no_due_day_to_recurring_bills` (só estrutura, aditiva): `recurring_bills.no_due_day` boolean
+`NOT NULL DEFAULT false`. Fica `false` em todas as linhas existentes, que seguem com dia como antes. Checksum das
+colunas antigas de `recurring_bills` idêntico antes e depois no banco com formato de produção.

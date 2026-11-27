@@ -152,7 +152,20 @@ defmodule PlanfinBackend.Finance.Bills do
 
   defp preload_bill(error), do: error
 
-  @doc "Due date of the bill in `{year, month}`, clamped to the month's last day."
+  @doc """
+  Due date of the bill in `{year, month}`, clamped to the month's last day. A
+  planned one-off without a day falls on the last purchase day of its invoice
+  (card) or on the last day of its month: it counts there until realized.
+  """
+  def due_date(
+        %RecurringBill{no_due_day: true, account: %Account{kind: "credit_card"} = card},
+        month
+      ),
+      do: Date.add(Invoices.closing_date(card, month), -1)
+
+  def due_date(%RecurringBill{no_due_day: true}, {year, month}),
+    do: Date.end_of_month(Date.new!(year, month, 1))
+
   def due_date(%RecurringBill{due_day: day}, {year, month}) do
     Date.new!(year, month, min(day, Elixir.Calendar.ISO.days_in_month(year, month)))
   end
@@ -284,7 +297,7 @@ defmodule PlanfinBackend.Finance.Bills do
       cond do
         expense -> "paid"
         payment -> "skipped"
-        card?(bill) and not auto_chargeable?(bill, due) -> "before_start"
+        card?(bill) and not bill.no_due_day and not auto_chargeable?(bill, due) -> "before_start"
         Date.compare(today, due) == :gt -> "overdue"
         true -> "pending"
       end
@@ -302,6 +315,9 @@ defmodule PlanfinBackend.Finance.Bills do
       quota_spent: nil
     }
   end
+
+  # A planned one-off without a day is never charged by itself: it waits for the purchase.
+  defp card?(%RecurringBill{no_due_day: true}), do: false
 
   defp card?(%RecurringBill{
          kind: "fixed",

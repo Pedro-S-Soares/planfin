@@ -1,4 +1,4 @@
-defmodule PlanfinBackendWeb.Schema.QuotaTypesTest do
+defmodule PlanfinBackendWeb.Schema.PlannedTypesTest do
   use PlanfinBackendWeb.ConnCase, async: true
 
   import PlanfinBackend.AccountsFixtures
@@ -95,5 +95,30 @@ defmodule PlanfinBackendWeb.Schema.QuotaTypesTest do
 
     assert %{"data" => %{"updateExpense" => %{"quotaId" => nil, "countsInBudget" => true}}} =
              gql(conn, unlink, %{id: expense["id"]})
+  end
+
+  test "a planned expense without a day is created and edited through the API, prefilled",
+       %{conn: conn, card: card} do
+    create = """
+    mutation($accountId: ID!) {
+      createRecurringBill(name: "Pneus", amount: "800.00", dueDay: 1, accountId: $accountId,
+                          onceMonth: "2026-12", noDueDay: true) { id noDueDay onceMonth }
+    }
+    """
+
+    %{"data" => %{"createRecurringBill" => bill}} = gql(conn, create, %{accountId: card.id})
+    assert bill["noDueDay"]
+    assert bill["onceMonth"] == "2026-12"
+
+    list = "query { recurringBills { id noDueDay } }"
+    assert %{"data" => %{"recurringBills" => bills}} = gql(conn, list, %{})
+    assert Enum.any?(bills, &(&1["id"] == bill["id"] and &1["noDueDay"]))
+
+    update = """
+    mutation($id: ID!) { updateRecurringBill(id: $id, noDueDay: false, dueDay: 20) { noDueDay dueDay } }
+    """
+
+    assert %{"data" => %{"updateRecurringBill" => %{"noDueDay" => false, "dueDay" => 20}}} =
+             gql(conn, update, %{id: bill["id"]})
   end
 end
