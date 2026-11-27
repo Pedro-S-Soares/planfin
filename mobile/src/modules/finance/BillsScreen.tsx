@@ -163,6 +163,7 @@ export function BillsScreen() {
               <BillRow
                 key={billId}
                 occurrence={o}
+                card={cards.find((c) => c.id === bill.account?.id)}
                 onEdit={() => navigation.navigate("BillForm", { billId })}
                 onPay={() =>
                   navigation.navigate("PayBill", {
@@ -173,6 +174,7 @@ export function BillsScreen() {
                     isCard,
                     isIncome: bill.direction === "income",
                     isPlanned: !!bill.noDueDay,
+                    cardId: isCard ? bill.account?.id ?? undefined : undefined,
                   })
                 }
                 onAddPurchase={() =>

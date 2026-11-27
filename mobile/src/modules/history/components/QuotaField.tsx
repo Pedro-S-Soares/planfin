@@ -5,6 +5,8 @@ import { useCurrency } from "../../../context/CurrencyContext";
 import { useQuotasForQuery } from "../../../graphql/__generated__/hooks";
 import { formatMoney } from "../../../lib/money";
 import { formatMonth } from "../../finance/format";
+import { invoiceMonthLabel } from "../../finance/invoice-label";
+import { useFinancialAccounts } from "../../finance/use-financial-accounts";
 import { space } from "../../../theme";
 import { FieldLabel } from "./entry-form-parts";
 
@@ -25,6 +27,7 @@ interface QuotaFieldProps {
  */
 export function QuotaField({ date, value, onChange, ownAmount = 0 }: QuotaFieldProps) {
   const { currency } = useCurrency();
+  const { cards } = useFinancialAccounts();
   const { data } = useQuotasForQuery({ variables: { date }, fetchPolicy: "cache-and-network", skip: !date });
   const quotas = (data?.quotasFor ?? []).filter((q) => q?.quotaId) as NonNullable<
     NonNullable<typeof data>["quotasFor"]
@@ -33,6 +36,7 @@ export function QuotaField({ date, value, onChange, ownAmount = 0 }: QuotaFieldP
   if (quotas.length === 0 && !value) return null;
 
   const chosen = quotas.find((q) => q?.quotaId === value);
+  const chosenCard = cards.find((c) => c.id === chosen?.accountId);
   const leftOf = (q: (typeof quotas)[number]) =>
     parseFloat(q?.remaining ?? "0") + (q?.quotaId === value ? ownAmount : 0);
 
@@ -52,7 +56,7 @@ export function QuotaField({ date, value, onChange, ownAmount = 0 }: QuotaFieldP
       </View>
       {chosen ? (
         <AppText variant="caption" style={styles.note}>
-          Abate da cota {chosen.name} ({formatMonth(chosen.month ?? "")}) e não mexe no limite diário. O que passar
+          Abate da cota {chosen.name} ({chosenCard ? `fatura de ${invoiceMonthLabel(chosen.month, chosenCard)}` : formatMonth(chosen.month ?? "")}) e não mexe no limite diário. O que passar
           da cota sai do limite do dia.
         </AppText>
       ) : value ? (

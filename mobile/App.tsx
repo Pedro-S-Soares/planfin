@@ -93,6 +93,8 @@ export type AppStackParamList = {
     isIncome?: boolean;
     /** A planned one-off without a day: registering it is the real purchase. */
     isPlanned?: boolean;
+    /** Card of the bill, to name its invoice by the due month. */
+    cardId?: string;
   };
   SkipBill: { billId: string; month: string; name: string; isCard: boolean };
   SalarySettings: undefined;

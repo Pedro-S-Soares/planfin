@@ -14,11 +14,15 @@ import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
 import { MONEY_QUERIES } from "../../lib/money-queries";
+import { invoiceMonthLabel } from "./invoice-label";
+import { useFinancialAccounts } from "./use-financial-accounts";
 
 export function PayBillScreen() {
   usePageTitle("Planfin - Pagar despesa fixa");
   const navigation = useNavigation();
   const { params } = useRoute<RouteProp<AppStackParamList, "PayBill">>();
+  const { cards } = useFinancialAccounts();
+  const card = cards.find((c) => c.id === params.cardId);
   const [amount, setAmount] = useState(formatCents(Math.round(toNumber(params.amount) * 100)));
   const [date, setDate] = useState(toISODate(new Date()));
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +42,7 @@ export function PayBillScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: palette.sheet }} contentContainerStyle={{ padding: 18 }}>
       <Text style={{ fontSize: 15, fontWeight: "700", color: palette.ink }}>{params.name}</Text>
       <Text style={{ fontSize: 13, color: palette.muted, marginBottom: 18 }}>
-        {formatMonth(params.month)} ·{" "}
+        {params.isPlanned && card ? `Fatura de ${invoiceMonthLabel(params.month, card)}` : formatMonth(params.month)} ·{" "}
         {params.isIncome ? "entra no saldo da conta" : params.isCard ? "vai para a fatura do cartão" : "sai do saldo da conta"} · não
         mexe no limite diário
       </Text>

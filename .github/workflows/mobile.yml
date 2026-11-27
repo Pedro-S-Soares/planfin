@@ -30,6 +30,10 @@ jobs:
         working-directory: mobile
         run: npx tsc --noEmit
 
+      - name: Unit tests
+        working-directory: mobile
+        run: npm run test:unit
+
       - name: Expo doctor
         working-directory: mobile
         run: npx expo-doctor

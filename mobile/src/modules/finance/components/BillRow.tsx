@@ -5,11 +5,14 @@ import { formatMoney, formatMonth, formatShortDate, toNumber } from "../format";
 import { palette, radius } from "../../../theme";
 import { Text } from "../../../components/ui/Text";
 import { Button } from "../../../components/ui/Button";
+import { invoiceMonthLabel, type InvoiceCard } from "../invoice-label";
 
 export type BillOccurrence = NonNullable<NonNullable<BillOccurrencesQuery["billOccurrences"]>[number]>;
 
 type BillRowProps = {
   occurrence: BillOccurrence;
+  /** The bill's card closing and due days, to name its invoice by the due month. */
+  card?: InvoiceCard;
   onEdit: () => void;
   onPay: () => void;
   onUndo: () => void;
@@ -19,7 +22,7 @@ type BillRowProps = {
 };
 
 /** One fixed bill: its day, whether this month is settled and what comes next. */
-export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip, onAddPurchase }: BillRowProps) {
+export function BillRow({ occurrence: o, card, onEdit, onPay, onUndo, onSkip, onUnskip, onAddPurchase }: BillRowProps) {
   const { currency } = useCurrency();
   const isCard = o.bill?.account?.kind === "credit_card";
   const isPaid = o.status === "paid";
@@ -36,12 +39,12 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
     ? "cota do mês (pela categoria)"
     : isQuota
     ? o.bill?.onceMonth
-      ? `cota só ${isCard ? "da fatura de" : "de"} ${formatMonth(o.bill.onceMonth)}`
+      ? `cota só ${isCard ? `da fatura de ${invoiceMonthLabel(o.bill.onceMonth, card)}` : `de ${formatMonth(o.bill.onceMonth)}`}`
       : isCard
         ? "cota de toda fatura"
         : "cota do mês"
     : isDateless && o.bill?.onceMonth
-      ? `sem data · ${isCard ? "fatura de" : "em"} ${formatMonth(o.bill.onceMonth)}`
+      ? `sem data · ${isCard ? `fatura de ${invoiceMonthLabel(o.bill.onceMonth, card)}` : `em ${formatMonth(o.bill.onceMonth)}`}`
     : o.bill?.onceMonth
       ? `só em ${formatMonth(o.bill.onceMonth)}`
       : `todo dia ${o.bill?.dueDay}${o.bill?.lastMonth ? ` até ${formatMonth(o.bill.lastMonth)}` : ""}`;
