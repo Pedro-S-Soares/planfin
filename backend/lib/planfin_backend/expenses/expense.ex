@@ -27,6 +27,7 @@ defmodule PlanfinBackend.Expenses.Expense do
     belongs_to :budget_day, PlanfinBackend.Periods.BudgetDay, type: :binary_id
     belongs_to :subcategory, PlanfinBackend.Categories.Subcategory, type: :binary_id
     belongs_to :account, PlanfinBackend.Finance.Account, type: :binary_id
+    belongs_to :quota, PlanfinBackend.Finance.RecurringBill, type: :binary_id
 
     timestamps()
   end
@@ -61,7 +62,8 @@ defmodule PlanfinBackend.Expenses.Expense do
       :installment_group_id,
       :installment_number,
       :installment_count,
-      :source
+      :source,
+      :quota_id
     ])
     |> validate_required([:amount, :date, :group_id, :created_by_id])
     |> validate_inclusion(:type, ["expense", "income"])

@@ -5,7 +5,6 @@ import * as yup from "yup";
 import {
   useCategoriesQuery,
   useCreateExpenseMutation,
-  useRecurringBillsQuery,
 } from "../../../graphql/__generated__/hooks";
 import { usePeriod } from "../../../context/PeriodContext";
 import { DatePickerField } from "../../../components/DatePickerField";
@@ -13,7 +12,6 @@ import { CurrencyInput } from "../../../components/CurrencyInput";
 import { Button } from "../../../components/ui/Button";
 import { toISODate } from "../../../lib/date";
 import { displayToAPI } from "../../../lib/currency";
-import { AppText } from "../../../components/ui/AppText";
 import { AccountPicker } from "../../finance/components/AccountPicker";
 import { InstallmentPlan } from "../../finance/components/InstallmentPlan";
 import { invoiceMonthFor } from "../../finance/format";
@@ -24,6 +22,7 @@ import { toast } from "../../../lib/toast";
 import { ENTRY_REFETCH_QUERIES } from "../../../lib/money-queries";
 import { CategoryField, ExtraToggle, FieldLabel, MoreOptions, NoteField, EntryFormLayout } from "../components/entry-form-parts";
 import type { EntryFormParams } from "../entry-types";
+import { QuotaField } from "../components/QuotaField";
 
 const schema = yup.object({
   amount: yup
@@ -42,6 +41,7 @@ const schema = yup.object({
   // undefined = invoice of the purchase date
   firstInvoice: yup.string().optional(),
   countsInBudget: yup.boolean().default(true),
+  quotaId: yup.string().nullable().default(null),
 });
 
 interface AddExpenseFormProps {
@@ -72,6 +72,7 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
       note: "",
       categoryId: params?.categoryId ?? "",
       subcategoryId: params?.subcategoryId ?? "",
+      quotaId: params?.quotaId ?? null,
     },
   });
 
@@ -88,12 +89,9 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
   const firstInvoice = watch("firstInvoice") || defaultInvoice;
   // A purchase placed on another invoice never touches today's limit.
   const isRetroactive = installments > 1 && firstInvoice !== defaultInvoice;
-  const { data: billsData } = useRecurringBillsQuery();
-  const quota = billsData?.recurringBills?.find(
-    (b) => b?.kind === "quota" && !!b.subcategory?.id && b.subcategory.id === watch("subcategoryId"),
-  );
-  // Quota purchases were reserved among the fixed bills: the server keeps them out of the daily limit.
-  const countsInBudget = watch("countsInBudget") && !isPrivateAccount && !isRetroactive && !quota;
+  // A purchase chosen into a quota was already planned: it stays out of the daily limit.
+  const quotaId = installments > 1 ? null : watch("quotaId") ?? null;
+  const countsInBudget = watch("countsInBudget") && !isPrivateAccount && !isRetroactive && !quotaId;
   const amountValue = parseCents(watch("amount")) / 100;
 
   const [createExpense, { loading }] = useCreateExpenseMutation({
@@ -116,6 +114,7 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
         firstInvoice: installments > 1 ? firstInvoice : null,
         today: toISODate(new Date()),
         countsInBudget,
+        quotaId,
       },
     });
   };
@@ -144,11 +143,6 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
         }}
         onSubcategoryChange={(id) => setValue("subcategoryId", id)}
       />
-      {quota ? (
-        <AppText variant="caption" style={styles.quotaNote}>
-          Entra na cota "{quota.name}": abate do valor reservado no mês e não mexe no limite diário.
-        </AppText>
-      ) : null}
 
       <Controller
         control={control}
@@ -173,6 +167,10 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
         )}
       />
 
+      {installments > 1 ? null : (
+        <QuotaField date={watch("date")} value={quotaId} onChange={(id) => setValue("quotaId", id)} />
+      )}
+
       <MoreOptions summary={isCard ? "Parcelas, orçamento, gasto extra, nota" : "Orçamento, gasto extra, nota"}>
         {isCard && account?.closingDay && account.dueDay ? (
           <InstallmentPlan
@@ -189,7 +187,7 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
           />
         ) : null}
 
-        {isPrivateAccount || isRetroactive || quota ? null : (
+        {isPrivateAccount || isRetroactive || quotaId ? null : (
           <Controller
             control={control}
             name="countsInBudget"
@@ -227,9 +225,3 @@ export function AddExpenseForm({ params, onDone }: AddExpenseFormProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  quotaNote: {
-    marginTop: -8,
-    marginBottom: 16,
-  },
-});

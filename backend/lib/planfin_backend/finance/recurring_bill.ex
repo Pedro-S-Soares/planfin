@@ -7,9 +7,10 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     * `direction: "income"` — expected money in (e.g. variable income),
       received on an account.
 
-  With `kind: "quota"` an expense is a monthly spending allowance (e.g. R$ 350
-  for nails) consumed by several purchases of its subcategory instead of one
-  payment. It is never paid nor charged: its purchases are the real entries.
+  With `kind: "quota"` an expense is a spending allowance (e.g. R$ 150 of car
+  washes) consumed by the purchases linked to it instead of one payment. On a
+  card it belongs to an invoice (its month is the invoice month). It is never
+  paid nor charged: its purchases are the real entries. See `Finance.Quotas`.
 
   Recurring items happen every month; with `once_month` the item happens only
   in that month (a one-off boleto or a one-off expected income). With
@@ -36,6 +37,9 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     field :last_month, :date
     field :kind, :string, default: "fixed"
     field :partner_income, :boolean, default: false
+    # Quota in the invoice model (purchases chosen explicitly). False: a quota from
+    # before it, still matched by subcategory and calendar month (see Finance.Quotas).
+    field :per_invoice, :boolean, default: false
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :account, PlanfinBackend.Finance.Account
@@ -59,7 +63,8 @@ defmodule PlanfinBackend.Finance.RecurringBill do
       :once_month,
       :last_month,
       :kind,
-      :partner_income
+      :partner_income,
+      :per_invoice
     ])
     |> update_change(:once_month, &first_of_month/1)
     |> update_change(:last_month, &first_of_month/1)
@@ -78,9 +83,9 @@ defmodule PlanfinBackend.Finance.RecurringBill do
 
   defp validate_quota(changeset) do
     if get_field(changeset, :kind) == "quota" do
-      changeset
-      |> validate_required([:subcategory_id], message: "a quota needs a subcategory")
-      |> validate_inclusion(:direction, ["expense"], message: "a quota must be an expense")
+      validate_inclusion(changeset, :direction, ["expense"],
+        message: "a quota must be an expense"
+      )
     else
       changeset
     end

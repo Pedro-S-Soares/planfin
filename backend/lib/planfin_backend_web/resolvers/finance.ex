@@ -10,6 +10,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
     MonthPlan,
     Invoices,
     Panel,
+    Quotas,
     Salary
   }
 
@@ -43,7 +44,17 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
 
     with {:ok, card} <- fetch_card(group.id, card_id),
          {:ok, month} <- parse_month(month) do
-      {:ok, card |> Invoices.build(month, today(args), with_entries: true) |> format_invoice()}
+      quotas =
+        group.id
+        |> Quotas.list()
+        |> Enum.filter(&(&1.account_id == card.id and Bills.exists_in?(&1, month)))
+        |> Enum.map(&(&1 |> Quotas.status(month) |> format_quota_status()))
+
+      {:ok,
+       card
+       |> Invoices.build(month, today(args), with_entries: true)
+       |> format_invoice()
+       |> Map.put(:quotas, quotas)}
     end
   end
 
@@ -719,6 +730,19 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       other_cards: items.(b.other_cards),
       fixed_bills: items.(b.fixed_bills),
       one_off_bills: items.(b.one_off_bills),
+      quotas:
+        Enum.map(b.quotas, fn q ->
+          %{
+            quota_id: q.quota_id,
+            label: q.label,
+            date: Date.to_iso8601(q.date),
+            amount: Decimal.to_string(q.amount),
+            planned: Decimal.to_string(q.planned),
+            spent: Decimal.to_string(q.spent),
+            remaining: Decimal.to_string(q.remaining)
+          }
+        end),
+      quota_leftovers: items.(Map.get(b, :quota_leftovers, [])),
       carry: b |> Map.get(:carry) |> then(&(&1 && item.(&1))),
       result: Decimal.to_string(b.result),
       goal_start: date.(b.goal_start),
@@ -813,6 +837,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
     %{
       id: bill.id,
       kind: bill.kind,
+      per_invoice: bill.per_invoice,
       direction: bill.direction,
       once_month:
         bill.once_month && Invoices.format_month({bill.once_month.year, bill.once_month.month}),
@@ -879,6 +904,37 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   defp format_owner(_), do: nil
 
   @doc false
+  def quotas_for(_parent, %{date: date}, %{context: %{current_group: group}}) do
+    case Date.from_iso8601(date) do
+      {:ok, date} ->
+        {:ok,
+         group.id
+         |> Quotas.open_for(date)
+         |> Enum.map(&(&1 |> Quotas.status(Quotas.month_for(&1, date)) |> format_quota_status()))}
+
+      _ ->
+        {:error, "Invalid date"}
+    end
+  end
+
+  def quotas_for(_parent, _args, context), do: access_error(context)
+
+  defp format_quota_status(s) do
+    %{
+      quota_id: s.quota.id,
+      name: s.quota.name,
+      account_id: s.quota.account_id,
+      account_name: s.quota.account && s.quota.account.name,
+      month: Invoices.format_month(s.month),
+      planned: Decimal.to_string(s.planned),
+      spent: Decimal.to_string(s.spent),
+      remaining: Decimal.to_string(s.remaining),
+      excess: Decimal.to_string(s.excess),
+      starts_on: Date.to_iso8601(s.starts_on),
+      ends_on: Date.to_iso8601(s.ends_on)
+    }
+  end
+
   def format_invoice(invoice) do
     %{
       card_id: invoice.card_id,

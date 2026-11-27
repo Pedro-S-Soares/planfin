@@ -180,6 +180,7 @@ export function BillsScreen() {
                       accountId: bill.account?.id ?? undefined,
                       categoryId: bill.subcategory?.categoryId ?? undefined,
                       subcategoryId: bill.subcategory?.id ?? undefined,
+                      quotaId: bill.kind === "quota" ? billId : undefined,
                     }),
                   )
                 }

@@ -288,4 +288,124 @@ defmodule PlanfinBackend.Finance.CyclePlanTest do
       assert Repo.get!(Period, first.id).status == "abandoned"
     end
   end
+
+  describe "spending quotas of the cycle card" do
+    # R$ 150 of car washes on Crédito BB, every invoice (or one).
+    defp wash_quota(ctx, attrs \\ %{}) do
+      {:ok, quota} =
+        Bills.create_bill(
+          ctx.group.id,
+          Map.merge(
+            %{
+              name: "Lavagem do carro",
+              amount: Decimal.new("150"),
+              due_day: 1,
+              account_id: ctx.card.id,
+              kind: "quota"
+            },
+            attrs
+          )
+        )
+
+      quota
+      |> Ecto.Changeset.change(inserted_at: ~N[2026-09-01 00:00:00])
+      |> Repo.update!()
+    end
+
+    defp wash(ctx, quota, amount, date) do
+      {:ok, _} =
+        Expenses.create_expense(ctx.group.id, ctx.user.id, %{
+          amount: Decimal.new(amount),
+          date: date,
+          account_id: ctx.card.id,
+          quota_id: quota.id,
+          today: @today
+        })
+    end
+
+    test "the open invoice keeps what is left of the quota; together with the purchases, its full value" do
+      ctx = setup_pedro()
+      quota = wash_quota(ctx)
+      wash(ctx, quota, "30", ~D[2026-10-26])
+      wash(ctx, quota, "30", @today)
+
+      {:ok, plan} = CyclePlan.build(ctx.group.id, @today)
+
+      assert [%{label: "Lavagem do carro", amount: left, planned: planned, spent: spent}] =
+               plan.current.quotas
+
+      assert Decimal.equal?(left, Decimal.new("90"))
+      assert Decimal.equal?(planned, Decimal.new("150"))
+      assert Decimal.equal?(spent, Decimal.new("60"))
+      assert Decimal.equal?(plan.current.invoice.amount, Decimal.new("7060"))
+      # 5287 − 60 on the invoice − 90 still reserved = 5287 − 150
+      assert Decimal.equal?(plan.current.result, Decimal.new("5137"))
+    end
+
+    test "a recurring quota is planned at its full value in the next invoice too" do
+      ctx = setup_pedro()
+      wash_quota(ctx)
+
+      {:ok, plan} = CyclePlan.build(ctx.group.id, @today)
+      assert [%{amount: amount}] = plan.next.quotas
+      assert Decimal.equal?(amount, Decimal.new("150"))
+      refute Enum.any?(plan.next.card_bills, &(&1.label == "Lavagem do carro"))
+      # 12881.10 − 150
+      assert Decimal.equal?(plan.next.result, Decimal.new("12731.10"))
+    end
+
+    test "a one-off quota only enters its invoice" do
+      ctx = setup_pedro()
+
+      wash_quota(ctx, %{
+        name: "Presentes de Natal",
+        once_month: ~D[2026-12-01],
+        amount: Decimal.new("500")
+      })
+
+      {:ok, plan} = CyclePlan.build(ctx.group.id, @today)
+      assert plan.current.quotas == []
+      assert [%{label: "Presentes de Natal", amount: amount}] = plan.next.quotas
+      assert Decimal.equal?(amount, Decimal.new("500"))
+    end
+
+    test "overspending leaves nothing reserved: the excess is already on the invoice" do
+      ctx = setup_pedro()
+      quota = wash_quota(ctx)
+      wash(ctx, quota, "120", ~D[2026-10-26])
+      wash(ctx, quota, "60", @today)
+
+      {:ok, plan} = CyclePlan.build(ctx.group.id, @today)
+      assert [%{amount: left, spent: spent}] = plan.current.quotas
+      assert Decimal.equal?(left, Decimal.new("0"))
+      assert Decimal.equal?(spent, Decimal.new("180"))
+      # The 30 beyond the quota cost the plan 30 more than planned
+      assert Decimal.equal?(plan.current.result, Decimal.new("5107"))
+      # and come out of the daily budget on the day they were spent
+      assert Decimal.equal?(
+               PlanfinBackend.BudgetDays.get_total_spent_for_day(ctx.group.id, @today),
+               Decimal.new("30")
+             )
+    end
+
+    test "once the invoice closes, what the quota did not use goes to the next cycle" do
+      ctx = setup_pedro()
+      quota = wash_quota(ctx)
+      wash(ctx, quota, "60", ~D[2026-10-26])
+
+      {:ok, without} = CyclePlan.build(ctx.group.id, ~D[2026-11-08])
+      assert without.current.status == "closed"
+      assert without.current.quotas == []
+
+      assert [%{label: "Sobra da cota Lavagem do carro", amount: leftover}] =
+               without.next.quota_leftovers
+
+      assert Decimal.equal?(leftover, Decimal.new("90"))
+      # The leftover is inside the carry, not added twice
+      assert Decimal.equal?(without.next.carry.amount, without.current.result)
+      # December's quota is planned whole again
+      assert [%{amount: dec}] = without.next.quotas
+      assert Decimal.equal?(dec, Decimal.new("150"))
+    end
+  end
 end

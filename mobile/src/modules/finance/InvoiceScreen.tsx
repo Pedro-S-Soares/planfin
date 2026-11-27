@@ -17,6 +17,7 @@ import { usePageTitle } from "../../hooks/usePageTitle";
 import { layout, palette, space } from "../../theme";
 import { AdjustInvoiceTotal } from "./components/AdjustInvoiceTotal";
 import { StatusPill } from "./components/StatusPill";
+import { InvoiceQuotas } from "./components/InvoiceQuotas";
 import { groupInvoiceByDay } from "./invoice-days";
 import { EntrySheet } from "../history/components/EntrySheet";
 import { CLOSED_SHEET, createEntryState, editEntryState, type EntrySheetState } from "../history/entry-sheet";
@@ -136,6 +137,8 @@ export function InvoiceScreen() {
           </View>
         ) : null}
       </Block>
+
+      <InvoiceQuotas quotas={invoice.quotas ?? []} />
 
       <SectionHeader title={isFiltered ? `Lançamentos (${entries.length} de ${allEntries.length})` : `Lançamentos (${entries.length})`} trailing={entries.length > 0 ? addButton : null} />
       {allEntries.length > 0 ? (

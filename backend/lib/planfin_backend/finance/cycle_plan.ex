@@ -15,6 +15,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
       + vale alimentação (aberta): o saldo de hoje
       − fatura do cartão até agora
       − fixas do cartão que ainda entram nela (aberta)
+      − o que resta das cotas desta fatura (aberta)
       − faturas dos outros cartões que vencem até lá
       − fixas e avulsos no boleto até lá
       = aberta: quanto ainda dá para gastar até o fechamento
@@ -27,6 +28,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
         salário + salário do parceiro + entradas previstas
       + créditos do vale que caem durante a fatura atual (e o saldo, se ela fechou)
       − fixas do cartão lançadas no ciclo
+      − cotas da fatura, pelo valor cheio
       − parcelas que caem na fatura
       − faturas dos outros cartões que vencem na janela
       − fixas e avulsos no boleto da janela
@@ -37,7 +39,16 @@ defmodule PlanfinBackend.Finance.CyclePlan do
 
   alias PlanfinBackend.{Finance, Repo}
   alias PlanfinBackend.Expenses.Expense
-  alias PlanfinBackend.Finance.{Benefits, Bills, Calendar, Invoices, RecurringBill, Salary}
+
+  alias PlanfinBackend.Finance.{
+    Benefits,
+    Bills,
+    Calendar,
+    Invoices,
+    Quotas,
+    RecurringBill,
+    Salary
+  }
 
   @default_partner_name "Salário da esposa"
   @default_partner_day 15
@@ -113,7 +124,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
         pending
         |> Enum.filter(fn occ ->
           occ.bill.account_id == card.id and occ.bill.direction == "expense" and
-            in_range?(occ.due_date, today, Date.add(dates.closing_date, -1))
+            not quota?(occ) and in_range?(occ.due_date, today, Date.add(dates.closing_date, -1))
         end)
         |> Enum.split_with(&one_off?/1)
       else
@@ -142,6 +153,8 @@ defmodule PlanfinBackend.Finance.CyclePlan do
         amount: invoice.remaining
       },
       card_bills: Enum.map(card_bills, &item/1),
+      # The purchases already made are in the invoice; what is left is still committed.
+      quotas: if(status == "open", do: quota_items(ctx, month, :remaining), else: []),
       installments: [],
       other_cards:
         Enum.flat_map(ctx.other_cards, &other_card_items(ctx, &1, today, dates.window_end, :owed)),
@@ -164,6 +177,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
     outflows =
       block.invoice.amount
       |> Decimal.add(sum(block.card_bills))
+      |> Decimal.add(sum(block.quotas))
       |> Decimal.add(sum(block.other_cards))
       |> Decimal.add(sum(block.fixed_bills))
       |> Decimal.add(sum(block.one_off_bills))
@@ -193,7 +207,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
     {card_one_offs, card_bills} =
       occurrences
       |> Enum.filter(fn occ ->
-        occ.bill.account_id == card.id and occ.bill.direction == "expense" and
+        occ.bill.account_id == card.id and occ.bill.direction == "expense" and not quota?(occ) and
           in_range?(occ.due_date, dates.purchase_start, Date.add(dates.closing_date, -1))
       end)
       |> Enum.split_with(&one_off?/1)
@@ -231,6 +245,8 @@ defmodule PlanfinBackend.Finance.CyclePlan do
         ),
       invoice: nil,
       card_bills: Enum.map(card_bills, &planned_item/1),
+      # Planned at their full value, whatever gets spent.
+      quotas: quota_items(ctx, month, :planned),
       installments: installment_items(card, month),
       other_cards:
         Enum.flat_map(
@@ -245,7 +261,9 @@ defmodule PlanfinBackend.Finance.CyclePlan do
         |> Kernel.++(card_one_offs)
         |> sort_by_date()
         |> Enum.map(&planned_item/1),
-      carry: carry_item(current)
+      carry: carry_item(current),
+      # Part of the carry: what the quotas of the closed invoice did not use.
+      quota_leftovers: quota_leftovers(ctx, current)
     }
 
     inflows =
@@ -258,6 +276,7 @@ defmodule PlanfinBackend.Finance.CyclePlan do
 
     outflows =
       sum(block.card_bills)
+      |> Decimal.add(sum(block.quotas))
       |> Decimal.add(sum(block.installments))
       |> Decimal.add(sum(block.other_cards))
       |> Decimal.add(sum(block.fixed_bills))
@@ -533,6 +552,55 @@ defmodule PlanfinBackend.Finance.CyclePlan do
     Decimal.add(base, bills)
   end
 
+  # ---- Spending quotas of the cycle card ----
+
+  # The cycle card's quotas of the invoice `month`: at their full value
+  # (`:planned`) or what is left of them (`:remaining`).
+  defp quota_items(ctx, month, mode) do
+    ctx
+    |> cycle_card_quotas(month)
+    |> Enum.map(fn status ->
+      %{
+        label: status.quota.name,
+        date: status.ends_on,
+        amount: if(mode == :planned, do: status.planned, else: status.remaining),
+        quota_id: status.quota.id,
+        planned: status.planned,
+        spent: status.spent,
+        remaining: status.remaining
+      }
+    end)
+  end
+
+  defp cycle_card_quotas(ctx, month) do
+    ctx.group_id
+    |> Quotas.list()
+    |> Enum.filter(&(&1.account_id == ctx.card.id and Bills.exists_in?(&1, month)))
+    |> Enum.reject(&skipped?(ctx.group_id, &1, month))
+    |> Enum.map(&Quotas.status(&1, month))
+  end
+
+  defp skipped?(group_id, quota, month),
+    do: MapSet.member?(Bills.skipped_ids(group_id, month), quota.id)
+
+  # Once the invoice closed, what its quotas did not use is money of the next
+  # cycle. It is already inside the carry (the closed invoice has only the real
+  # purchases); listed apart so it shows where it came from.
+  defp quota_leftovers(ctx, %{status: "closed", invoice_month: month}) do
+    ctx
+    |> cycle_card_quotas(month)
+    |> Enum.filter(&(Decimal.compare(&1.remaining, 0) == :gt))
+    |> Enum.map(fn status ->
+      %{
+        label: "Sobra da cota #{status.quota.name}",
+        date: status.ends_on,
+        amount: status.remaining
+      }
+    end)
+  end
+
+  defp quota_leftovers(_ctx, _current), do: []
+
   # ---- Installments ----
 
   defp installment_items(card, month) do
@@ -577,6 +645,10 @@ defmodule PlanfinBackend.Finance.CyclePlan do
     do: occ.bill.direction == "expense" and occ.bill.account.kind != "credit_card"
 
   defp one_off?(occ), do: not is_nil(occ.bill.once_month)
+
+  # Invoice-model quotas are planned apart (quota_items/3); legacy ones keep
+  # going through the bill lists as before.
+  defp quota?(occ), do: occ.bill.kind == "quota" and occ.bill.per_invoice
 
   defp item(occ), do: %{label: occ.bill.name, date: occ.due_date, amount: occ.amount}
 

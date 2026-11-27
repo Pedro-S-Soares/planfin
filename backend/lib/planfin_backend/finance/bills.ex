@@ -36,7 +36,7 @@ defmodule PlanfinBackend.Finance.Bills do
   import Ecto.Query, warn: false
 
   alias PlanfinBackend.{Expenses, Repo}
-  alias PlanfinBackend.Finance.{Account, BillPayment, Calendar, RecurringBill}
+  alias PlanfinBackend.Finance.{Account, BillPayment, Calendar, Invoices, Quotas, RecurringBill}
 
   def list_bills(group_id) do
     RecurringBill
@@ -56,7 +56,7 @@ defmodule PlanfinBackend.Finance.Bills do
   def create_bill(group_id, attrs) do
     with :ok <- validate_account(group_id, attrs[:account_id], attrs[:direction]) do
       %RecurringBill{}
-      |> RecurringBill.changeset(Map.put(attrs, :group_id, group_id))
+      |> RecurringBill.changeset(attrs |> Map.put(:group_id, group_id) |> invoice_model())
       |> Repo.insert()
       |> preload_bill()
     end
@@ -71,7 +71,9 @@ defmodule PlanfinBackend.Finance.Bills do
            ) do
       Repo.transaction(fn ->
         with {:ok, updated} <-
-               bill |> RecurringBill.changeset(Map.drop(attrs, [:group_id])) |> Repo.update(),
+               bill
+               |> RecurringBill.changeset(attrs |> Map.drop([:group_id]) |> invoice_model(bill))
+               |> Repo.update(),
              :ok <- sync_one_off_entry(bill, updated) do
           updated
         else
@@ -80,6 +82,14 @@ defmodule PlanfinBackend.Finance.Bills do
       end)
       |> preload_bill()
     end
+  end
+
+  # Every quota created or saved from now on is in the invoice model; a legacy
+  # quota converts when it is edited (its old purchases are left as they are).
+  defp invoice_model(attrs, bill \\ %RecurringBill{}) do
+    if Map.get(attrs, :kind, bill.kind) == "quota",
+      do: Map.put(attrs, :per_invoice, true),
+      else: attrs
   end
 
   # A one-off item has a single occurrence: once paid (or charged on the card) that
@@ -213,10 +223,21 @@ defmodule PlanfinBackend.Finance.Bills do
     end)
   end
 
-  defp exists_in?(%RecurringBill{once_month: %Date{} = once}, month),
+  @doc "Whether the bill has an occurrence in `month` (for a card quota: the invoice month)."
+  def exists_in?(%RecurringBill{once_month: %Date{} = once}, month),
     do: {once.year, once.month} == month
 
-  defp exists_in?(%RecurringBill{inserted_at: inserted_at, last_month: last}, month) do
+  # A card quota starts in the invoice that was open when it was created.
+  def exists_in?(
+        %RecurringBill{kind: "quota", account: %Account{kind: "credit_card"} = card} = quota,
+        month
+      ) do
+    first = Invoices.month_for(card, NaiveDateTime.to_date(quota.inserted_at))
+    last = quota.last_month
+    first <= month and (is_nil(last) or month <= {last.year, last.month})
+  end
+
+  def exists_in?(%RecurringBill{inserted_at: inserted_at, last_month: last}, month) do
     {inserted_at.year, inserted_at.month} <= month and
       (is_nil(last) or month <= {last.year, last.month})
   end
@@ -226,17 +247,16 @@ defmodule PlanfinBackend.Finance.Bills do
   defp auto_chargeable?(%RecurringBill{inserted_at: inserted_at}, due),
     do: Date.compare(due, NaiveDateTime.to_date(inserted_at)) != :lt
 
+  # A quota is spent by the purchases linked to it in its invoice (card) or
+  # month: pending while there is money left and its purchase days last.
   defp occurrence(%RecurringBill{kind: "quota"} = bill, month, payments, today) do
     payment = Map.get(payments, {bill.id, month})
-    spent = quota_spent(bill, month)
-    remaining = Decimal.max(Decimal.sub(bill.amount, spent), Decimal.new("0"))
-    {year, mon} = month
-    month_end = Date.new!(year, mon, Elixir.Calendar.ISO.days_in_month(year, mon))
+    %{spent: spent, remaining: remaining, ends_on: ends_on} = Quotas.status(bill, month)
 
     status =
       cond do
         payment -> "skipped"
-        Date.compare(today, month_end) == :gt -> "paid"
+        Date.compare(today, ends_on) == :gt -> "paid"
         Decimal.compare(remaining, 0) == :eq -> "paid"
         true -> "pending"
       end
@@ -318,35 +338,6 @@ defmodule PlanfinBackend.Finance.Bills do
     end
 
     :ok
-  end
-
-  @doc "What the month's expenses of the quota's subcategory add up to."
-  def quota_spent(%RecurringBill{group_id: group_id, subcategory_id: sub_id}, {year, month}) do
-    from = Date.new!(year, month, 1)
-    to = Date.end_of_month(from)
-
-    PlanfinBackend.Expenses.Expense
-    |> where(
-      [e],
-      e.group_id == ^group_id and e.subcategory_id == ^sub_id and e.type == "expense" and
-        e.date >= ^from and e.date <= ^to
-    )
-    |> select([e], sum(e.amount))
-    |> Repo.one()
-    |> Kernel.||(Decimal.new("0"))
-  end
-
-  @doc "Whether an expense in `subcategory_id` feeds an active quota of the group."
-  def quota_subcategory?(_group_id, nil), do: false
-
-  def quota_subcategory?(group_id, subcategory_id) do
-    RecurringBill
-    |> where(
-      [b],
-      b.group_id == ^group_id and b.active == true and b.kind == "quota" and
-        b.subcategory_id == ^subcategory_id
-    )
-    |> Repo.exists?()
   end
 
   defp payments_for(group_id, months) do

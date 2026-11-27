@@ -13,6 +13,7 @@ export type ExpenseWithAuthor = {
   installmentNumber: number | null;
   installmentCount: number | null;
   source: string | null;
+  quotaId?: string | null;
   account: { id: string; name: string; kind: string } | null;
   subcategory: {
     id: string;
@@ -58,6 +59,7 @@ export const EXPENSE_HISTORY_WITH_AUTHORS = gql`
         installmentNumber
         installmentCount
         source
+        quotaId
         account {
           id
           name

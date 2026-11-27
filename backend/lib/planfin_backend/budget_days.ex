@@ -12,6 +12,7 @@ defmodule PlanfinBackend.BudgetDays do
   alias PlanfinBackend.Periods
   alias PlanfinBackend.Periods.BudgetDay
   alias PlanfinBackend.Expenses.Expense
+  alias PlanfinBackend.Finance.Quotas
 
   @cascade_abandon_threshold_days 60
 
@@ -155,6 +156,7 @@ defmodule PlanfinBackend.BudgetDays do
     total_budget
     |> Decimal.sub(total_expenses || Decimal.new("0"))
     |> Decimal.add(total_income || Decimal.new("0"))
+    |> Decimal.sub(Quotas.excess_between(period.group_id, period.start_date, today))
   end
 
   @doc """
@@ -191,6 +193,7 @@ defmodule PlanfinBackend.BudgetDays do
     period.total_budget
     |> Decimal.sub(total_expenses || Decimal.new("0"))
     |> Decimal.add(total_income || Decimal.new("0"))
+    |> Decimal.sub(Quotas.excess_between(period.group_id, period.start_date, period.end_date))
   end
 
   @doc """
@@ -292,7 +295,8 @@ defmodule PlanfinBackend.BudgetDays do
   @doc """
   Net regular spending of the group on `date`: regular expenses minus regular income.
 
-  Extra entries are excluded, matching the daily balance. Always computed live, so
+  Extra entries are excluded, matching the daily balance. What a purchase spent
+  beyond its quota counts too (see `Finance.Quotas`). Always computed live, so
   it stays correct when entries are logged or edited after the day was closed.
   """
   def get_total_spent_for_day(group_id, date) do
@@ -314,5 +318,6 @@ defmodule PlanfinBackend.BudgetDays do
 
     (total_expenses || Decimal.new("0"))
     |> Decimal.sub(total_income || Decimal.new("0"))
+    |> Decimal.add(Quotas.excess_between(group_id, date, date))
   end
 end
