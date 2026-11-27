@@ -289,6 +289,36 @@ defmodule PlanfinBackend.Finance.CyclePlanTest do
     end
   end
 
+  test "a planned expense without a day counts in the invoice it was planned for" do
+    ctx = setup_pedro()
+
+    planned = fn name, amount, account, month ->
+      {:ok, _} =
+        Bills.create_bill(ctx.group.id, %{
+          name: name,
+          amount: Decimal.new(amount),
+          due_day: 1,
+          account_id: account.id,
+          once_month: month,
+          no_due_day: true
+        })
+    end
+
+    # Crédito BB closes on the 5th: the November invoice is the open one, December the next.
+    planned.("Óculos", "600", ctx.card, ~D[2026-11-01])
+    planned.("Presente de Natal", "250", ctx.card, ~D[2026-12-01])
+    planned.("Conserto", "180", ctx.bb, ~D[2026-12-01])
+    backdate_bills(ctx.group.id, @today)
+
+    {:ok, plan} = CyclePlan.build(ctx.group.id, @today)
+
+    assert [%{label: "Óculos", date: ~D[2026-11-04]}] = plan.current.one_off_bills
+    assert Enum.map(plan.next.one_off_bills, & &1.label) == ["Presente de Natal", "Conserto"]
+    # 5287 − 600 and 12881.10 − 250 − 180
+    assert Decimal.equal?(plan.current.result, Decimal.new("4687"))
+    assert Decimal.equal?(plan.next.result, Decimal.new("12451.10"))
+  end
+
   describe "spending quotas of the cycle card" do
     # R$ 150 of car washes on Crédito BB, every invoice (or one).
     defp wash_quota(ctx, attrs \\ %{}) do

@@ -357,7 +357,8 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
              direction: args[:direction] || "expense",
              once_month: once_month,
              last_month: last_month,
-             kind: args[:kind] || "fixed"
+             kind: args[:kind] || "fixed",
+             no_due_day: args[:no_due_day] || false
            }) do
       {:ok, format_bill(bill)}
     else
@@ -838,6 +839,7 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
       id: bill.id,
       kind: bill.kind,
       per_invoice: bill.per_invoice,
+      no_due_day: bill.no_due_day,
       direction: bill.direction,
       once_month:
         bill.once_month && Invoices.format_month({bill.once_month.year, bill.once_month.month}),
@@ -993,7 +995,16 @@ defmodule PlanfinBackendWeb.Resolvers.Finance do
   end
 
   defp bill_attrs(args) do
-    base = Map.take(args, [:name, :due_day, :account_id, :subcategory_id, :direction, :kind])
+    base =
+      Map.take(args, [
+        :name,
+        :due_day,
+        :account_id,
+        :subcategory_id,
+        :direction,
+        :kind,
+        :no_due_day
+      ])
 
     with {:ok, base} <- put_month(base, args, :once_month),
          {:ok, base} <- put_month(base, args, :last_month) do

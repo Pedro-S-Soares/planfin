@@ -48,6 +48,18 @@ function oneOffLandingText(month: string, day: number, account: FinancialAccount
   return `Sai da conta em ${when}.`;
 }
 
+/** Where a planned expense without a day lands: the invoice's purchase window, or the month. */
+function datelessLandingText(month: string, account: FinancialAccount | undefined) {
+  if (account?.kind === "credit_card" && account.closingDay && account.dueDay) {
+    const closing = `${month}-${String(account.closingDay).padStart(2, "0")}`;
+    const start = `${addMonths(month, -1)}-${String(account.closingDay).padStart(2, "0")}`;
+    const lastDay = toISODate(new Date(new Date(`${closing}T12:00:00`).getTime() - 86400000));
+    const due = invoiceDueDate(month, account.closingDay, account.dueDay);
+    return `Planejada na fatura de ${formatMonth(month)} (compras de ${formatShortDate(start)} a ${formatShortDate(lastDay)}, vence ${formatShortDate(due)}). Conta no planejamento dessa fatura até você lançar a compra.`;
+  }
+  return `Planejada para ${formatMonth(month)}, sem dia. Conta no planejamento até você registrar o pagamento.`;
+}
+
 /** When the last month happens and when it stops, so the end can be checked against the invoice. */
 function lastOccurrenceText(month: string, day: number, account: FinancialAccount | undefined, isIncome: boolean, isQuota: boolean) {
   const [year, mon] = month.split("-").map(Number);
@@ -99,7 +111,7 @@ function BillForm({ params, editing }: BillFormProps) {
   const allCategories = catData?.categories?.filter((c) => c !== null) ?? [];
 
   // The form starts from the saved item: mounted only once it is loaded (see EditGate).
-  const { control, handleSubmit, watch, setError, formState: { errors } } = useForm({
+  const { control, handleSubmit, watch, setValue, setError, formState: { errors } } = useForm({
     resolver: yupResolver(billFormSchema),
     defaultValues: editing
       ? {
@@ -113,6 +125,7 @@ function BillForm({ params, editing }: BillFormProps) {
           onceMonth: editing.onceMonth ?? "",
           lastMonth: editing.lastMonth ?? "",
           kind: editing.kind === "quota" ? "quota" : "fixed",
+          noDueDay: editing.noDueDay ?? false,
         }
       : {
           name: "",
@@ -125,6 +138,7 @@ function BillForm({ params, editing }: BillFormProps) {
           onceMonth: params.once ? params.month ?? monthOf(new Date()) : "",
           lastMonth: "",
           kind: "fixed",
+          noDueDay: false,
         },
   });
   const direction = watch("direction");
@@ -137,11 +151,16 @@ function BillForm({ params, editing }: BillFormProps) {
   const defaultAccount = isIncome ? accounts.find((a) => a.isPrimary)?.id ?? null : defaultSpendingAccountId(accounts);
   const accountId = chosenAccount === undefined ? defaultAccount : chosenAccount;
   const subcategories = categories.find((c) => c.id === watch("categoryId"))?.subcategories?.filter((s) => s !== null) ?? [];
-  // A quota on a card belongs to an invoice, not to a calendar month.
-  const quotaCard = isQuota ? accounts.find((a) => a.id === accountId && a.kind === "credit_card") : undefined;
+  // A one-off expense can be planned without a day, in an invoice (card) or month.
+  const canBeDateless = !isIncome && !isQuota && !!onceMonth;
+  const noDueDay = canBeDateless && !!watch("noDueDay");
+  // A quota or a dateless expense on a card belongs to an invoice, not to a calendar month.
+  const chosenCard = accounts.find((a) => a.id === accountId && a.kind === "credit_card");
+  const quotaCard = isQuota ? chosenCard : undefined;
+  const invoiceCard = isQuota || noDueDay ? chosenCard : undefined;
   const periodWord = quotaCard ? "fatura" : "mês";
-  const currentPeriod = quotaCard?.closingDay
-    ? invoiceMonthFor(toISODate(new Date()), quotaCard.closingDay)
+  const currentPeriod = invoiceCard?.closingDay
+    ? invoiceMonthFor(toISODate(new Date()), invoiceCard.closingDay)
     : monthOf(new Date());
 
   // Editing a paid one-off item also changes its entry (history, invoice, balances).
@@ -158,7 +177,8 @@ function BillForm({ params, editing }: BillFormProps) {
       name: values.name,
       amount: displayToAPI(values.amount),
       // A quota has no due date of its own: it is reserved for its whole invoice or month.
-      dueDay: isQuota ? 1 : Number(values.dueDay),
+      dueDay: isQuota || noDueDay ? 1 : Number(values.dueDay),
+      noDueDay,
       kind: isQuota ? "quota" : "fixed",
       accountId,
       subcategoryId: values.subcategoryId || null,
@@ -188,9 +208,9 @@ function BillForm({ params, editing }: BillFormProps) {
         render={({ field: { onChange, value } }) => (
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: "row", gap: 7 }}>
-              <Chip label={quotaCard ? "Toda fatura" : "Todo mês"} selected={!value} onPress={() => onChange("")} />
+              <Chip label={invoiceCard ? "Toda fatura" : "Todo mês"} selected={!value} onPress={() => onChange("")} />
               <Chip
-                label={quotaCard ? "Só uma fatura" : "Só um mês"}
+                label={invoiceCard ? "Só uma fatura" : "Só um mês"}
                 selected={!!value}
                 onPress={() => onChange(value || currentPeriod)}
               />
@@ -198,7 +218,7 @@ function BillForm({ params, editing }: BillFormProps) {
             {value ? (
               <View style={{ marginTop: 10 }}>
                 <MonthStepper
-                  label={quotaCard ? `Fatura de ${formatMonth(value)}` : formatMonth(value)}
+                  label={invoiceCard ? `Fatura de ${formatMonth(value)}` : formatMonth(value)}
                   onPrevious={() => onChange(addMonths(value, -1))}
                   onNext={() => onChange(addMonths(value, 1))}
                 />
@@ -207,6 +227,29 @@ function BillForm({ params, editing }: BillFormProps) {
           </View>
         )}
       />
+      {canBeDateless ? (
+        <Controller
+          control={control}
+          name="noDueDay"
+          render={({ field: { onChange, value } }) => (
+            <View style={{ flexDirection: "row", gap: 7, marginBottom: 16 }}>
+              <Chip label="Com dia" selected={!value} onPress={() => onChange(false)} />
+              <Chip
+                label={chosenCard ? "Sem data, só a fatura" : "Sem data, só o mês"}
+                selected={!!value}
+                onPress={() => {
+                  onChange(true);
+                  // On a card the month becomes an invoice: start at the open one, not a closed one.
+                  const openInvoice = chosenCard?.closingDay
+                    ? invoiceMonthFor(toISODate(new Date()), chosenCard.closingDay)
+                    : null;
+                  if (openInvoice && onceMonth && onceMonth < openInvoice) setValue("onceMonth", openInvoice);
+                }}
+              />
+            </View>
+          )}
+        />
+      ) : null}
       {isIncome ? null : (
         <Controller
           control={control}
@@ -278,7 +321,7 @@ function BillForm({ params, editing }: BillFormProps) {
         name="amount"
         render={({ field: { onChange, value } }) => <CurrencyInput value={value} onChange={onChange} error={errors.amount?.message} />}
       />
-      {isQuota ? null : (
+      {isQuota || noDueDay ? null : (
         <Controller
           control={control}
           name="dueDay"
@@ -295,7 +338,9 @@ function BillForm({ params, editing }: BillFormProps) {
       )}
       {onceMonth && !isQuota ? (
         <Text style={{ fontSize: 12, color: palette.accent, marginTop: -8, marginBottom: 16, lineHeight: 17 }}>
-          {oneOffLandingText(onceMonth, Number(watch("dueDay")) || 1, accounts.find((a) => a.id === accountId), isIncome)}
+          {noDueDay
+            ? datelessLandingText(onceMonth, chosenCard)
+            : oneOffLandingText(onceMonth, Number(watch("dueDay")) || 1, accounts.find((a) => a.id === accountId), isIncome)}
         </Text>
       ) : null}
       <Controller

@@ -89,6 +89,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
 
     @desc "Quota in the invoice model; false = quota from before it (matched by subcategory, calendar month)"
     field :per_invoice, :boolean
+    @desc "One-off with no day: due on the last purchase day of its invoice (card) or month"
+    field :no_due_day, :boolean
     @desc "expense | income"
     field :direction, :string
     @desc "YYYY-MM when it happens only in that month"
@@ -525,6 +527,8 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       arg(:due_day, non_null(:integer))
       arg(:account_id, non_null(:id))
       arg(:subcategory_id, :id)
+      @desc "One-off with no day: once_month is the invoice (card) or month it falls in"
+      arg(:no_due_day, :boolean)
       resolve(&Finance.create_bill/3)
     end
 
@@ -542,6 +546,7 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
       arg(:due_day, :integer)
       arg(:account_id, :id)
       arg(:subcategory_id, :id)
+      arg(:no_due_day, :boolean)
       resolve(&Finance.update_bill/3)
     end
 

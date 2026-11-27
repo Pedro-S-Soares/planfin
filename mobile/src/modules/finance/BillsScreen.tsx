@@ -172,6 +172,7 @@ export function BillsScreen() {
                     name: bill.name ?? "",
                     isCard,
                     isIncome: bill.direction === "income",
+                    isPlanned: !!bill.noDueDay,
                   })
                 }
                 onAddPurchase={() =>

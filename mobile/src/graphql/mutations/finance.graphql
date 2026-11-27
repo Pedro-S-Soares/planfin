@@ -112,6 +112,7 @@ mutation CreateRecurringBill(
   $onceMonth: String
   $lastMonth: String
   $kind: String
+  $noDueDay: Boolean
 ) {
   createRecurringBill(
     name: $name
@@ -123,6 +124,7 @@ mutation CreateRecurringBill(
     onceMonth: $onceMonth
     lastMonth: $lastMonth
     kind: $kind
+    noDueDay: $noDueDay
   ) {
     id
   }
@@ -139,6 +141,7 @@ mutation UpdateRecurringBill(
   $onceMonth: String
   $lastMonth: String
   $kind: String
+  $noDueDay: Boolean
 ) {
   updateRecurringBill(
     id: $id
@@ -151,6 +154,7 @@ mutation UpdateRecurringBill(
     onceMonth: $onceMonth
     lastMonth: $lastMonth
     kind: $kind
+    noDueDay: $noDueDay
   ) {
     id
   }

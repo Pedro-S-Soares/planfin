@@ -123,6 +123,7 @@ query RecurringBills {
     id
     kind
     perInvoice
+    noDueDay
     name
     amount
     dueDay
@@ -157,6 +158,7 @@ query BillOccurrences($month: String!, $today: String) {
       id
       kind
       perInvoice
+      noDueDay
       name
       amount
       dueDay

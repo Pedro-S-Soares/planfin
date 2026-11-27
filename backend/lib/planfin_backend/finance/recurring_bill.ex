@@ -40,6 +40,9 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     # Quota in the invoice model (purchases chosen explicitly). False: a quota from
     # before it, still matched by subcategory and calendar month (see Finance.Quotas).
     field :per_invoice, :boolean, default: false
+    # A planned one-off without a day: it belongs to the invoice `once_month` of its
+    # card (or to that month off a card) and is realized by registering the purchase.
+    field :no_due_day, :boolean, default: false
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :account, PlanfinBackend.Finance.Account
@@ -64,7 +67,8 @@ defmodule PlanfinBackend.Finance.RecurringBill do
       :last_month,
       :kind,
       :partner_income,
-      :per_invoice
+      :per_invoice,
+      :no_due_day
     ])
     |> update_change(:once_month, &first_of_month/1)
     |> update_change(:last_month, &first_of_month/1)
@@ -76,6 +80,17 @@ defmodule PlanfinBackend.Finance.RecurringBill do
     |> validate_inclusion(:direction, ["expense", "income"])
     |> validate_inclusion(:kind, ["fixed", "quota"])
     |> validate_quota()
+    |> validate_no_due_day()
+  end
+
+  # Only a one-off expense can go without a day.
+  defp validate_no_due_day(changeset) do
+    if get_field(changeset, :no_due_day) and
+         (is_nil(get_field(changeset, :once_month)) or get_field(changeset, :kind) == "quota") do
+      add_error(changeset, :no_due_day, "only a one-off item can have no day")
+    else
+      changeset
+    end
   end
 
   defp first_of_month(nil), do: nil

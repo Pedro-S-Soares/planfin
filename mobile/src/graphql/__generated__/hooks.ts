@@ -466,6 +466,8 @@ export type RecurringBill = {
   /** YYYY-MM: last month of a recurring item; null when it has no end */
   lastMonth?: Maybe<Scalars['String']['output']>;
   name?: Maybe<Scalars['String']['output']>;
+  /** One-off with no day: due on the last purchase day of its invoice (card) or month */
+  noDueDay?: Maybe<Scalars['Boolean']['output']>;
   /** YYYY-MM when it happens only in that month */
   onceMonth?: Maybe<Scalars['String']['output']>;
   /** Quota in the invoice model; false = quota from before it (matched by subcategory, calendar month) */
@@ -640,6 +642,7 @@ export type RootMutationTypeCreateRecurringBillArgs = {
   kind?: InputMaybe<Scalars['String']['input']>;
   lastMonth?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
+  noDueDay?: InputMaybe<Scalars['Boolean']['input']>;
   onceMonth?: InputMaybe<Scalars['String']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
 };
@@ -915,6 +918,7 @@ export type RootMutationTypeUpdateRecurringBillArgs = {
   kind?: InputMaybe<Scalars['String']['input']>;
   lastMonth?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
+  noDueDay?: InputMaybe<Scalars['Boolean']['input']>;
   onceMonth?: InputMaybe<Scalars['String']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
 };
@@ -1425,6 +1429,7 @@ export type CreateRecurringBillMutationVariables = Exact<{
   onceMonth?: InputMaybe<Scalars['String']['input']>;
   lastMonth?: InputMaybe<Scalars['String']['input']>;
   kind?: InputMaybe<Scalars['String']['input']>;
+  noDueDay?: InputMaybe<Scalars['Boolean']['input']>;
 }>;
 
 
@@ -1441,6 +1446,7 @@ export type UpdateRecurringBillMutationVariables = Exact<{
   onceMonth?: InputMaybe<Scalars['String']['input']>;
   lastMonth?: InputMaybe<Scalars['String']['input']>;
   kind?: InputMaybe<Scalars['String']['input']>;
+  noDueDay?: InputMaybe<Scalars['Boolean']['input']>;
 }>;
 
 
@@ -1728,7 +1734,7 @@ export type FinancePanelQuery = { __typename?: 'RootQueryType', financePanel?: {
 export type RecurringBillsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type RecurringBillsQuery = { __typename?: 'RootQueryType', recurringBills?: Array<{ __typename?: 'RecurringBill', id?: string | null, kind?: string | null, perInvoice?: boolean | null, name?: string | null, amount?: string | null, dueDay?: number | null, direction?: string | null, onceMonth?: string | null, lastMonth?: string | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null> | null };
+export type RecurringBillsQuery = { __typename?: 'RootQueryType', recurringBills?: Array<{ __typename?: 'RecurringBill', id?: string | null, kind?: string | null, perInvoice?: boolean | null, noDueDay?: boolean | null, name?: string | null, amount?: string | null, dueDay?: number | null, direction?: string | null, onceMonth?: string | null, lastMonth?: string | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null> | null };
 
 export type BillOccurrencesQueryVariables = Exact<{
   month: Scalars['String']['input'];
@@ -1736,7 +1742,7 @@ export type BillOccurrencesQueryVariables = Exact<{
 }>;
 
 
-export type BillOccurrencesQuery = { __typename?: 'RootQueryType', billOccurrences?: Array<{ __typename?: 'BillOccurrence', month?: string | null, dueDate?: string | null, nextDueDate?: string | null, paidOn?: string | null, status?: string | null, note?: string | null, amount?: string | null, quotaSpent?: string | null, expenseId?: string | null, bill?: { __typename?: 'RecurringBill', id?: string | null, kind?: string | null, perInvoice?: boolean | null, name?: string | null, amount?: string | null, dueDay?: number | null, direction?: string | null, onceMonth?: string | null, lastMonth?: string | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null } | null> | null };
+export type BillOccurrencesQuery = { __typename?: 'RootQueryType', billOccurrences?: Array<{ __typename?: 'BillOccurrence', month?: string | null, dueDate?: string | null, nextDueDate?: string | null, paidOn?: string | null, status?: string | null, note?: string | null, amount?: string | null, quotaSpent?: string | null, expenseId?: string | null, bill?: { __typename?: 'RecurringBill', id?: string | null, kind?: string | null, perInvoice?: boolean | null, noDueDay?: boolean | null, name?: string | null, amount?: string | null, dueDay?: number | null, direction?: string | null, onceMonth?: string | null, lastMonth?: string | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, categoryId?: string | null } | null } | null } | null> | null };
 
 export type FinancialSettingsQueryVariables = Exact<{
   today?: InputMaybe<Scalars['String']['input']>;
@@ -3043,7 +3049,7 @@ export type AssignEntriesToAccountMutationHookResult = ReturnType<typeof useAssi
 export type AssignEntriesToAccountMutationResult = Apollo.MutationResult<AssignEntriesToAccountMutation>;
 export type AssignEntriesToAccountMutationOptions = Apollo.BaseMutationOptions<AssignEntriesToAccountMutation, AssignEntriesToAccountMutationVariables>;
 export const CreateRecurringBillDocument = gql`
-    mutation CreateRecurringBill($name: String!, $amount: String!, $dueDay: Int!, $accountId: ID!, $subcategoryId: ID, $direction: String, $onceMonth: String, $lastMonth: String, $kind: String) {
+    mutation CreateRecurringBill($name: String!, $amount: String!, $dueDay: Int!, $accountId: ID!, $subcategoryId: ID, $direction: String, $onceMonth: String, $lastMonth: String, $kind: String, $noDueDay: Boolean) {
   createRecurringBill(
     name: $name
     amount: $amount
@@ -3054,6 +3060,7 @@ export const CreateRecurringBillDocument = gql`
     onceMonth: $onceMonth
     lastMonth: $lastMonth
     kind: $kind
+    noDueDay: $noDueDay
   ) {
     id
   }
@@ -3083,6 +3090,7 @@ export type CreateRecurringBillMutationFn = Apollo.MutationFunction<CreateRecurr
  *      onceMonth: // value for 'onceMonth'
  *      lastMonth: // value for 'lastMonth'
  *      kind: // value for 'kind'
+ *      noDueDay: // value for 'noDueDay'
  *   },
  * });
  */
@@ -3094,7 +3102,7 @@ export type CreateRecurringBillMutationHookResult = ReturnType<typeof useCreateR
 export type CreateRecurringBillMutationResult = Apollo.MutationResult<CreateRecurringBillMutation>;
 export type CreateRecurringBillMutationOptions = Apollo.BaseMutationOptions<CreateRecurringBillMutation, CreateRecurringBillMutationVariables>;
 export const UpdateRecurringBillDocument = gql`
-    mutation UpdateRecurringBill($id: ID!, $name: String, $amount: String, $dueDay: Int, $accountId: ID, $subcategoryId: ID, $direction: String, $onceMonth: String, $lastMonth: String, $kind: String) {
+    mutation UpdateRecurringBill($id: ID!, $name: String, $amount: String, $dueDay: Int, $accountId: ID, $subcategoryId: ID, $direction: String, $onceMonth: String, $lastMonth: String, $kind: String, $noDueDay: Boolean) {
   updateRecurringBill(
     id: $id
     name: $name
@@ -3106,6 +3114,7 @@ export const UpdateRecurringBillDocument = gql`
     onceMonth: $onceMonth
     lastMonth: $lastMonth
     kind: $kind
+    noDueDay: $noDueDay
   ) {
     id
   }
@@ -3136,6 +3145,7 @@ export type UpdateRecurringBillMutationFn = Apollo.MutationFunction<UpdateRecurr
  *      onceMonth: // value for 'onceMonth'
  *      lastMonth: // value for 'lastMonth'
  *      kind: // value for 'kind'
+ *      noDueDay: // value for 'noDueDay'
  *   },
  * });
  */
@@ -4659,6 +4669,7 @@ export const RecurringBillsDocument = gql`
     id
     kind
     perInvoice
+    noDueDay
     name
     amount
     dueDay
@@ -4729,6 +4740,7 @@ export const BillOccurrencesDocument = gql`
       id
       kind
       perInvoice
+      noDueDay
       name
       amount
       dueDay
