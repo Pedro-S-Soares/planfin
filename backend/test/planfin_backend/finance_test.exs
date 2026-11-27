@@ -191,7 +191,8 @@ defmodule PlanfinBackend.FinanceTest do
             order_by: e.installment_number
         )
 
-      assert Enum.map(parcels, & &1.date) == [~D[2026-10-02], ~D[2026-11-02], ~D[2026-12-02]]
+      # Parcel 1 on the purchase date; the next ones on their invoice's opening day.
+      assert Enum.map(parcels, & &1.date) == [~D[2026-10-02], ~D[2026-10-05], ~D[2026-11-05]]
       assert Enum.map(parcels, & &1.counts_in_budget) == [true, false, false]
       assert Enum.all?(tl(parcels), &is_nil(&1.period_id))
 
