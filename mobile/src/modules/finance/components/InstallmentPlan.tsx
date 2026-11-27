@@ -5,7 +5,8 @@ import { IconButton } from "../../../components/ui/IconButton";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { toISODate } from "../../../lib/date";
 import { space } from "../../../theme";
-import { addMonths, formatMoney, formatMonth, invoiceDueDate } from "../format";
+import { addMonths, formatMoney, invoiceDueDate } from "../format";
+import { invoiceMonthLabel } from "../invoice-label";
 import { FormLabel } from "./FormLabel";
 
 const COUNTS = [1, 2, 3, 4, 5, 6, 8, 10, 12, 18, 24];
@@ -39,6 +40,7 @@ export function InstallmentPlan({
   closingDay,
   dueDay,
 }: InstallmentPlanProps) {
+  const label = (month: string) => invoiceMonthLabel(month, { closingDay, dueDay });
   const { currency } = useCurrency();
   const money = (v: number) => formatMoney(v, currency.symbol);
   const parcel = count > 1 && !perInstallment ? amount / count : amount;
@@ -78,7 +80,7 @@ export function InstallmentPlan({
               onPress={() => onFirstInvoiceChange(addMonths(firstInvoice, -1))}
             />
             <AppText variant="label" tone="accent" style={styles.month}>
-              {formatMonth(firstInvoice)}
+              {invoiceMonthLabel(firstInvoice, { closingDay, dueDay })}
             </AppText>
             <IconButton
               icon="chevron-right"
@@ -97,8 +99,8 @@ export function InstallmentPlan({
             {firstCreated === undefined
               ? "Todas as parcelas já venceram; não há nada para lançar."
               : firstCreated === 1
-                ? `Parcelas nas faturas de ${formatMonth(firstInvoice)} a ${formatMonth(addMonths(firstInvoice, count - 1))}.`
-                : `Serão lançadas as parcelas ${firstCreated} a ${count} (${formatMonth(addMonths(firstInvoice, firstCreated - 1))} a ${formatMonth(addMonths(firstInvoice, count - 1))}). As parcelas 1 a ${firstCreated - 1} já venceram e ficam de fora.`}
+                ? `Parcelas nas faturas de ${label(firstInvoice)} a ${label(addMonths(firstInvoice, count - 1))}.`
+                : `Serão lançadas as parcelas ${firstCreated} a ${count} (${label(addMonths(firstInvoice, firstCreated - 1))} a ${label(addMonths(firstInvoice, count - 1))}). As parcelas 1 a ${firstCreated - 1} já venceram e ficam de fora.`}
           </AppText>
           <AppText variant="caption" style={styles.note}>
             {isRetroactive

@@ -6,7 +6,8 @@ import { Block } from "../../../components/ui/Block";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { useSetInvoiceGoalMutation } from "../../../graphql/__generated__/hooks";
 import { displayToAPI, formatCents, parseCents } from "../../../lib/currency";
-import { formatMoney, formatMonth, toNumber } from "../format";
+import { formatMoney, toNumber } from "../format";
+import { invoiceMonthLabel, type InvoiceCard } from "../invoice-label";
 import { palette, radius } from "../../../theme";
 import { Text } from "../../../components/ui/Text";
 
@@ -14,6 +15,8 @@ type HistoryInvoice = { month: string; total: number; status: string };
 
 type InvoiceHistoryProps = {
   cardId: string;
+  /** The card's closing and due days, to name invoices by their due month. */
+  card?: InvoiceCard;
   goal: string | null | undefined;
   /** Oldest first, up to the current (open) invoice. */
   invoices: HistoryInvoice[];
@@ -22,7 +25,7 @@ type InvoiceHistoryProps = {
 const CHART_HEIGHT = 120;
 
 /** Invoice totals month by month against the optional goal. */
-export function InvoiceHistory({ cardId, goal, invoices }: InvoiceHistoryProps) {
+export function InvoiceHistory({ cardId, card, goal, invoices }: InvoiceHistoryProps) {
   const { currency } = useCurrency();
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalDraft, setGoalDraft] = useState(formatCents(Math.round(toNumber(goal) * 100)));
@@ -44,7 +47,7 @@ export function InvoiceHistory({ cardId, goal, invoices }: InvoiceHistoryProps) 
       {last ? (
         <Text style={{ fontSize: 13, color: palette.muted, marginTop: 4 }}>
           Última fechada: {formatMoney(last.total, currency.symbol)}
-          {delta !== null ? ` · ${delta <= 0 ? "▼" : "▲"} ${Math.abs(Math.round(delta * 100))}% vs ${formatMonth(previous?.month)}` : ""}
+          {delta !== null ? ` · ${delta <= 0 ? "▼" : "▲"} ${Math.abs(Math.round(delta * 100))}% vs ${invoiceMonthLabel(previous?.month, card)}` : ""}
         </Text>
       ) : null}
 
@@ -85,7 +88,7 @@ export function InvoiceHistory({ cardId, goal, invoices }: InvoiceHistoryProps) 
       <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
         {invoices.map((i) => (
           <Text key={i.month} style={{ flex: 1, textAlign: "center", fontSize: 12, color: palette.muted }}>
-            {formatMonth(i.month).slice(0, 3)}
+            {invoiceMonthLabel(i.month, card).slice(0, 3)}
           </Text>
         ))}
       </View>

@@ -10,8 +10,9 @@ import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { AccountPicker } from "./components/AccountPicker";
 import { FormLabel } from "./components/FormLabel";
-import { formatMonth, toNumber } from "./format";
+import { toNumber } from "./format";
 import { useFinancialAccounts } from "./use-financial-accounts";
+import { invoiceMonthLabel } from "./invoice-label";
 import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
@@ -44,7 +45,7 @@ export function PayInvoiceScreen() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: palette.sheet }} contentContainerStyle={{ padding: 18 }}>
-      <Text style={{ fontSize: 14, color: palette.muted, marginBottom: 16 }}>Fatura de {formatMonth(params.month)}</Text>
+      <Text style={{ fontSize: 14, color: palette.muted, marginBottom: 16 }}>Fatura de {invoiceMonthLabel(params.month, accounts.find((a) => a.id === params.cardId))}</Text>
       <FormLabel>Valor pago</FormLabel>
       <CurrencyInput value={amount} onChange={setAmount} autoFocus />
       <AccountPicker label="Pago com" accounts={accounts} value={from} onChange={setFrom} kinds={["checking", "allowance", "reserve"]} />

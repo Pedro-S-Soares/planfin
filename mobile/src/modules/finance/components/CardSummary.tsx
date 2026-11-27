@@ -4,7 +4,8 @@ import { InlineError } from "../../../components/ui/InlineError";
 import { useCurrency } from "../../../context/CurrencyContext";
 import { useInvoicesQuery } from "../../../graphql/__generated__/hooks";
 import { toISODate } from "../../../lib/date";
-import { formatMoney, formatMonth, formatShortDate, isInvoiceStatus, toNumber } from "../format";
+import { formatMoney, formatShortDate, isInvoiceStatus, toNumber } from "../format";
+import { invoiceMonthLabel } from "../invoice-label";
 import type { FinancialAccount } from "../use-financial-accounts";
 import { StatusPill } from "./StatusPill";
 import { palette, radius } from "../../../theme";
@@ -63,7 +64,7 @@ export function CardSummary({ card, onOpen, onOpenInvoice, onPay }: CardSummaryP
             <View style={{ backgroundColor: palette.paper, borderRadius: radius.control, padding: 12 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>
-                  A PAGAR · {formatMonth(toPay.month)}
+                  A PAGAR · {invoiceMonthLabel(toPay.month, card)}
                 </Text>
                 {isInvoiceStatus(toPay.status) ? <StatusPill status={toPay.status} /> : null}
               </View>
@@ -79,7 +80,7 @@ export function CardSummary({ card, onOpen, onOpenInvoice, onPay }: CardSummaryP
           {current ? (
             <TouchableOpacity onPress={() => onOpenInvoice(current.month ?? "")} activeOpacity={0.8}>
               <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>
-                Fatura aberta · {formatMonth(current.month)}
+                Fatura aberta · {invoiceMonthLabel(current.month, card)}
               </Text>
               <Text style={{ fontSize: 20, fontWeight: "800", color: palette.ink, marginTop: 2 }}>
                 {formatMoney(current.total, currency.symbol)}

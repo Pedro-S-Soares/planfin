@@ -24,6 +24,7 @@ import { AccountPicker } from "./components/AccountPicker";
 import { FormLabel } from "./components/FormLabel";
 import { addMonths, formatMonth, formatShortDate, invoiceDueDate, invoiceMonthFor, monthOf, toNumber } from "./format";
 import { toISODate } from "../../lib/date";
+import { invoiceMonthLabel } from "./invoice-label";
 import { defaultSpendingAccountId, useFinancialAccounts, type FinancialAccount } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
 import { categoryColor, palette } from "../../theme";
@@ -43,7 +44,7 @@ function oneOffLandingText(month: string, day: number, account: FinancialAccount
     const invoiceMonth = invoiceMonthFor(date, account.closingDay);
     const due = invoiceDueDate(invoiceMonth, account.closingDay, account.dueDay);
     const closing = `${invoiceMonth}-${String(account.closingDay).padStart(2, "0")}`;
-    return `Compra em ${when}: entra na fatura que fecha em ${formatShortDate(closing)} e vence em ${formatShortDate(due)}.`;
+    return `Compra em ${when}: entra na fatura de ${invoiceMonthLabel(invoiceMonth, account)}, que fecha em ${formatShortDate(closing)} e vence em ${formatShortDate(due)}.`;
   }
   return `Sai da conta em ${when}.`;
 }
@@ -55,7 +56,7 @@ function datelessLandingText(month: string, account: FinancialAccount | undefine
     const start = `${addMonths(month, -1)}-${String(account.closingDay).padStart(2, "0")}`;
     const lastDay = toISODate(new Date(new Date(`${closing}T12:00:00`).getTime() - 86400000));
     const due = invoiceDueDate(month, account.closingDay, account.dueDay);
-    return `Planejada na fatura de ${formatMonth(month)} (compras de ${formatShortDate(start)} a ${formatShortDate(lastDay)}, vence ${formatShortDate(due)}). Conta no planejamento dessa fatura até você lançar a compra.`;
+    return `Planejada na fatura de ${invoiceMonthLabel(month, account)} (compras de ${formatShortDate(start)} a ${formatShortDate(lastDay)}, vence ${formatShortDate(due)}). Conta no planejamento dessa fatura até você lançar a compra.`;
   }
   return `Planejada para ${formatMonth(month)}, sem dia. Conta no planejamento até você registrar o pagamento.`;
 }
@@ -64,7 +65,11 @@ function datelessLandingText(month: string, account: FinancialAccount | undefine
 function lastOccurrenceText(month: string, day: number, account: FinancialAccount | undefined, isIncome: boolean, isQuota: boolean) {
   const [year, mon] = month.split("-").map(Number);
   const date = `${month}-${String(Math.min(day, new Date(year, mon, 0).getDate())).padStart(2, "0")}`;
-  const stops = `A partir de ${formatMonth(addMonths(month, 1))} não entra mais.`;
+  const isCardQuota = isQuota && account?.kind === "credit_card";
+  const stops = isCardQuota
+    ? `A partir da fatura de ${invoiceMonthLabel(addMonths(month, 1), account)} não entra mais.`
+    : `A partir de ${formatMonth(addMonths(month, 1))} não entra mais.`;
+  if (isCardQuota) return `Última cota na fatura de ${invoiceMonthLabel(month, account)}. ${stops}`;
   if (isQuota) return `Última cota em ${formatMonth(month)}. ${stops}`;
   if (isIncome) return `Última entrada em ${formatShortDate(date)}/${year}. ${stops}`;
   if (account?.kind === "credit_card" && account.closingDay && account.dueDay) {
@@ -218,7 +223,7 @@ function BillForm({ params, editing }: BillFormProps) {
             {value ? (
               <View style={{ marginTop: 10 }}>
                 <MonthStepper
-                  label={invoiceCard ? `Fatura de ${formatMonth(value)}` : formatMonth(value)}
+                  label={invoiceCard ? `Fatura de ${invoiceMonthLabel(value, invoiceCard)}` : formatMonth(value)}
                   onPrevious={() => onChange(addMonths(value, -1))}
                   onNext={() => onChange(addMonths(value, 1))}
                 />
@@ -291,7 +296,11 @@ function BillForm({ params, editing }: BillFormProps) {
               {value ? (
                 <>
                   <View style={{ marginTop: 10 }}>
-                    <MonthStepper label={formatMonth(value)} onPrevious={() => onChange(addMonths(value, -1))} onNext={() => onChange(addMonths(value, 1))} />
+                    <MonthStepper
+                      label={quotaCard ? `Fatura de ${invoiceMonthLabel(value, quotaCard)}` : formatMonth(value)}
+                      onPrevious={() => onChange(addMonths(value, -1))}
+                      onNext={() => onChange(addMonths(value, 1))}
+                    />
                   </View>
                   <Text style={{ fontSize: 12, color: palette.muted, marginTop: 6, lineHeight: 17 }}>
                     {lastOccurrenceText(value, Number(watch("dueDay")) || 1, accounts.find((a) => a.id === accountId), isIncome, isQuota)}

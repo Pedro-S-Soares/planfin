@@ -18,10 +18,12 @@ import { layout, palette, space } from "../../theme";
 import { AdjustInvoiceTotal } from "./components/AdjustInvoiceTotal";
 import { StatusPill } from "./components/StatusPill";
 import { InvoiceQuotas } from "./components/InvoiceQuotas";
+import { invoiceMonthLabel } from "./invoice-label";
+import { useFinancialAccounts } from "./use-financial-accounts";
 import { groupInvoiceByDay } from "./invoice-days";
 import { EntrySheet } from "../history/components/EntrySheet";
 import { CLOSED_SHEET, createEntryState, editEntryState, type EntrySheetState } from "../history/entry-sheet";
-import { formatMonth, formatShortDate, isInvoiceStatus, toNumber } from "./format";
+import { formatShortDate, isInvoiceStatus, toNumber } from "./format";
 import type { AppStackParamList } from "../../../App";
 import { useSessionState } from "../../lib/session-state";
 import { CategoryFilterRow } from "../history/components/CategoryFilterRow";
@@ -58,6 +60,8 @@ export function InvoiceScreen() {
   const [sheet, setSheet] = useState<EntrySheetState>(CLOSED_SHEET);
   const [categoryFilter, setCategoryFilter] = useSessionState<CategoryFilter>(`invoice-category-${params.cardId}`, ALL_CATEGORIES);
   const categories = useFilterCategories();
+  const { cards } = useFinancialAccounts();
+  const card = cards.find((c) => c.id === params.cardId);
 
   if (loading && !data) return <ActivityIndicator color={palette.accent} style={styles.loading} />;
   if (error || !data?.invoice) {
@@ -101,7 +105,7 @@ export function InvoiceScreen() {
     <ScrollView style={styles.root} contentContainerStyle={styles.content}>
       <Block style={styles.summary}>
         <View style={styles.summaryTitle}>
-          <AppText variant="label">Fatura de {formatMonth(invoice.month)}</AppText>
+          <AppText variant="label">Fatura de {invoiceMonthLabel(invoice.month, card)}</AppText>
           {isInvoiceStatus(invoice.status) ? <StatusPill status={invoice.status} /> : null}
         </View>
         <MoneyText amount={invoice.total} variant="amount" style={styles.total} />

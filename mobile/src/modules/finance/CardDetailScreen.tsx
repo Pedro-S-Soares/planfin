@@ -59,7 +59,7 @@ export function CardDetailScreen() {
         </Text>
       ) : null}
 
-      {history.length > 0 ? <InvoiceHistory cardId={params.cardId} goal={card?.invoiceGoal} invoices={history} /> : null}
+      {history.length > 0 ? <InvoiceHistory cardId={params.cardId} card={card} goal={card?.invoiceGoal} invoices={history} /> : null}
 
       <Block padding={16} style={{ marginBottom: 12 }}>
         <Text style={{ fontSize: 12, fontWeight: "700", color: palette.muted }}>Faturas</Text>
@@ -75,6 +75,7 @@ export function CardDetailScreen() {
               total={inv.total}
               dueDate={inv.dueDate}
               status={inv.status}
+              card={card}
               onPress={() => navigation.navigate("Invoice", { cardId: params.cardId, month: inv.month ?? "" })}
             />
           ))

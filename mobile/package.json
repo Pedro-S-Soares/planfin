@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "build": "expo export --platform web",
     "codegen": "graphql-codegen --config codegen.ts",
-    "codegen:watch": "graphql-codegen --config codegen.ts --watch"
+    "codegen:watch": "graphql-codegen --config codegen.ts --watch",
+    "test:unit": "node -r sucrase/register --test src/modules/finance/invoice-label.test.ts"
   },
   "dependencies": {
     "@absinthe/socket": "^0.2.1",
@@ -49,6 +50,7 @@
     "@graphql-codegen/typescript-react-apollo": "^4.4.1",
     "@types/react": "~19.1.0",
     "babel-preset-expo": "~54.0.10",
+    "sucrase": "^3.35.1",
     "typescript": "~5.9.2"
   },
   "private": true,
