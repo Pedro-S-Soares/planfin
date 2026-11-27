@@ -82,7 +82,9 @@ defmodule PlanfinBackend.Expenses do
   end
 
   # Card purchase in `count` parcels. Parcel k lands on the invoice
-  # `first_invoice + k - 1` (default: the invoice of the purchase date).
+  # `first_invoice + k - 1` (default: the invoice of the purchase date): parcel 1
+  # keeps the purchase date, the next ones are dated on their invoice's opening
+  # day, as the bank shows them (see Finance.Installments).
   # Parcels on invoices already due before `today` were paid outside the app
   # and are not created; the rest keep their real numbering (k/N).
   # Only parcel 1 of a purchase made in the current invoice can count in the
@@ -118,7 +120,15 @@ defmodule PlanfinBackend.Expenses do
             parcel_attrs =
               attrs
               |> Map.put(:amount, Enum.at(amounts, number - 1))
-              |> Map.put(:date, Calendar.shift_date(base_date, number - 1))
+              |> Map.put(
+                :date,
+                PlanfinBackend.Finance.Installments.parcel_date(
+                  card,
+                  first_invoice,
+                  number,
+                  base_date
+                )
+              )
               |> Map.put(:installment_group_id, group_uuid)
               |> Map.put(:installment_number, number)
               |> Map.put(:installment_count, count)
@@ -314,12 +324,27 @@ defmodule PlanfinBackend.Expenses do
           |> Expense.changeset(attrs)
           |> Repo.update()
           |> case do
-            {:ok, updated} -> {:ok, preload_entry(updated)}
-            {:error, changeset} -> {:error, changeset}
+            {:ok, updated} ->
+              realign_later_parcels(expense, updated)
+              {:ok, preload_entry(updated)}
+
+            {:error, changeset} ->
+              {:error, changeset}
           end
         end
     end
   end
+
+  # The first parcel decides the invoices of the next ones: when its date moves,
+  # they follow.
+  defp realign_later_parcels(
+         %Expense{installment_number: 1, date: old},
+         %Expense{date: new} = updated
+       )
+       when old != new,
+       do: PlanfinBackend.Finance.Installments.realign_purchase(updated.installment_group_id)
+
+  defp realign_later_parcels(_before, _after), do: :ok
 
   defp fetch_new_account(group_id, attrs) do
     if Map.has_key?(attrs, :account_id),

@@ -69,8 +69,20 @@ defmodule PlanfinBackend.Finance do
       Map.take(attrs, [:name, :closing_day, :due_day, :owner_user_id, :invoice_goal])
     )
     |> Repo.update()
+    |> tap(&realign_installments(account, &1))
     |> preload_owner()
   end
+
+  # A new closing day moves the invoice boundaries: the parcels of the card's
+  # purchases are re-dated so each stays on its invoice (settled ones untouched).
+  defp realign_installments(
+         %Account{kind: "credit_card", closing_day: old},
+         {:ok, %Account{closing_day: new} = card}
+       )
+       when old != new,
+       do: PlanfinBackend.Finance.Installments.realign_card(card.id)
+
+  defp realign_installments(_before, _result), do: :ok
 
   @doc "Makes `account` the group's primary checking account."
   def make_primary(%Account{kind: "checking"} = account) do
