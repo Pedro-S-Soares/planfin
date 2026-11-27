@@ -45,6 +45,7 @@ query Invoice($cardId: ID!, $month: String!, $today: String) {
     paid
     remaining
     status
+    quotas { quotaId name planned spent remaining excess startsOn endsOn }
     entries {
       id
       amount
@@ -56,6 +57,7 @@ query Invoice($cardId: ID!, $month: String!, $today: String) {
       installmentNumber
       installmentCount
       source
+      quotaId
       account {
         id
         name
@@ -291,6 +293,8 @@ fragment CycleBlockFields on CycleBlock {
   otherCards { label date amount }
   fixedBills { label date amount }
   oneOffBills { label date amount }
+  quotas { quotaId label date amount planned spent remaining }
+  quotaLeftovers { label date amount }
   carry { label date amount }
   result
   goalStart
@@ -303,5 +307,18 @@ query CyclePlan($today: String) {
     cardName
     current { ...CycleBlockFields }
     next { ...CycleBlockFields }
+  }
+}
+
+query QuotasFor($date: String!) {
+  quotasFor(date: $date) {
+    quotaId
+    name
+    accountId
+    accountName
+    month
+    planned
+    spent
+    remaining
   }
 }

@@ -65,6 +65,23 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
   const oneOffBills = lines(block.oneOffBills);
   const days = block.days ?? 0;
   const carry = block.carry;
+  const quotaLeftovers = lines(block.quotaLeftovers);
+  // Open invoice: what is left of each quota (the purchases are already in the invoice);
+  // next invoice: the full value.
+  const quotas: PlanLine[] = (block.quotas ?? []).flatMap((q) =>
+    q
+      ? [
+          {
+            label:
+              block.status === "open"
+                ? `${q.label} · gasto ${money(q.spent)} de ${money(q.planned)}`
+                : q.label ?? "",
+            date: q.date,
+            amount: q.amount,
+          },
+        ]
+      : [],
+  );
   const carryAmount = toNumber(carry?.amount);
 
   return (
@@ -86,6 +103,15 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
           hideCount
         />
       ) : null}
+      {quotaLeftovers.length > 0 ? (
+        <View style={{ marginTop: -4, marginBottom: 8, gap: 2 }}>
+          {quotaLeftovers.map((l) => (
+            <Text key={l.label} style={{ fontSize: 12, color: palette.income }}>
+              inclui {l.label}: {money(l.amount)}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       <PlanSection sign="+" title={block.status === "next" ? "Salário" : "Salário a receber"} items={lines(block.salaries)} emptyText="—" />
       <PartnerIncomeRow month={salaryMonth} partner={block.partner} />
       <PlanSection sign="+" title="Entradas previstas" items={incomes} emptyText="—" />
@@ -100,6 +126,13 @@ export function CycleBlockCard({ block, cardName, today, footer, isTakingPurchas
           title={block.status === "open" ? "Fixas que ainda entram na fatura" : `Fixas no ${cardName}`}
           items={lines(block.cardBills)}
           emptyText="—"
+        />
+      ) : null}
+      {quotas.length > 0 ? (
+        <PlanSection
+          sign="−"
+          title={block.status === "open" ? "Cotas da fatura (o que resta)" : "Cotas da fatura"}
+          items={quotas}
         />
       ) : null}
       {installments.length > 0 ? <PlanSection sign="−" title={`Parcelas no ${cardName}`} items={installments} /> : null}

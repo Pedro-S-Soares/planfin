@@ -20,6 +20,8 @@ defmodule PlanfinBackend.Expenses.Expense do
     field :installment_number, :integer
     field :installment_count, :integer
     field :source, :string
+    # Spending quota this purchase uses (chosen by the user); see Finance.Quotas.
+    field :quota_backfilled, :boolean, default: false
 
     belongs_to :group, PlanfinBackend.Groups.Group
     belongs_to :created_by, PlanfinBackend.Accounts.User, type: :integer
@@ -27,6 +29,7 @@ defmodule PlanfinBackend.Expenses.Expense do
     belongs_to :budget_day, PlanfinBackend.Periods.BudgetDay, type: :binary_id
     belongs_to :subcategory, PlanfinBackend.Categories.Subcategory, type: :binary_id
     belongs_to :account, PlanfinBackend.Finance.Account, type: :binary_id
+    belongs_to :quota, PlanfinBackend.Finance.RecurringBill, type: :binary_id
 
     timestamps()
   end
@@ -61,7 +64,8 @@ defmodule PlanfinBackend.Expenses.Expense do
       :installment_group_id,
       :installment_number,
       :installment_count,
-      :source
+      :source,
+      :quota_id
     ])
     |> validate_required([:amount, :date, :group_id, :created_by_id])
     |> validate_inclusion(:type, ["expense", "income"])

@@ -68,6 +68,8 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
 
     @desc "What produced the entry: salary | bill | one_off_bill | benefit_credit | invoice_adjustment | anticipation | null"
     field :source, :string
+    @desc "Spending quota the purchase uses (null: none)"
+    field :quota_id, :id
   end
 
   object :expense_account do
@@ -180,6 +182,8 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:first_invoice, :string)
       arg(:amount_per_installment, :boolean)
       arg(:counts_in_budget, :boolean)
+      @desc "Spending quota the purchase uses"
+      arg(:quota_id, :id)
       @desc "Client's today, to skip installments whose invoice is already due"
       arg(:today, :string)
       resolve(&Budget.create_expense/3)
@@ -194,6 +198,8 @@ defmodule PlanfinBackendWeb.Schema.BudgetTypes do
       arg(:subcategory_id, :id)
       arg(:type, :string)
       arg(:account_id, :id)
+      @desc "Spending quota the purchase uses; null takes it out of its quota"
+      arg(:quota_id, :id)
       resolve(&Budget.update_expense/3)
     end
 

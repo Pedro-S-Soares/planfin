@@ -142,6 +142,10 @@ export type CycleBlock = {
   otherCards?: Maybe<Array<Maybe<PlanItem>>>;
   partner?: Maybe<PartnerIncome>;
   purchaseStart?: Maybe<Scalars['String']['output']>;
+  /** Next block: what the quotas of the closed invoice did not use (already inside the carry) */
+  quotaLeftovers?: Maybe<Array<Maybe<PlanItem>>>;
+  /** Spending quotas of the cycle card's invoice: what is left (open) or the full value (next) */
+  quotas?: Maybe<Array<Maybe<PlanQuota>>>;
   /** open: still spendable until the closing; closed: left over; next: free for variable spending */
   result?: Maybe<Scalars['String']['output']>;
   salaries?: Maybe<Array<Maybe<PlanItem>>>;
@@ -192,7 +196,9 @@ export type Expense = {
   installmentNumber?: Maybe<Scalars['Int']['output']>;
   isExtra?: Maybe<Scalars['Boolean']['output']>;
   note?: Maybe<Scalars['String']['output']>;
-  /** What produced the entry: salary | bill | benefit_credit | invoice_adjustment | anticipation | null */
+  /** Spending quota the purchase uses (null: none) */
+  quotaId?: Maybe<Scalars['ID']['output']>;
+  /** What produced the entry: salary | bill | one_off_bill | benefit_credit | invoice_adjustment | anticipation | null */
   source?: Maybe<Scalars['String']['output']>;
   subcategory?: Maybe<Subcategory>;
   type?: Maybe<Scalars['String']['output']>;
@@ -315,6 +321,8 @@ export type Invoice = {
   /** YYYY-MM */
   month?: Maybe<Scalars['String']['output']>;
   paid?: Maybe<Scalars['String']['output']>;
+  /** Spending quotas of this card for this invoice */
+  quotas?: Maybe<Array<Maybe<QuotaStatus>>>;
   remaining?: Maybe<Scalars['String']['output']>;
   startDate?: Maybe<Scalars['String']['output']>;
   /** open | closed | partial | paid | overdue */
@@ -411,6 +419,37 @@ export type PlanItem = {
   amount?: Maybe<Scalars['String']['output']>;
   date?: Maybe<Scalars['String']['output']>;
   label?: Maybe<Scalars['String']['output']>;
+};
+
+/** A quota line of the plan: amount counted in the plan, and the quota's numbers */
+export type PlanQuota = {
+  __typename?: 'PlanQuota';
+  amount?: Maybe<Scalars['String']['output']>;
+  date?: Maybe<Scalars['String']['output']>;
+  label?: Maybe<Scalars['String']['output']>;
+  planned?: Maybe<Scalars['String']['output']>;
+  quotaId?: Maybe<Scalars['ID']['output']>;
+  remaining?: Maybe<Scalars['String']['output']>;
+  spent?: Maybe<Scalars['String']['output']>;
+};
+
+/** A spending quota in one invoice (card) or month: planned, spent, left */
+export type QuotaStatus = {
+  __typename?: 'QuotaStatus';
+  accountId?: Maybe<Scalars['ID']['output']>;
+  accountName?: Maybe<Scalars['String']['output']>;
+  endsOn?: Maybe<Scalars['String']['output']>;
+  /** Spent beyond the quota (came out of the daily budget) */
+  excess?: Maybe<Scalars['String']['output']>;
+  /** YYYY-MM: the invoice month (card) or calendar month */
+  month?: Maybe<Scalars['String']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
+  planned?: Maybe<Scalars['String']['output']>;
+  quotaId?: Maybe<Scalars['ID']['output']>;
+  remaining?: Maybe<Scalars['String']['output']>;
+  spent?: Maybe<Scalars['String']['output']>;
+  /** First and last purchase day of the quota's month */
+  startsOn?: Maybe<Scalars['String']['output']>;
 };
 
 export type RecurringBill = {
@@ -557,6 +596,7 @@ export type RootMutationTypeCreateExpenseArgs = {
   installments?: InputMaybe<Scalars['Int']['input']>;
   isExtra?: InputMaybe<Scalars['Boolean']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
+  quotaId?: InputMaybe<Scalars['ID']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
   type?: InputMaybe<Scalars['String']['input']>;
@@ -822,6 +862,7 @@ export type RootMutationTypeUpdateExpenseArgs = {
   id: Scalars['ID']['input'];
   isExtra?: InputMaybe<Scalars['Boolean']['input']>;
   note?: InputMaybe<Scalars['String']['input']>;
+  quotaId?: InputMaybe<Scalars['ID']['input']>;
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
   type?: InputMaybe<Scalars['String']['input']>;
 };
@@ -915,6 +956,8 @@ export type RootQueryType = {
   myGroups?: Maybe<Array<Maybe<Group>>>;
   periodSummary?: Maybe<PeriodSummary>;
   periods?: Maybe<Array<Maybe<Period>>>;
+  /** Quotas a purchase dated `date` can use (with what is left in its invoice/month) */
+  quotasFor?: Maybe<Array<Maybe<QuotaStatus>>>;
   recurringBills?: Maybe<Array<Maybe<RecurringBill>>>;
   reserveStatus?: Maybe<ReserveStatus>;
 };
@@ -1027,6 +1070,11 @@ export type RootQueryTypeMonthPlanArgs = {
 
 export type RootQueryTypePeriodSummaryArgs = {
   periodId: Scalars['ID']['input'];
+};
+
+
+export type RootQueryTypeQuotasForArgs = {
+  date: Scalars['String']['input'];
 };
 
 
@@ -1197,6 +1245,7 @@ export type CreateExpenseMutationVariables = Exact<{
   firstInvoice?: InputMaybe<Scalars['String']['input']>;
   amountPerInstallment?: InputMaybe<Scalars['Boolean']['input']>;
   countsInBudget?: InputMaybe<Scalars['Boolean']['input']>;
+  quotaId?: InputMaybe<Scalars['ID']['input']>;
   today?: InputMaybe<Scalars['String']['input']>;
 }>;
 
@@ -1212,10 +1261,11 @@ export type UpdateExpenseMutationVariables = Exact<{
   subcategoryId?: InputMaybe<Scalars['ID']['input']>;
   type?: InputMaybe<Scalars['String']['input']>;
   accountId?: InputMaybe<Scalars['ID']['input']>;
+  quotaId?: InputMaybe<Scalars['ID']['input']>;
 }>;
 
 
-export type UpdateExpenseMutation = { __typename?: 'RootMutationType', updateExpense?: { __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, isExtra?: boolean | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null };
+export type UpdateExpenseMutation = { __typename?: 'RootMutationType', updateExpense?: { __typename?: 'Expense', id?: string | null, quotaId?: string | null, amount?: string | null, date?: string | null, note?: string | null, isExtra?: boolean | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null } | null } | null };
 
 export type DeleteExpenseMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -1656,7 +1706,7 @@ export type InvoiceQueryVariables = Exact<{
 }>;
 
 
-export type InvoiceQuery = { __typename?: 'RootQueryType', invoice?: { __typename?: 'Invoice', cardId?: string | null, month?: string | null, startDate?: string | null, closingDate?: string | null, dueDate?: string | null, total?: string | null, paid?: string | null, remaining?: string | null, status?: string | null, entries?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, type?: string | null, isExtra?: boolean | null, countsInBudget?: boolean | null, installmentNumber?: number | null, installmentCount?: number | null, source?: string | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, category?: { __typename?: 'SubcategoryCategory', id?: string | null, name?: string | null, icon?: string | null } | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null> | null } | null };
+export type InvoiceQuery = { __typename?: 'RootQueryType', invoice?: { __typename?: 'Invoice', cardId?: string | null, month?: string | null, startDate?: string | null, closingDate?: string | null, dueDate?: string | null, total?: string | null, paid?: string | null, remaining?: string | null, status?: string | null, quotas?: Array<{ __typename?: 'QuotaStatus', quotaId?: string | null, name?: string | null, planned?: string | null, spent?: string | null, remaining?: string | null, excess?: string | null, startsOn?: string | null, endsOn?: string | null } | null> | null, entries?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, type?: string | null, isExtra?: boolean | null, countsInBudget?: boolean | null, installmentNumber?: number | null, installmentCount?: number | null, source?: string | null, quotaId?: string | null, account?: { __typename?: 'ExpenseAccount', id?: string | null, name?: string | null, kind?: string | null } | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, category?: { __typename?: 'SubcategoryCategory', id?: string | null, name?: string | null, icon?: string | null } | null } | null, createdBy?: { __typename?: 'User', id?: string | null, email?: string | null } | null } | null> | null } | null };
 
 export type AccountMovementsQueryVariables = Exact<{
   accountId: Scalars['ID']['input'];
@@ -1722,14 +1772,21 @@ export type InstallmentsDueQueryVariables = Exact<{
 
 export type InstallmentsDueQuery = { __typename?: 'RootQueryType', installmentsDue?: Array<{ __typename?: 'Invoice', cardId?: string | null, month?: string | null, dueDate?: string | null, status?: string | null, entries?: Array<{ __typename?: 'Expense', id?: string | null, amount?: string | null, date?: string | null, note?: string | null, installmentNumber?: number | null, installmentCount?: number | null, subcategory?: { __typename?: 'Subcategory', id?: string | null, name?: string | null, category?: { __typename?: 'SubcategoryCategory', id?: string | null, name?: string | null } | null } | null } | null> | null } | null> | null };
 
-export type CycleBlockFieldsFragment = { __typename?: 'CycleBlock', status?: string | null, invoiceMonth?: string | null, purchaseStart?: string | null, lastPurchaseDate?: string | null, dueDate?: string | null, salaryDate?: string | null, windowEnd?: string | null, balance?: string | null, hasPrimary?: boolean | null, result?: string | null, goalStart?: string | null, days?: number | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, partner?: { __typename?: 'PartnerIncome', month?: string | null, label?: string | null, date?: string | null, amount?: string | null, received?: boolean | null } | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoice?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, otherCards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, carry?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null };
+export type CycleBlockFieldsFragment = { __typename?: 'CycleBlock', status?: string | null, invoiceMonth?: string | null, purchaseStart?: string | null, lastPurchaseDate?: string | null, dueDate?: string | null, salaryDate?: string | null, windowEnd?: string | null, balance?: string | null, hasPrimary?: boolean | null, result?: string | null, goalStart?: string | null, days?: number | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, partner?: { __typename?: 'PartnerIncome', month?: string | null, label?: string | null, date?: string | null, amount?: string | null, received?: boolean | null } | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoice?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, otherCards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, quotas?: Array<{ __typename?: 'PlanQuota', quotaId?: string | null, label?: string | null, date?: string | null, amount?: string | null, planned?: string | null, spent?: string | null, remaining?: string | null } | null> | null, quotaLeftovers?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, carry?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null };
 
 export type CyclePlanQueryVariables = Exact<{
   today?: InputMaybe<Scalars['String']['input']>;
 }>;
 
 
-export type CyclePlanQuery = { __typename?: 'RootQueryType', cyclePlan?: { __typename?: 'CyclePlan', cardId?: string | null, cardName?: string | null, current?: { __typename?: 'CycleBlock', status?: string | null, invoiceMonth?: string | null, purchaseStart?: string | null, lastPurchaseDate?: string | null, dueDate?: string | null, salaryDate?: string | null, windowEnd?: string | null, balance?: string | null, hasPrimary?: boolean | null, result?: string | null, goalStart?: string | null, days?: number | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, partner?: { __typename?: 'PartnerIncome', month?: string | null, label?: string | null, date?: string | null, amount?: string | null, received?: boolean | null } | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoice?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, otherCards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, carry?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null } | null, next?: { __typename?: 'CycleBlock', status?: string | null, invoiceMonth?: string | null, purchaseStart?: string | null, lastPurchaseDate?: string | null, dueDate?: string | null, salaryDate?: string | null, windowEnd?: string | null, balance?: string | null, hasPrimary?: boolean | null, result?: string | null, goalStart?: string | null, days?: number | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, partner?: { __typename?: 'PartnerIncome', month?: string | null, label?: string | null, date?: string | null, amount?: string | null, received?: boolean | null } | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoice?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, otherCards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, carry?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null } | null } | null };
+export type CyclePlanQuery = { __typename?: 'RootQueryType', cyclePlan?: { __typename?: 'CyclePlan', cardId?: string | null, cardName?: string | null, current?: { __typename?: 'CycleBlock', status?: string | null, invoiceMonth?: string | null, purchaseStart?: string | null, lastPurchaseDate?: string | null, dueDate?: string | null, salaryDate?: string | null, windowEnd?: string | null, balance?: string | null, hasPrimary?: boolean | null, result?: string | null, goalStart?: string | null, days?: number | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, partner?: { __typename?: 'PartnerIncome', month?: string | null, label?: string | null, date?: string | null, amount?: string | null, received?: boolean | null } | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoice?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, otherCards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, quotas?: Array<{ __typename?: 'PlanQuota', quotaId?: string | null, label?: string | null, date?: string | null, amount?: string | null, planned?: string | null, spent?: string | null, remaining?: string | null } | null> | null, quotaLeftovers?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, carry?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null } | null, next?: { __typename?: 'CycleBlock', status?: string | null, invoiceMonth?: string | null, purchaseStart?: string | null, lastPurchaseDate?: string | null, dueDate?: string | null, salaryDate?: string | null, windowEnd?: string | null, balance?: string | null, hasPrimary?: boolean | null, result?: string | null, goalStart?: string | null, days?: number | null, salaries?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, partner?: { __typename?: 'PartnerIncome', month?: string | null, label?: string | null, date?: string | null, amount?: string | null, received?: boolean | null } | null, incomes?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, benefits?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, invoice?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null, cardBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, installments?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, otherCards?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, fixedBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, oneOffBills?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, quotas?: Array<{ __typename?: 'PlanQuota', quotaId?: string | null, label?: string | null, date?: string | null, amount?: string | null, planned?: string | null, spent?: string | null, remaining?: string | null } | null> | null, quotaLeftovers?: Array<{ __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null> | null, carry?: { __typename?: 'PlanItem', label?: string | null, date?: string | null, amount?: string | null } | null } | null } | null };
+
+export type QuotasForQueryVariables = Exact<{
+  date: Scalars['String']['input'];
+}>;
+
+
+export type QuotasForQuery = { __typename?: 'RootQueryType', quotasFor?: Array<{ __typename?: 'QuotaStatus', quotaId?: string | null, name?: string | null, accountId?: string | null, accountName?: string | null, month?: string | null, planned?: string | null, spent?: string | null, remaining?: string | null } | null> | null };
 
 export type MyGroupsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -1824,6 +1881,20 @@ export const CycleBlockFieldsFragmentDoc = gql`
     amount
   }
   oneOffBills {
+    label
+    date
+    amount
+  }
+  quotas {
+    quotaId
+    label
+    date
+    amount
+    planned
+    spent
+    remaining
+  }
+  quotaLeftovers {
     label
     date
     amount
@@ -2223,7 +2294,7 @@ export type UpdatePeriodMutationHookResult = ReturnType<typeof useUpdatePeriodMu
 export type UpdatePeriodMutationResult = Apollo.MutationResult<UpdatePeriodMutation>;
 export type UpdatePeriodMutationOptions = Apollo.BaseMutationOptions<UpdatePeriodMutation, UpdatePeriodMutationVariables>;
 export const CreateExpenseDocument = gql`
-    mutation CreateExpense($amount: String!, $date: String!, $note: String, $isExtra: Boolean, $subcategoryId: ID, $type: String, $accountId: ID, $installments: Int, $firstInvoice: String, $amountPerInstallment: Boolean, $countsInBudget: Boolean, $today: String) {
+    mutation CreateExpense($amount: String!, $date: String!, $note: String, $isExtra: Boolean, $subcategoryId: ID, $type: String, $accountId: ID, $installments: Int, $firstInvoice: String, $amountPerInstallment: Boolean, $countsInBudget: Boolean, $quotaId: ID, $today: String) {
   createExpense(
     amount: $amount
     date: $date
@@ -2236,6 +2307,7 @@ export const CreateExpenseDocument = gql`
     firstInvoice: $firstInvoice
     amountPerInstallment: $amountPerInstallment
     countsInBudget: $countsInBudget
+    quotaId: $quotaId
     today: $today
   ) {
     id
@@ -2282,6 +2354,7 @@ export type CreateExpenseMutationFn = Apollo.MutationFunction<CreateExpenseMutat
  *      firstInvoice: // value for 'firstInvoice'
  *      amountPerInstallment: // value for 'amountPerInstallment'
  *      countsInBudget: // value for 'countsInBudget'
+ *      quotaId: // value for 'quotaId'
  *      today: // value for 'today'
  *   },
  * });
@@ -2294,7 +2367,7 @@ export type CreateExpenseMutationHookResult = ReturnType<typeof useCreateExpense
 export type CreateExpenseMutationResult = Apollo.MutationResult<CreateExpenseMutation>;
 export type CreateExpenseMutationOptions = Apollo.BaseMutationOptions<CreateExpenseMutation, CreateExpenseMutationVariables>;
 export const UpdateExpenseDocument = gql`
-    mutation UpdateExpense($id: ID!, $amount: String, $date: String, $note: String, $isExtra: Boolean, $subcategoryId: ID, $type: String, $accountId: ID) {
+    mutation UpdateExpense($id: ID!, $amount: String, $date: String, $note: String, $isExtra: Boolean, $subcategoryId: ID, $type: String, $accountId: ID, $quotaId: ID) {
   updateExpense(
     id: $id
     amount: $amount
@@ -2304,8 +2377,10 @@ export const UpdateExpenseDocument = gql`
     subcategoryId: $subcategoryId
     type: $type
     accountId: $accountId
+    quotaId: $quotaId
   ) {
     id
+    quotaId
     amount
     date
     note
@@ -2340,6 +2415,7 @@ export type UpdateExpenseMutationFn = Apollo.MutationFunction<UpdateExpenseMutat
  *      subcategoryId: // value for 'subcategoryId'
  *      type: // value for 'type'
  *      accountId: // value for 'accountId'
+ *      quotaId: // value for 'quotaId'
  *   },
  * });
  */
@@ -4380,6 +4456,16 @@ export const InvoiceDocument = gql`
     paid
     remaining
     status
+    quotas {
+      quotaId
+      name
+      planned
+      spent
+      remaining
+      excess
+      startsOn
+      endsOn
+    }
     entries {
       id
       amount
@@ -4391,6 +4477,7 @@ export const InvoiceDocument = gql`
       installmentNumber
       installmentCount
       source
+      quotaId
       account {
         id
         name
@@ -5064,6 +5151,56 @@ export type CyclePlanQueryHookResult = ReturnType<typeof useCyclePlanQuery>;
 export type CyclePlanLazyQueryHookResult = ReturnType<typeof useCyclePlanLazyQuery>;
 export type CyclePlanSuspenseQueryHookResult = ReturnType<typeof useCyclePlanSuspenseQuery>;
 export type CyclePlanQueryResult = Apollo.QueryResult<CyclePlanQuery, CyclePlanQueryVariables>;
+export const QuotasForDocument = gql`
+    query QuotasFor($date: String!) {
+  quotasFor(date: $date) {
+    quotaId
+    name
+    accountId
+    accountName
+    month
+    planned
+    spent
+    remaining
+  }
+}
+    `;
+
+/**
+ * __useQuotasForQuery__
+ *
+ * To run a query within a React component, call `useQuotasForQuery` and pass it any options that fit your needs.
+ * When your component renders, `useQuotasForQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useQuotasForQuery({
+ *   variables: {
+ *      date: // value for 'date'
+ *   },
+ * });
+ */
+export function useQuotasForQuery(baseOptions: Apollo.QueryHookOptions<QuotasForQuery, QuotasForQueryVariables> & ({ variables: QuotasForQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<QuotasForQuery, QuotasForQueryVariables>(QuotasForDocument, options);
+      }
+export function useQuotasForLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<QuotasForQuery, QuotasForQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<QuotasForQuery, QuotasForQueryVariables>(QuotasForDocument, options);
+        }
+// @ts-ignore
+export function useQuotasForSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<QuotasForQuery, QuotasForQueryVariables>): Apollo.UseSuspenseQueryResult<QuotasForQuery, QuotasForQueryVariables>;
+export function useQuotasForSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<QuotasForQuery, QuotasForQueryVariables>): Apollo.UseSuspenseQueryResult<QuotasForQuery | undefined, QuotasForQueryVariables>;
+export function useQuotasForSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<QuotasForQuery, QuotasForQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<QuotasForQuery, QuotasForQueryVariables>(QuotasForDocument, options);
+        }
+export type QuotasForQueryHookResult = ReturnType<typeof useQuotasForQuery>;
+export type QuotasForLazyQueryHookResult = ReturnType<typeof useQuotasForLazyQuery>;
+export type QuotasForSuspenseQueryHookResult = ReturnType<typeof useQuotasForSuspenseQuery>;
+export type QuotasForQueryResult = Apollo.QueryResult<QuotasForQuery, QuotasForQueryVariables>;
 export const MyGroupsDocument = gql`
     query MyGroups {
   myGroups {

@@ -39,6 +39,26 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     @desc "open | closed | partial | paid | overdue"
     field :status, :string
     field :entries, list_of(:expense)
+    @desc "Spending quotas of this card for this invoice"
+    field :quotas, list_of(:quota_status)
+  end
+
+  @desc "A spending quota in one invoice (card) or month: planned, spent, left"
+  object :quota_status do
+    field :quota_id, :id
+    field :name, :string
+    field :account_id, :id
+    field :account_name, :string
+    @desc "YYYY-MM: the invoice month (card) or calendar month"
+    field :month, :string
+    field :planned, :string
+    field :spent, :string
+    field :remaining, :string
+    @desc "Spent beyond the quota (came out of the daily budget)"
+    field :excess, :string
+    @desc "First and last purchase day of the quota's month"
+    field :starts_on, :string
+    field :ends_on, :string
   end
 
   object :account_movement do
@@ -244,6 +264,12 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     @desc "One-off expenses, on accounts and on the cycle card"
     field :one_off_bills, list_of(:plan_item)
 
+    @desc "Spending quotas of the cycle card's invoice: what is left (open) or the full value (next)"
+    field :quotas, list_of(:plan_quota)
+
+    @desc "Next block: what the quotas of the closed invoice did not use (already inside the carry)"
+    field :quota_leftovers, list_of(:plan_item)
+
     @desc "Next block only: what is left (or missing) after the closed invoice, carried into this cycle"
     field :carry, :plan_item
 
@@ -266,6 +292,17 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :label, :string
     field :date, :string
     field :amount, :string
+  end
+
+  @desc "A quota line of the plan: amount counted in the plan, and the quota's numbers"
+  object :plan_quota do
+    field :quota_id, :id
+    field :label, :string
+    field :date, :string
+    field :amount, :string
+    field :planned, :string
+    field :spent, :string
+    field :remaining, :string
   end
 
   @desc "This month: today until the eve of next month's salary"
@@ -319,6 +356,12 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :cycle_plan, :cycle_plan do
       arg(:today, :string)
       resolve(&Finance.cycle_plan/3)
+    end
+
+    @desc "Quotas a purchase dated `date` can use (with what is left in its invoice/month)"
+    field :quotas_for, list_of(:quota_status) do
+      arg(:date, non_null(:string))
+      resolve(&Finance.quotas_for/3)
     end
 
     field :month_plan, :month_plan do

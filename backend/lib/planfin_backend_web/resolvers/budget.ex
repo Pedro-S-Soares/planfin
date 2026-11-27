@@ -261,6 +261,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       account_id: Map.get(args, :account_id),
       installments: Map.get(args, :installments, 1),
       counts_in_budget: Map.get(args, :counts_in_budget, true),
+      quota_id: Map.get(args, :quota_id),
       first_invoice: first_invoice,
       amount_per_installment: Map.get(args, :amount_per_installment, false),
       today: parse_today(args)
@@ -281,6 +282,9 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
       {:error, :installments_require_card} ->
         {:error, "Installments require a credit card"}
+
+      {:error, :quota_not_found} ->
+        {:error, "Quota not found"}
 
       {:error, :invalid_installments} ->
         {:error, "Invalid number of installments"}
@@ -338,6 +342,7 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       |> maybe_put(:subcategory_id, args[:subcategory_id], & &1)
       |> maybe_put(:type, args[:type], & &1)
       |> put_if_present(:account_id, args)
+      |> put_if_present(:quota_id, args)
 
     case Expenses.update_expense(group.id, id, attrs) do
       {:ok, expense} ->
@@ -348,6 +353,9 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
 
       {:error, :account_not_found} ->
         {:error, "Account not found"}
+
+      {:error, :quota_not_found} ->
+        {:error, "Quota not found"}
 
       {:error, :date_out_of_range} ->
         {:error, "Date is out of the period range"}
@@ -573,7 +581,8 @@ defmodule PlanfinBackendWeb.Resolvers.Budget do
       installment_group_id: expense.installment_group_id,
       installment_number: expense.installment_number,
       installment_count: expense.installment_count,
-      source: expense.source
+      source: expense.source,
+      quota_id: expense.quota_id
     }
   end
 

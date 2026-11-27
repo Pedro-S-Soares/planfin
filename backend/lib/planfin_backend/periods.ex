@@ -127,6 +127,7 @@ defmodule PlanfinBackend.Periods do
 
     (total_expenses || Decimal.new("0"))
     |> Decimal.sub(total_income || Decimal.new("0"))
+    |> Decimal.add(PlanfinBackend.Finance.Quotas.excess_between(group_id, date, date))
   end
 
   # Returns the earlier of two dates.
@@ -293,6 +294,13 @@ defmodule PlanfinBackend.Periods do
 
     (total_expenses || Decimal.new("0"))
     |> Decimal.sub(total_income || Decimal.new("0"))
+    |> Decimal.add(
+      PlanfinBackend.Finance.Quotas.excess_between(
+        period.group_id,
+        period.start_date,
+        period.end_date
+      )
+    )
   end
 
   @doc """

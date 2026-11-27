@@ -31,7 +31,11 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
   const spent = toNumber(o.quotaSpent);
   const isIncome = o.bill?.direction === "income";
   const recurrence = isQuota
-    ? "cota do mês"
+    ? o.bill?.onceMonth
+      ? `cota só ${isCard ? "da fatura de" : "de"} ${formatMonth(o.bill.onceMonth)}`
+      : isCard
+        ? "cota de toda fatura"
+        : "cota do mês"
     : o.bill?.onceMonth
       ? `só em ${formatMonth(o.bill.onceMonth)}`
       : `todo dia ${o.bill?.dueDay}${o.bill?.lastMonth ? ` até ${formatMonth(o.bill.lastMonth)}` : ""}`;
@@ -40,8 +44,8 @@ export function BillRow({ occurrence: o, onEdit, onPay, onUndo, onSkip, onUnskip
   const next = o.bill?.onceMonth ? "" : isLastMonth ? " · última" : ` · próxima ${formatShortDate(o.nextDueDate)}`;
   const quotaText =
     spent > quota
-      ? `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · passou ${formatMoney(spent - quota, currency.symbol)}`
-      : `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · ${isPaid ? "mês encerrado" : `resta ${formatMoney(quota - spent, currency.symbol)}`}`;
+      ? `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · passou ${formatMoney(spent - quota, currency.symbol)}, saiu do limite diário`
+      : `Gasto ${formatMoney(spent, currency.symbol)} de ${formatMoney(quota, currency.symbol)} · ${isPaid ? (isCard ? "fatura fechada" : "mês encerrado") : `resta ${formatMoney(quota - spent, currency.symbol)}`}`;
   const statusText = isSkipped
     ? `Pulada neste mês${o.note ? `: ${o.note}` : ""}${next}`
     : isQuota

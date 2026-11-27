@@ -25,9 +25,10 @@ defmodule PlanfinBackend.Expenses do
       `counts_in_budget`; parcels 2..N are dated one month apart and are
       budget commitments of later cycles (`counts_in_budget: false`).
     * `:counts_in_budget` — `false` records a movement outside the daily/period
-      budget; it needs no active period. An expense in the subcategory of a
-      spending quota (`RecurringBill` with `kind: "quota"`) is always outside:
-      the quota was already reserved among the fixed bills.
+      budget; it needs no active period.
+    * `:quota_id` — the spending quota the purchase uses (see `Finance.Quotas`).
+      A purchase in a quota is outside the daily budget: the quota was already
+      planned; only what goes beyond it reaches the daily allowance.
 
   Budget entries follow the original rules: the active period must exist and
   contain the date, and the entry is linked to its period and budget_day.
@@ -37,11 +38,14 @@ defmodule PlanfinBackend.Expenses do
     attrs = atomize(attrs)
     installments = Map.get(attrs, :installments) || 1
 
+    attrs = drop_quota_unless_expense(attrs)
+
     with {:ok, account} <- fetch_account(group_id, Map.get(attrs, :account_id)),
-         :ok <- validate_installments(installments, account) do
+         :ok <- validate_installments(installments, account),
+         :ok <- validate_quota(group_id, Map.get(attrs, :quota_id)) do
       counts_in_budget =
         counts_in_budget?(Map.get(attrs, :counts_in_budget, true), account) and
-          not quota_expense?(group_id, attrs)
+          is_nil(Map.get(attrs, :quota_id))
 
       options = Map.take(attrs, [:first_invoice, :amount_per_installment, :today])
 
@@ -240,9 +244,17 @@ defmodule PlanfinBackend.Expenses do
 
   defp validate_installments(_n, _account), do: {:error, :invalid_installments}
 
-  defp quota_expense?(group_id, attrs) do
-    Map.get(attrs, :type, "expense") == "expense" and
-      PlanfinBackend.Finance.Bills.quota_subcategory?(group_id, Map.get(attrs, :subcategory_id))
+  # Only purchases use a quota; a refund or an income never does.
+  defp drop_quota_unless_expense(attrs) do
+    if Map.get(attrs, :type, "expense") == "expense",
+      do: attrs,
+      else: Map.put(attrs, :quota_id, nil)
+  end
+
+  defp validate_quota(group_id, quota_id) do
+    if PlanfinBackend.Finance.Quotas.valid?(group_id, quota_id),
+      do: :ok,
+      else: {:error, :quota_not_found}
   end
 
   defp counts_in_budget?(_requested, %{kind: kind})
@@ -285,7 +297,11 @@ defmodule PlanfinBackend.Expenses do
         {:error, :not_found}
 
       expense ->
+        attrs = quota_update_attrs(expense, attrs)
+
         with {:ok, account} <- fetch_new_account(group_id, attrs),
+             :ok <- validate_quota(group_id, Map.get(attrs, :quota_id)),
+             {:ok, attrs} <- left_quota_attrs(expense, attrs),
              {:ok, attrs} <- budget_link_attrs(expense, attrs, account) do
           expense
           |> Expense.changeset(attrs)
@@ -304,13 +320,40 @@ defmodule PlanfinBackend.Expenses do
       else: {:ok, :unchanged}
   end
 
-  defp moved_into_quota?(expense, attrs) do
-    Map.has_key?(attrs, :subcategory_id) and
-      quota_expense?(expense.group_id, %{
-        type: Map.get(attrs, :type, expense.type),
-        subcategory_id: attrs.subcategory_id
-      })
+  # An entry that becomes an income leaves its quota.
+  defp quota_update_attrs(expense, attrs) do
+    if Map.get(attrs, :type, expense.type) == "expense",
+      do: attrs,
+      else: Map.put(attrs, :quota_id, nil)
   end
+
+  defp moved_into_quota?(attrs), do: not is_nil(Map.get(attrs, :quota_id))
+
+  # A purchase taken out of its quota comes back to the daily budget when the
+  # active period holds its date; otherwise (an old purchase) it stays outside.
+  defp left_quota_attrs(%Expense{quota_id: nil}, attrs), do: {:ok, attrs}
+
+  defp left_quota_attrs(
+         %Expense{counts_in_budget: false, source: nil, installment_group_id: nil} = expense,
+         %{quota_id: nil} = attrs
+       ) do
+    date = Map.get(attrs, :date, expense.date)
+
+    with {:ok, period} <- get_active_period_or_error(expense.group_id),
+         :ok <- validate_date_in_range(date, period),
+         {:ok, budget_day} <- get_or_create_budget_day(period, date) do
+      {:ok,
+       Map.merge(attrs, %{
+         counts_in_budget: true,
+         period_id: period.id,
+         budget_day_id: budget_day.id
+       })}
+    else
+      _ -> {:ok, attrs}
+    end
+  end
+
+  defp left_quota_attrs(_expense, attrs), do: {:ok, attrs}
 
   # Budget entries must stay inside their period and keep the right budget_day;
   # moving one to an allowance/reserve account takes it out of the budget.
@@ -320,7 +363,7 @@ defmodule PlanfinBackend.Expenses do
 
     cond do
       match?(%{kind: kind} when kind in ["allowance", "reserve"], account) or
-          moved_into_quota?(expense, attrs) ->
+          moved_into_quota?(attrs) ->
         {:ok, Map.merge(attrs, %{counts_in_budget: false, period_id: nil, budget_day_id: nil})}
 
       is_nil(expense.period) ->

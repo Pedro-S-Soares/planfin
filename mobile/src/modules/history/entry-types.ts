@@ -8,6 +8,8 @@ export type EntryFormParams =
       date?: string;
       categoryId?: string;
       subcategoryId?: string;
+      /** Purchase in this spending quota (the "+ Gasto" of a quota). */
+      quotaId?: string;
     }
   | undefined;
 
@@ -23,4 +25,5 @@ export type EntryEditParams = {
   accountId?: string;
   countsInBudget?: boolean;
   installmentCount?: number;
+  quotaId?: string | null;
 };

@@ -47,6 +47,7 @@ type EditableEntry = {
   installmentCount?: number | null;
   subcategory?: { id?: string | null } | null;
   account?: { id?: string | null } | null;
+  quotaId?: string | null;
 };
 
 export function editEntryState(entry: EditableEntry, dayDate: string): EntrySheetState {
@@ -63,6 +64,7 @@ export function editEntryState(entry: EditableEntry, dayDate: string): EntryShee
       accountId: entry.account?.id ?? undefined,
       countsInBudget: entry.countsInBudget ?? undefined,
       installmentCount: entry.installmentCount ?? undefined,
+      quotaId: entry.quotaId ?? null,
     },
   };
 }

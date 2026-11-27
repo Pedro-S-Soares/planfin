@@ -23,6 +23,7 @@ import { billFormSchema } from "./bill-form-schema";
 import { AccountPicker } from "./components/AccountPicker";
 import { FormLabel } from "./components/FormLabel";
 import { addMonths, formatMonth, formatShortDate, invoiceDueDate, invoiceMonthFor, monthOf, toNumber } from "./format";
+import { toISODate } from "../../lib/date";
 import { defaultSpendingAccountId, useFinancialAccounts, type FinancialAccount } from "./use-financial-accounts";
 import type { AppStackParamList } from "../../../App";
 import { categoryColor, palette } from "../../theme";
@@ -136,6 +137,12 @@ function BillForm({ params, editing }: BillFormProps) {
   const defaultAccount = isIncome ? accounts.find((a) => a.isPrimary)?.id ?? null : defaultSpendingAccountId(accounts);
   const accountId = chosenAccount === undefined ? defaultAccount : chosenAccount;
   const subcategories = categories.find((c) => c.id === watch("categoryId"))?.subcategories?.filter((s) => s !== null) ?? [];
+  // A quota on a card belongs to an invoice, not to a calendar month.
+  const quotaCard = isQuota ? accounts.find((a) => a.id === accountId && a.kind === "credit_card") : undefined;
+  const periodWord = quotaCard ? "fatura" : "mês";
+  const currentPeriod = quotaCard?.closingDay
+    ? invoiceMonthFor(toISODate(new Date()), quotaCard.closingDay)
+    : monthOf(new Date());
 
   // Editing a paid one-off item also changes its entry (history, invoice, balances).
   const refetchQueries = MONEY_QUERIES;
@@ -147,11 +154,10 @@ function BillForm({ params, editing }: BillFormProps) {
 
   const onSubmit = (values: BillFormValues) => {
     if (!accountId) return setError("root", { message: isIncome ? "Escolha a conta onde o dinheiro entra" : "Escolha como a despesa é paga" });
-    if (isQuota && !values.subcategoryId) return setError("root", { message: "Escolha a subcategoria dos gastos que entram na cota" });
     const variables = {
       name: values.name,
       amount: displayToAPI(values.amount),
-      // A quota has no due date of its own: it is reserved from the start of the month.
+      // A quota has no due date of its own: it is reserved for its whole invoice or month.
       dueDay: isQuota ? 1 : Number(values.dueDay),
       kind: isQuota ? "quota" : "fixed",
       accountId,
@@ -182,12 +188,20 @@ function BillForm({ params, editing }: BillFormProps) {
         render={({ field: { onChange, value } }) => (
           <View style={{ marginBottom: 16 }}>
             <View style={{ flexDirection: "row", gap: 7 }}>
-              <Chip label="Todo mês" selected={!value} onPress={() => onChange("")} />
-              <Chip label="Só um mês" selected={!!value} onPress={() => onChange(value || monthOf(new Date()))} />
+              <Chip label={quotaCard ? "Toda fatura" : "Todo mês"} selected={!value} onPress={() => onChange("")} />
+              <Chip
+                label={quotaCard ? "Só uma fatura" : "Só um mês"}
+                selected={!!value}
+                onPress={() => onChange(value || currentPeriod)}
+              />
             </View>
             {value ? (
               <View style={{ marginTop: 10 }}>
-                <MonthStepper label={formatMonth(value)} onPrevious={() => onChange(addMonths(value, -1))} onNext={() => onChange(addMonths(value, 1))} />
+                <MonthStepper
+                  label={quotaCard ? `Fatura de ${formatMonth(value)}` : formatMonth(value)}
+                  onPrevious={() => onChange(addMonths(value, -1))}
+                  onNext={() => onChange(addMonths(value, 1))}
+                />
               </View>
             ) : null}
           </View>
@@ -205,8 +219,9 @@ function BillForm({ params, editing }: BillFormProps) {
               </View>
               {value === "quota" ? (
                 <Text style={{ fontSize: 12, color: palette.muted, marginTop: 8, lineHeight: 17 }}>
-                  Um valor reservado no mês e gasto aos poucos, como R$ 350 de unhas. Os gastos da subcategoria escolhida
-                  abaixo vão abatendo a cota e não mexem no limite diário. Nada é lançado sozinho.
+                  Um valor reservado na {periodWord} e gasto aos poucos, como R$ 150 de lavagem do carro. Ao lançar uma
+                  compra, escolha em "Entra na cota": ela abate da cota e não mexe no limite diário. O que passar da cota
+                  sai do limite do dia; o que sobrar volta como dinheiro livre no ciclo seguinte. Nada é lançado sozinho.
                 </Text>
               ) : null}
             </View>
@@ -250,7 +265,7 @@ function BillForm({ params, editing }: BillFormProps) {
           />
         )}
       />
-      <FormLabel>{isQuota ? "Cota do mês" : onceMonth ? "Valor" : "Valor por mês (estimado)"}</FormLabel>
+      <FormLabel>{isQuota ? `Cota da ${periodWord}` : onceMonth ? "Valor" : "Valor por mês (estimado)"}</FormLabel>
       <Controller
         control={control}
         name="amount"
@@ -281,7 +296,7 @@ function BillForm({ params, editing }: BillFormProps) {
         name="accountId"
         render={({ field: { onChange } }) => (
           <AccountPicker
-            label={isIncome ? "Entra na conta" : isQuota ? "Onde costuma ser gasta" : "Como é paga"}
+            label={isIncome ? "Entra na conta" : isQuota ? "Cartão ou conta da cota" : "Como é paga"}
             accounts={accounts}
             value={accountId}
             onChange={onChange}
@@ -300,7 +315,7 @@ function BillForm({ params, editing }: BillFormProps) {
         name="categoryId"
         render={({ field: { onChange, value } }) => (
           <View style={{ marginBottom: 16 }}>
-            <FormLabel>{isQuota ? "Categoria dos gastos da cota" : "Categoria (opcional)"}</FormLabel>
+            <FormLabel>Categoria (opcional)</FormLabel>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7 }}>
               {categories.map((cat) => (
                 <Chip

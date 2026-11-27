@@ -27,6 +27,7 @@ import {
   EntryFormLayout,
 } from "../components/entry-form-parts";
 import type { EntryEditParams } from "../entry-types";
+import { QuotaField } from "../components/QuotaField";
 
 const schema = yup.object({
   amount: yup
@@ -39,6 +40,7 @@ const schema = yup.object({
   categoryId: yup.string().optional(),
   subcategoryId: yup.string().optional(),
   accountId: yup.string().nullable().optional(),
+  quotaId: yup.string().nullable().optional(),
 });
 
 function apiToDisplay(apiAmount: string): string {
@@ -65,6 +67,7 @@ export function EditExpenseForm({ entry, onDone }: EditExpenseFormProps) {
     accountId: initialAccountId,
     countsInBudget,
     installmentCount,
+    quotaId: initialQuotaId,
   } = entry;
   const { accounts } = useFinancialAccounts();
   const isBudgetEntry = countsInBudget !== false;
@@ -83,6 +86,7 @@ export function EditExpenseForm({ entry, onDone }: EditExpenseFormProps) {
       categoryId: categoryId ?? "",
       subcategoryId: subcategoryId ?? "",
       accountId: initialAccountId ?? null,
+      quotaId: initialQuotaId ?? null,
     },
   });
 
@@ -117,6 +121,7 @@ export function EditExpenseForm({ entry, onDone }: EditExpenseFormProps) {
         note: values.note || null,
         subcategoryId: values.subcategoryId || null,
         ...(values.accountId !== (initialAccountId ?? null) ? { accountId: values.accountId ?? null } : {}),
+        ...((values.quotaId ?? null) !== (initialQuotaId ?? null) ? { quotaId: values.quotaId ?? null } : {}),
       },
     });
   };
@@ -170,6 +175,15 @@ export function EditExpenseForm({ entry, onDone }: EditExpenseFormProps) {
           />
         )}
       />
+
+      {installmentCount ? null : (
+        <QuotaField
+          date={watch("date")}
+          value={watch("quotaId") ?? null}
+          onChange={(quotaIdValue) => setValue("quotaId", quotaIdValue)}
+          ownAmount={initialQuotaId && watch("quotaId") === initialQuotaId ? parseFloat(amount) : 0}
+        />
+      )}
 
       <MoreOptions
         summary={installmentCount ? "Parcelas, gasto extra, nota" : "Gasto extra, nota"}
