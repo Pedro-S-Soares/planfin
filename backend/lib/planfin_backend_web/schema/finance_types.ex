@@ -217,6 +217,24 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypes do
     field :free, :string
     @desc "Part of the free money kept because the next salary can't cover what is on it"
     field :shortfall, :string
+    @desc "open | closed | null (no invoice plan): which version of the math applies"
+    field :invoice_status, :string
+    @desc "Result of the invoice plan (current invoice), before the daily goal"
+    field :plan_result, :string
+
+    @desc "Open invoice: last purchase day (eve of the closing); closed: eve of the salary after the one that pays it"
+    field :plan_until, :string
+    @desc "Open invoice: purchase days the daily goal still covers"
+    field :goal_days, :integer
+    @desc "Open invoice: daily goal of the active period"
+    field :goal_daily, :string
+    @desc "Open invoice: goal_days × goal_daily, kept out of the allowance"
+    field :goal_amount, :string
+    @desc "Cash free in the primary account until the eve of the next salary (the cap)"
+    field :cash, :string
+    field :cash_until, :string
+    @desc "True when the allowance is limited by the cash instead of the plan"
+    field :capped, :boolean
     field :amount, :string
     field :can_distribute, :boolean
     @desc "Allowance already transferred in this cycle"

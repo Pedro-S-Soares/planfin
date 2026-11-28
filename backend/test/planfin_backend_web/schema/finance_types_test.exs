@@ -288,6 +288,35 @@ defmodule PlanfinBackendWeb.Schema.FinanceTypesTest do
     assert gql(conn, "query { recurringBills { id } }")["data"]["recurringBills"] == []
   end
 
+  test "allowancePlan exposes the parts of its math", %{conn: conn} do
+    {conn, _user, _group} = setup_conn(conn)
+    {_checking, _card} = create_accounts(conn)
+
+    gql(
+      conn,
+      ~s|mutation { updateFinancialSettings(salaryAmount: "6000.00", today: "#{@today}") { salaryAmount } }|
+    )
+
+    resp =
+      gql(conn, """
+      query { allowancePlan(today: "#{@today}") {
+        free invoiceStatus planResult planUntil goalDays goalDaily goalAmount cash cashUntil capped amount } }
+      """)
+
+    plan = resp["data"]["allowancePlan"]
+    assert plan["invoiceStatus"] == "open"
+    assert plan["goalDaily"] == "50.00"
+    assert is_integer(plan["goalDays"]) and plan["goalDays"] > 0
+    assert plan["cashUntil"] == "2026-10-12"
+    assert is_boolean(plan["capped"])
+    assert is_binary(plan["planUntil"])
+
+    assert Decimal.equal?(
+             Decimal.sub(Decimal.new(plan["planResult"]), Decimal.new(plan["goalAmount"])),
+             Decimal.new(plan["free"])
+           )
+  end
+
   test "salary settings, proposal, panel info and register salary", %{conn: conn} do
     {conn, _user, _group} = setup_conn(conn)
     {_checking, _card} = create_accounts(conn)
