@@ -4,7 +4,7 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
   import PlanfinBackend.AccountsFixtures
 
   alias PlanfinBackend.{Expenses, Finance}
-  alias PlanfinBackend.Finance.{Allowance, Salary}
+  alias PlanfinBackend.Finance.{Allowance, Bills, CyclePlan, Panel, Salary}
 
   # Cycle Sep 12 – Oct 12 (next salary Oct 13). Closing window: Oct 10–12.
   # Month window: today until Nov 12 (eve of the November salary).
@@ -135,6 +135,114 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
       |> Enum.sort()
 
     assert balances == ["500.00", "500.01"]
+  end
+
+  describe "card invoice due after the salary" do
+    # Card closes on the 5th and is due on the 15th; the salary lands on Dec 11
+    # (10th labor business day). On Dec 9 (month closing) the invoice closed on
+    # Dec 5 is still unpaid and due Dec 15, after the salary.
+    @dec_closing ~D[2026-12-09]
+
+    defp setup_after_salary do
+      ctx = setup_group("3000.00")
+      {:ok, _} = Finance.set_balance(ctx.checking, Decimal.new("3000.00"), ~D[2026-12-01])
+      {:ok, _} = Salary.update_settings(ctx.group.id, %{salary_amount: Decimal.new("9000.00")})
+
+      {:ok, _} =
+        Expenses.create_expense(ctx.group.id, ctx.user.id, %{
+          amount: Decimal.new("7000.00"),
+          date: ~D[2026-11-20],
+          account_id: ctx.card.id,
+          counts_in_budget: false
+        })
+
+      {:ok, _} =
+        Bills.create_bill(ctx.group.id, %{
+          name: "Escola",
+          amount: Decimal.new("4000.00"),
+          due_day: 15,
+          account_id: ctx.checking.id
+        })
+
+      backdate_bills(ctx.group.id, ~D[2026-12-01])
+      ctx
+    end
+
+    test "keeps what the invoice and the bills after the salary need" do
+      ctx = setup_after_salary()
+
+      # Until the eve of the salary nothing leaves the account: the cash alone
+      # would offer the whole balance.
+      panel = Panel.build(ctx.group.id, @dec_closing, Salary.horizon(ctx.group.id, @dec_closing))
+      assert Decimal.equal?(panel.free, Decimal.new("3000.00"))
+
+      # 3000 + salary 9000 − invoice 7000 − bill 4000 (Dec 15) = 1000
+      plan = Allowance.build(ctx.group.id, @dec_closing)
+      assert Decimal.equal?(plan.free, Decimal.new("1000.00"))
+      assert Decimal.equal?(plan.amount, Decimal.new("1000.00"))
+      assert plan.can_distribute
+      assert Enum.map(plan.shares, &Decimal.to_string(&1.amount)) == ["500.00", "500.00"]
+    end
+
+    test "after distributing, the next cycle starts with nothing carried" do
+      ctx = setup_after_salary()
+
+      {:ok, after_plan} = Allowance.distribute(ctx.group.id, ctx.user.id, @dec_closing)
+      assert Decimal.equal?(after_plan.distributed, Decimal.new("1000.00"))
+      assert Decimal.equal?(after_plan.amount, Decimal.new("0"))
+
+      assert {:error, :not_available} =
+               Allowance.distribute(ctx.group.id, ctx.user.id, @dec_closing, Decimal.new("1"))
+
+      {:ok, cycle} = CyclePlan.build(ctx.group.id, @dec_closing)
+      assert cycle.current.status == "closed"
+      assert Decimal.equal?(cycle.current.result, Decimal.new("0"))
+      assert Decimal.equal?(cycle.next.carry.amount, Decimal.new("0"))
+    end
+
+    test "a bill due before the salary limits the transfer to the cash left" do
+      ctx = setup_after_salary()
+      {:ok, _} = Salary.update_settings(ctx.group.id, %{salary_amount: Decimal.new("15000.00")})
+
+      {:ok, _} =
+        Bills.create_bill(ctx.group.id, %{
+          name: "IPVA",
+          amount: Decimal.new("2500.00"),
+          due_day: 10,
+          once_month: ~D[2026-12-01],
+          account_id: ctx.checking.id
+        })
+
+      backdate_bills(ctx.group.id, ~D[2026-12-01])
+      plan = Allowance.build(ctx.group.id, @dec_closing)
+      # Plan: 3000 + 15000 − 7000 − 4000 − 2500 = 4500; cash until Dec 10: 3000 − 2500
+      assert Decimal.equal?(plan.free, Decimal.new("4500.00"))
+      assert Decimal.equal?(plan.amount, Decimal.new("500.00"))
+    end
+
+    test "while the invoice is open, the daily goal until the closing is kept" do
+      ctx = setup_group("3000.00")
+
+      {:ok, _} =
+        PlanfinBackend.Periods.create_period(
+          ctx.group.id,
+          %{
+            name: "Meta",
+            start_date: ~D[2026-10-01],
+            end_date: ~D[2026-11-04],
+            daily_limit: Decimal.new("100.00"),
+            total_budget: Decimal.new("3500.00"),
+            status: "active"
+          },
+          ~D[2026-10-01]
+        )
+
+      # Open invoice (closes Nov 5): the goal reserves 100 × 25 days (Oct 11 – Nov 4).
+      plan = Allowance.build(ctx.group.id, @closing)
+      {:ok, cycle} = CyclePlan.build(ctx.group.id, @closing)
+      assert cycle.current.status == "open"
+      assert Decimal.equal?(plan.free, Decimal.sub(cycle.current.result, Decimal.new("2500.00")))
+    end
   end
 
   test "reserve status sums reserve accounts against the goal" do

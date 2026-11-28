@@ -1,29 +1,20 @@
-import type { ReactNode } from "react";
 import { StyleSheet, View } from "react-native";
 import { useCurrency } from "../../context/CurrencyContext";
 import { formatMoney, toNumber } from "../../lib/money";
 import { palette, space } from "../../theme";
 import { AppText } from "./AppText";
 import { BalanceCard, BalanceStat, BalanceStatDivider, BalanceStatRow } from "./BalanceCard";
+import { MoneyText } from "./MoneyText";
 
-interface DailyBalanceCardProps {
-  available: string;
+interface DailyStatsProps {
   spent: string;
   dailyLimit: string;
   extraBudget: string;
   extraSpent: string;
-  /** Secondary lines under the stats (e.g. "Posso gastar"). */
-  footer?: ReactNode;
 }
 
-export function DailyBalanceCard({
-  available,
-  spent,
-  dailyLimit,
-  extraBudget,
-  extraSpent,
-  footer,
-}: DailyBalanceCardProps) {
+/** Today's stats of the daily budget: spent today, the daily goal and the period's extra. */
+export function DailyStats({ spent, dailyLimit, extraBudget, extraSpent }: DailyStatsProps) {
   const { currency } = useCurrency();
   const extraBudgetNum = toNumber(extraBudget);
   const extraSpentNum = toNumber(extraSpent);
@@ -32,14 +23,12 @@ export function DailyBalanceCard({
   const extraProgress = hasExtra ? Math.min(1, Math.max(0, extraSpentNum / extraBudgetNum)) : 0;
 
   return (
-    <BalanceCard title="Disponível hoje" amount={available}>
+    <>
       <BalanceStatRow>
         <BalanceStat label="Gasto hoje" value={spent} />
         <BalanceStatDivider />
-        <BalanceStat label="Limite diário" value={dailyLimit} />
+        <BalanceStat label="Meta diária" value={dailyLimit} />
       </BalanceStatRow>
-
-      {footer}
 
       {hasExtra ? (
         <View style={styles.extraBlock}>
@@ -60,11 +49,37 @@ export function DailyBalanceCard({
           </View>
         </View>
       ) : null}
+    </>
+  );
+}
+
+/** "Disponível hoje" as a secondary figure, inside another card. */
+export function DailyAvailable({ available }: { available: string }) {
+  return (
+    <View style={styles.inline}>
+      <AppText variant="label" tone="muted">Disponível hoje</AppText>
+      <MoneyText amount={available} variant="amount" tone={toNumber(available) < 0 ? "danger" : "ink"} />
+    </View>
+  );
+}
+
+interface DailyBalanceCardProps extends DailyStatsProps {
+  available: string;
+}
+
+/** Hero card of the daily budget, used when there is no invoice plan. */
+export function DailyBalanceCard({ available, ...stats }: DailyBalanceCardProps) {
+  return (
+    <BalanceCard title="Disponível hoje" amount={available}>
+      <DailyStats {...stats} />
     </BalanceCard>
   );
 }
 
 const styles = StyleSheet.create({
+  inline: {
+    marginBottom: space.md,
+  },
   extraBlock: {
     marginTop: space.md,
   },

@@ -17,18 +17,17 @@ import {
 import { AppText } from "../components/ui/AppText";
 import { Block, ListBlock } from "../components/ui/Block";
 import { ChipGroup } from "../components/ui/Chip";
-import { DailyBalanceCard } from "../components/ui/DailyBalanceCard";
+import { DailyAvailable, DailyBalanceCard, DailyStats } from "../components/ui/DailyBalanceCard";
 import { SectionHeader } from "../components/ui/DayHeader";
 import { EmptyState } from "../components/ui/EmptyState";
 import { ExpenseRow } from "../components/ui/ExpenseRow";
 import { InlineError } from "../components/ui/InlineError";
-import { TotalBalanceCard } from "../components/ui/TotalBalanceCard";
+import { TotalAvailable, TotalBalanceCard, TotalStats } from "../components/ui/TotalBalanceCard";
 import { layout, palette, radius, space } from "../theme";
 import { usePageTitle } from "../hooks/usePageTitle";
-import { FinancePanel } from "../modules/finance/components/FinancePanel";
-import { MonthPlanCard } from "../modules/finance/components/MonthPlanCard";
+import { FinanceNotices } from "../modules/finance/components/FinancePanel";
+import { PlanHomeCard } from "../modules/finance/components/PlanHomeCard";
 import { AllowanceCard } from "../modules/finance/components/AllowanceCard";
-import { SpendableLine } from "../modules/finance/components/SpendableLine";
 import { EntrySheet } from "../modules/history/components/EntrySheet";
 import { OptionSheet, type SheetSection } from "../modules/history/components/OptionSheet";
 import {
@@ -150,6 +149,17 @@ export function HomeScreen() {
 
   const todaySpent = Math.max(0, parseFloat(period?.today?.spent ?? "0")).toFixed(2);
 
+  const dailyStats = {
+    spent: todaySpent,
+    dailyLimit: period?.dailyLimit ?? "0.00",
+    extraBudget: period?.extraBudget ?? "0.00",
+    extraSpent: period?.extraSpent ?? "0.00",
+  };
+  const totalStats = {
+    remainingTotal: period?.remainingTotal ?? "0.00",
+    extraRemaining: period?.extraRemaining ?? "0.00",
+  };
+
   const daysLeft = (() => {
     if (!period?.endDate) return null;
     const end = new Date(period.endDate + "T00:00:00");
@@ -214,26 +224,36 @@ export function HomeScreen() {
       ) : null}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* The one hero number: what can be spent today (or in the period, on "Total") */}
+        {/* Notices about the account (cash alert, salary to register) above the one main card */}
+        <FinanceNotices />
+
+        {/* The one main number: what the invoice plan leaves free, with today's budget inside */}
         <View style={styles.viewToggle}>
           <ChipGroup options={BALANCE_VIEWS} value={balanceView} onChange={setBalanceView} />
         </View>
-        {balanceView === "daily" ? (
-          <DailyBalanceCard
-            available={balance}
-            spent={todaySpent}
-            dailyLimit={period?.dailyLimit ?? "0.00"}
-            extraBudget={period?.extraBudget ?? "0.00"}
-            extraSpent={period?.extraSpent ?? "0.00"}
-            footer={<SpendableLine />}
-          />
-        ) : (
-          <TotalBalanceCard
-            remainingTotal={period?.remainingTotal ?? "0.00"}
-            extraRemaining={period?.extraRemaining ?? "0.00"}
-            footer={<SpendableLine />}
-          />
-        )}
+        <PlanHomeCard
+          dailyLimit={period?.dailyLimit}
+          today={
+            balanceView === "daily" ? (
+              <>
+                <DailyAvailable available={balance} />
+                <DailyStats {...dailyStats} />
+              </>
+            ) : (
+              <>
+                <TotalAvailable remainingTotal={totalStats.remainingTotal} />
+                <TotalStats {...totalStats} />
+              </>
+            )
+          }
+          fallback={
+            balanceView === "daily" ? (
+              <DailyBalanceCard available={balance} {...dailyStats} />
+            ) : (
+              <TotalBalanceCard {...totalStats} />
+            )
+          }
+        />
 
         {/* Period: dates and days left in one line, tap to edit */}
         {period ? (
@@ -262,8 +282,6 @@ export function HomeScreen() {
           </Pressable>
         ) : null}
 
-        <FinancePanel />
-        <MonthPlanCard />
         <AllowanceCard />
 
         {/* Today's entries */}

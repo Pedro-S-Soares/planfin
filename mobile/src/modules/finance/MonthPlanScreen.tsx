@@ -9,6 +9,7 @@ import { useCyclePlanQuery } from "../../graphql/__generated__/hooks";
 import { toISODate } from "../../lib/date";
 import { usePageTitle } from "../../hooks/usePageTitle";
 import { CycleBlockCard } from "./components/CycleBlockCard";
+import { FinancePanel } from "./components/FinancePanel";
 import type { AppStackParamList } from "../../../App";
 import { palette } from "../../theme";
 import { Text } from "../../components/ui/Text";
@@ -93,6 +94,8 @@ export function MonthPlanScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: palette.paper }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
       {/* Once the invoice closes, the open one is the cycle being managed: it comes first. */}
       {isCurrentClosed ? [nextBlock, currentBlock] : [currentBlock, nextBlock]}
+      {/* Cash detail: what leaves the main account before the salary (no longer a Home number). */}
+      <FinancePanel />
       <Text style={{ fontSize: 12, color: palette.muted, lineHeight: 17 }}>
         O ciclo segue o fechamento do {cardName}: o que você compra até a véspera do fechamento é pago com o salário do mês
         em que a fatura vence. Troque o cartão do ciclo em Salário e ciclo.

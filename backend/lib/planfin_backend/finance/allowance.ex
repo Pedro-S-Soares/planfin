@@ -2,42 +2,47 @@ defmodule PlanfinBackend.Finance.Allowance do
   @moduledoc """
   Monthly allowance for the couple.
 
-  The allowance is the month's left over from `MonthPlan` (balance + salary
-  still to come + expected income − invoices − boletos until the eve of next
-  month's salary), capped by what is in the primary account right now: money
-  that has not arrived yet can't be transferred. When positive it is split
-  equally between the allowance accounts and moved there out of the primary
-  account. There is no mandatory reserve. Distribution is offered in the last
-  3 days before the next salary (the month closing); a negative left over is
-  shown as the shortfall.
+  The allowance is what the invoice plan (`CyclePlan`) leaves free once every
+  commitment up to the eve of the salary after the one that pays the cycle
+  card's invoice is covered:
+
+    * invoice closed: its result (= the carry the next cycle starts with);
+    * invoice open: its result minus the daily goal still to be spent until
+      the closing (the active period's limit × the purchase days left).
+
+  The month window used before (`MonthPlan`, up to the eve of the next salary)
+  missed an invoice due right after the salary, so it offered money the plan
+  needs.
+
+  It is capped by the cash free until the next salary (`Panel`: the primary
+  balance minus what leaves it before then): money that has not arrived yet,
+  or that a bill takes before the salary lands, can't be transferred. When
+  positive it is split equally between the allowance accounts and moved there
+  out of the primary account. Distribution is offered in the last 3 days
+  before the next salary (the month closing); a negative plan is shown as the
+  shortfall. Without a card there is no invoice plan and nothing is offered.
   """
 
   import Ecto.Query, warn: false
 
-  alias PlanfinBackend.{Finance, Repo}
-  alias PlanfinBackend.Finance.{MonthPlan, Salary, Transfer}
+  alias PlanfinBackend.{Finance, Periods, Repo}
+  alias PlanfinBackend.Finance.{CyclePlan, Panel, Salary, Transfer}
 
   @closing_days 3
 
   def build(group_id, today) do
     primary = Finance.get_primary_account(group_id)
-    balance = if primary, do: Finance.account_balance(primary, today), else: Decimal.new("0")
-
-    {leftover, cycle_start, cycle_end} =
-      case MonthPlan.build(group_id, today) do
-        {:ok, plan} ->
-          cycle = Salary.cycle(group_id, today)
-          {plan.current.leftover, cycle.start_date, cycle.end_date}
-
-        {:error, _} ->
-          {Decimal.new("0"), Date.beginning_of_month(today), Date.end_of_month(today)}
-      end
+    cycle = cycle_dates(group_id, today)
+    leftover = plan_leftover(group_id, today)
+    cash = cash_until_salary(group_id, primary, today)
 
     amount =
       leftover
-      |> Decimal.min(balance)
+      |> Decimal.min(cash)
       |> Decimal.max(Decimal.new("0"))
       |> Decimal.round(2, :down)
+
+    {cycle_start, cycle_end} = cycle
 
     shortfall = leftover |> Decimal.negate() |> Decimal.max(Decimal.new("0"))
     accounts = allowance_accounts(group_id)
@@ -113,6 +118,53 @@ defmodule PlanfinBackend.Finance.Allowance do
       |> Enum.reduce(Decimal.new("0"), &Decimal.add(&2, Finance.account_balance(&1, today)))
 
     %{goal: goal, total: total}
+  end
+
+  defp cycle_dates(group_id, today) do
+    if Salary.configured?(Salary.get_settings(group_id)) do
+      c = Salary.cycle(group_id, today)
+      {c.start_date, c.end_date}
+    else
+      {Date.beginning_of_month(today), Date.end_of_month(today)}
+    end
+  end
+
+  # What the invoice plan leaves free (see the moduledoc). Zero without a plan.
+  defp plan_leftover(group_id, today) do
+    case CyclePlan.build(group_id, today) do
+      {:ok, %{current: %{status: "closed", result: result}}} ->
+        result
+
+      {:ok, %{current: current}} ->
+        Decimal.sub(
+          current.result,
+          goal_until_closing(group_id, today, current.last_purchase_date)
+        )
+
+      {:error, _} ->
+        Decimal.new("0")
+    end
+  end
+
+  # The daily goal still to be spent on the open invoice: the active period's
+  # limit for each day from today to the eve of the closing (or the period end).
+  defp goal_until_closing(group_id, today, last_purchase_date) do
+    case Periods.get_active_period(group_id, today) do
+      {:ok, %{daily_limit: %Decimal{} = daily, end_date: end_date}} ->
+        last = Enum.min([last_purchase_date, end_date], Date)
+        days = max(Date.diff(last, today) + 1, 0)
+        Decimal.mult(daily, days)
+
+      _ ->
+        Decimal.new("0")
+    end
+  end
+
+  # The primary balance minus what leaves it before the next salary.
+  defp cash_until_salary(_group_id, nil, _today), do: Decimal.new("0")
+
+  defp cash_until_salary(group_id, _primary, today) do
+    Panel.build(group_id, today, Salary.horizon(group_id, today)).free || Decimal.new("0")
   end
 
   defp allowance_accounts(group_id) do
