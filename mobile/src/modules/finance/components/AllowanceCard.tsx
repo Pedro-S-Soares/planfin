@@ -89,7 +89,7 @@ export function AllowanceCard() {
       )}
       {shortfall > 0 ? (
         <AppText variant="caption" style={styles.gapTop}>
-          {money(shortfall)} ficam na conta porque o próximo salário não cobre o que já está na fatura.
+          Faltam {money(shortfall)} no plano da fatura: a fatura, os compromissos até o salário seguinte e a meta diária até o fechamento passam do dinheiro previsto.
         </AppText>
       ) : null}
       {distributed > 0 ? (
