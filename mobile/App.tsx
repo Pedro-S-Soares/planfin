@@ -14,6 +14,7 @@ import { CurrencyProvider } from "./src/context/CurrencyContext";
 import { LoadingScreen } from "./src/components/ui/LoadingScreen";
 import { ErrorScreen } from "./src/components/ui/ErrorScreen";
 import { ToastHost } from "./src/components/ui/ToastHost";
+import { UpdateBanner } from "./src/components/ui/UpdateBanner";
 import { apolloClient } from "./src/lib/apollo";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { InviteRegisterScreen } from "./src/screens/InviteRegisterScreen";
@@ -388,6 +389,7 @@ export default function App() {
                   <Navigation />
                 </NavigationContainer>
                 <ToastHost />
+                <UpdateBanner />
               </View>
             </View>
             <StatusBar style="auto" />

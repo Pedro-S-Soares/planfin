@@ -33,7 +33,8 @@ defmodule PlanfinBackend.Finance.Allowance do
   def build(group_id, today) do
     primary = Finance.get_primary_account(group_id)
     cycle = cycle_dates(group_id, today)
-    leftover = plan_leftover(group_id, today)
+    breakdown = plan_breakdown(group_id, today)
+    leftover = breakdown.leftover
     cash = cash_until_salary(group_id, primary, today)
 
     amount =
@@ -54,6 +55,15 @@ defmodule PlanfinBackend.Finance.Allowance do
       opens_on: distributable_from,
       free: leftover,
       shortfall: shortfall,
+      invoice_status: breakdown.invoice_status,
+      plan_result: breakdown.plan_result,
+      plan_until: breakdown.plan_until,
+      goal_days: breakdown.goal_days,
+      goal_daily: breakdown.goal_daily,
+      goal_amount: breakdown.goal_amount,
+      cash: cash,
+      cash_until: Salary.horizon(group_id, today),
+      capped: Decimal.compare(leftover, 0) == :gt and Decimal.compare(cash, leftover) == :lt,
       amount: amount,
       can_distribute:
         accounts != [] and primary != nil and Decimal.compare(amount, 0) == :gt and
@@ -129,34 +139,63 @@ defmodule PlanfinBackend.Finance.Allowance do
     end
   end
 
-  # What the invoice plan leaves free (see the moduledoc). Zero without a plan.
-  defp plan_leftover(group_id, today) do
+  # What the invoice plan leaves free (see the moduledoc), with the parts of
+  # the math shown on the Home: the plan's result minus the daily goal still to
+  # be spent while the invoice is open. `plan_until` is the date the Home puts
+  # on that result: the last purchase day while open (what can still be spent
+  # until the closing), the eve of the salary after the one that pays the
+  # invoice once closed (the left over until then). Zero without a plan.
+  defp plan_breakdown(group_id, today) do
     case CyclePlan.build(group_id, today) do
-      {:ok, %{current: %{status: "closed", result: result}}} ->
-        result
+      {:ok, %{current: %{status: "closed"} = current}} ->
+        %{
+          invoice_status: "closed",
+          plan_result: current.result,
+          plan_until: current.window_end,
+          goal_days: nil,
+          goal_daily: nil,
+          goal_amount: nil,
+          leftover: current.result
+        }
 
       {:ok, %{current: current}} ->
-        Decimal.sub(
-          current.result,
-          goal_until_closing(group_id, today, current.last_purchase_date)
-        )
+        {daily, days} = goal_until_closing(group_id, today, current.last_purchase_date)
+        goal = Decimal.mult(daily, days)
+
+        %{
+          invoice_status: current.status,
+          plan_result: current.result,
+          plan_until: current.last_purchase_date,
+          goal_days: days,
+          goal_daily: daily,
+          goal_amount: goal,
+          leftover: Decimal.sub(current.result, goal)
+        }
 
       {:error, _} ->
-        Decimal.new("0")
+        %{
+          invoice_status: nil,
+          plan_result: nil,
+          plan_until: nil,
+          goal_days: nil,
+          goal_daily: nil,
+          goal_amount: nil,
+          leftover: Decimal.new("0")
+        }
     end
   end
 
-  # The daily goal still to be spent on the open invoice: the active period's
-  # limit for each day from today to the eve of the closing (or the period end).
+  # The daily goal still to be spent on the open invoice, as {daily, days}: the
+  # active period's limit for each day from today to the eve of the closing (or
+  # the period end). No active goal: {0, 0}.
   defp goal_until_closing(group_id, today, last_purchase_date) do
     case Periods.get_active_period(group_id, today) do
       {:ok, %{daily_limit: %Decimal{} = daily, end_date: end_date}} ->
         last = Enum.min([last_purchase_date, end_date], Date)
-        days = max(Date.diff(last, today) + 1, 0)
-        Decimal.mult(daily, days)
+        {daily, max(Date.diff(last, today) + 1, 0)}
 
       _ ->
-        Decimal.new("0")
+        {Decimal.new("0"), 0}
     end
   end
 

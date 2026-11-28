@@ -204,6 +204,15 @@ query AllowancePlan($today: String) {
     opensOn
     free
     shortfall
+    invoiceStatus
+    planResult
+    planUntil
+    goalDays
+    goalDaily
+    goalAmount
+    cash
+    cashUntil
+    capped
     amount
     canDistribute
     distributed

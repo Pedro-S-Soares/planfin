@@ -11,6 +11,7 @@ import { useAllowancePlanQuery, useDistributeAllowanceMutation } from "../../../
 import { confirm } from "../../../lib/alert";
 import { toISODate } from "../../../lib/date";
 import { palette, radius, space } from "../../../theme";
+import { allowanceBreakdown } from "../allowance-breakdown";
 import { formatMoney, formatShortDate, toNumber } from "../format";
 import { useFinancialAccounts } from "../use-financial-accounts";
 import type { AppStackParamList } from "../../../../App";
@@ -40,7 +41,7 @@ export function AllowanceCard() {
   const money = (v: number | string | null | undefined) => formatMoney(v, currency.symbol);
   const shares = plan.shares?.filter((s) => s !== null) ?? [];
   const amount = toNumber(plan.amount);
-  const shortfall = toNumber(plan.shortfall);
+  const breakdown = allowanceBreakdown(plan, currency.symbol);
   const distributed = toNumber(plan.distributed);
 
   if (shares.length === 0) {
@@ -82,15 +83,36 @@ export function AllowanceCard() {
             </View>
           ))}
         </View>
-      ) : (
+      ) : breakdown ? null : (
         <AppText variant="body" tone="muted">
           Por enquanto não sobra para mesada. Ela aparece sozinha quando sobrar dinheiro no fim do ciclo.
         </AppText>
       )}
-      {shortfall > 0 ? (
-        <AppText variant="caption" style={styles.gapTop}>
-          Faltam {money(shortfall)} no plano da fatura: a fatura, os compromissos até o salário seguinte e a meta diária até o fechamento passam do dinheiro previsto.
-        </AppText>
+      {breakdown ? (
+        <View style={styles.extract}>
+          {breakdown.rows.map((row) => (
+            <View key={row.label} style={styles.extractRow}>
+              <AppText variant="caption" style={styles.extractLabel}>
+                {row.label}
+              </AppText>
+              <MoneyText amount={row.amount} variant="body" />
+            </View>
+          ))}
+          <View style={[styles.extractRow, breakdown.rows.length > 0 ? styles.extractTotal : null]}>
+            <AppText variant="label" style={styles.extractLabel}>
+              {breakdown.total.label}
+            </AppText>
+            <MoneyText amount={breakdown.total.amount} variant="label" tone={breakdown.total.amount < 0 ? "danger" : "ink"} />
+          </View>
+          {breakdown.capNote ? <AppText variant="caption">{breakdown.capNote}</AppText> : null}
+          {breakdown.hasGoal ? (
+            <Pressable accessibilityRole="button" hitSlop={8} onPress={() => navigation.navigate("MonthPlan")}>
+              <AppText variant="label" tone="accent">
+                Ajustar meta ›
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
       {distributed > 0 ? (
         <AppText variant="caption" tone="income" style={styles.gapTop}>
@@ -144,5 +166,25 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: space.md,
+  },
+  extract: {
+    marginTop: space.md,
+    gap: space.xs,
+  },
+  extractRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    gap: space.sm,
+  },
+  extractLabel: {
+    flex: 1,
+    minWidth: 0,
+  },
+  extractTotal: {
+    marginTop: space.xs,
+    paddingTop: space.xs,
+    borderTopWidth: 1,
+    borderTopColor: palette.rule,
   },
 });

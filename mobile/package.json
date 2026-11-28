@@ -10,7 +10,7 @@
     "build": "expo export --platform web",
     "codegen": "graphql-codegen --config codegen.ts",
     "codegen:watch": "graphql-codegen --config codegen.ts --watch",
-    "test:unit": "node -r sucrase/register --test src/modules/finance/invoice-label.test.ts"
+    "test:unit": "node -r sucrase/register --test src/modules/finance/invoice-label.test.ts src/modules/finance/allowance-breakdown.test.ts src/lib/app-version.test.ts"
   },
   "dependencies": {
     "@absinthe/socket": "^0.2.1",

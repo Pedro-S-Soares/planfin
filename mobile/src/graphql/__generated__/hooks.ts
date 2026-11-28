@@ -33,12 +33,29 @@ export type AllowancePlan = {
   __typename?: 'AllowancePlan';
   amount?: Maybe<Scalars['String']['output']>;
   canDistribute?: Maybe<Scalars['Boolean']['output']>;
+  /** True when the allowance is limited by the cash instead of the plan */
+  capped?: Maybe<Scalars['Boolean']['output']>;
+  /** Cash free in the primary account until the eve of the next salary (the cap) */
+  cash?: Maybe<Scalars['String']['output']>;
+  cashUntil?: Maybe<Scalars['String']['output']>;
   cycleEndDate?: Maybe<Scalars['String']['output']>;
   /** Allowance already transferred in this cycle */
   distributed?: Maybe<Scalars['String']['output']>;
   free?: Maybe<Scalars['String']['output']>;
+  /** Open invoice: goal_days × goal_daily, kept out of the allowance */
+  goalAmount?: Maybe<Scalars['String']['output']>;
+  /** Open invoice: daily goal of the active period */
+  goalDaily?: Maybe<Scalars['String']['output']>;
+  /** Open invoice: purchase days the daily goal still covers */
+  goalDays?: Maybe<Scalars['Int']['output']>;
+  /** open | closed | null (no invoice plan): which version of the math applies */
+  invoiceStatus?: Maybe<Scalars['String']['output']>;
   /** First day the distribution is offered (cycle closing) */
   opensOn?: Maybe<Scalars['String']['output']>;
+  /** Result of the invoice plan (current invoice), before the daily goal */
+  planResult?: Maybe<Scalars['String']['output']>;
+  /** Last day of the plan's money window (eve of the salary after the one that pays the invoice) */
+  planUntil?: Maybe<Scalars['String']['output']>;
   shares?: Maybe<Array<Maybe<AllowanceShare>>>;
   /** Part of the free money kept because the next salary can't cover what is on it */
   shortfall?: Maybe<Scalars['String']['output']>;
@@ -1756,7 +1773,7 @@ export type AllowancePlanQueryVariables = Exact<{
 }>;
 
 
-export type AllowancePlanQuery = { __typename?: 'RootQueryType', allowancePlan?: { __typename?: 'AllowancePlan', cycleEndDate?: string | null, opensOn?: string | null, free?: string | null, shortfall?: string | null, amount?: string | null, canDistribute?: boolean | null, distributed?: string | null, shares?: Array<{ __typename?: 'AllowanceShare', accountId?: string | null, accountName?: string | null, ownerName?: string | null, amount?: string | null } | null> | null } | null };
+export type AllowancePlanQuery = { __typename?: 'RootQueryType', allowancePlan?: { __typename?: 'AllowancePlan', cycleEndDate?: string | null, opensOn?: string | null, free?: string | null, shortfall?: string | null, invoiceStatus?: string | null, planResult?: string | null, planUntil?: string | null, goalDays?: number | null, goalDaily?: string | null, goalAmount?: string | null, cash?: string | null, cashUntil?: string | null, capped?: boolean | null, amount?: string | null, canDistribute?: boolean | null, distributed?: string | null, shares?: Array<{ __typename?: 'AllowanceShare', accountId?: string | null, accountName?: string | null, ownerName?: string | null, amount?: string | null } | null> | null } | null };
 
 export type ReserveStatusQueryVariables = Exact<{
   today?: InputMaybe<Scalars['String']['input']>;
@@ -4861,6 +4878,15 @@ export const AllowancePlanDocument = gql`
     opensOn
     free
     shortfall
+    invoiceStatus
+    planResult
+    planUntil
+    goalDays
+    goalDaily
+    goalAmount
+    cash
+    cashUntil
+    capped
     amount
     canDistribute
     distributed

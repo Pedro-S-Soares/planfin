@@ -83,6 +83,10 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
     # Month left over includes the Oct 13 salary (8000), but only 3000 is in the account
     assert Decimal.equal?(plan.free, Decimal.new("8000.00"))
     assert Decimal.equal?(plan.amount, Decimal.new("3000.00"))
+    # The Home shows the cap line: limited to the cash free until the salary.
+    assert plan.capped
+    assert Decimal.equal?(plan.cash, Decimal.new("3000.00"))
+    assert plan.cash_until == ~D[2026-10-12]
   end
 
   test "an invoice bigger than the money leaves a shortfall and no allowance" do
@@ -181,6 +185,13 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
       assert Decimal.equal?(plan.free, Decimal.new("1000.00"))
       assert Decimal.equal?(plan.amount, Decimal.new("1000.00"))
       assert plan.can_distribute
+      # Closed invoice: the math is the plan's result alone, no goal line.
+      assert plan.invoice_status == "closed"
+      assert Decimal.equal?(plan.plan_result, Decimal.new("1000.00"))
+      assert plan.goal_days == nil and plan.goal_amount == nil
+      {:ok, cycle} = CyclePlan.build(ctx.group.id, @dec_closing)
+      assert plan.plan_until == cycle.current.window_end
+      refute plan.capped
       assert Enum.map(plan.shares, &Decimal.to_string(&1.amount)) == ["500.00", "500.00"]
     end
 
@@ -218,6 +229,8 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
       # Plan: 3000 + 15000 − 7000 − 4000 − 2500 = 4500; cash until Dec 10: 3000 − 2500
       assert Decimal.equal?(plan.free, Decimal.new("4500.00"))
       assert Decimal.equal?(plan.amount, Decimal.new("500.00"))
+      assert plan.capped
+      assert Decimal.equal?(plan.cash, Decimal.new("500.00"))
     end
 
     test "while the invoice is open, the daily goal until the closing is kept" do
@@ -242,6 +255,15 @@ defmodule PlanfinBackend.Finance.AllowanceTest do
       {:ok, cycle} = CyclePlan.build(ctx.group.id, @closing)
       assert cycle.current.status == "open"
       assert Decimal.equal?(plan.free, Decimal.sub(cycle.current.result, Decimal.new("2500.00")))
+
+      # The parts shown on the Home add up to the same number.
+      assert plan.invoice_status == "open"
+      assert Decimal.equal?(plan.plan_result, cycle.current.result)
+      assert plan.plan_until == cycle.current.last_purchase_date
+      assert plan.goal_days == 25
+      assert Decimal.equal?(plan.goal_daily, Decimal.new("100.00"))
+      assert Decimal.equal?(plan.goal_amount, Decimal.new("2500.00"))
+      assert Decimal.equal?(Decimal.sub(plan.plan_result, plan.goal_amount), plan.free)
     end
   end
 
